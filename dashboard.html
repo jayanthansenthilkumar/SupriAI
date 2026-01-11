@@ -25,26 +25,44 @@
                 <span class="logo-text">SupriAI</span>
             </div>
 
-            <ul class="nav-menu">
-                <li class="nav-item active" data-target="dashboard">
-                    <i class="ri-dashboard-line"></i> <span>Dashboard</span>
-                </li>
-                <li class="nav-item" data-target="analytics">
-                    <i class="ri-bar-chart-grouped-fill"></i> <span>Analytics</span>
-                </li>
-                <li class="nav-item" data-target="library">
-                    <i class="ri-book-open-line"></i> <span>My Library</span>
-                </li>
-                <li class="nav-item" data-target="goals">
-                    <i class="ri-focus-3-line"></i> <span>Goals & Streak</span>
-                </li>
-                <li class="nav-item" data-target="community">
-                    <i class="ri-group-line"></i> <span>Community</span>
-                </li>
-                <li class="nav-item" data-target="settings">
-                    <i class="ri-settings-4-line"></i> <span>Settings</span>
-                </li>
-            </ul>
+            <div class="sidebar-scroll">
+                <ul class="nav-menu">
+                    <div class="nav-label">Overview</div>
+                    <li class="nav-item active" data-target="dashboard">
+                        <i class="ri-dashboard-line"></i> <span>Dashboard</span>
+                    </li>
+                    <li class="nav-item" data-target="analytics">
+                        <i class="ri-bar-chart-grouped-fill"></i> <span>Analytics</span>
+                    </li>
+                    <li class="nav-item" data-target="calendar">
+                        <i class="ri-calendar-event-line"></i> <span>Schedule</span>
+                    </li>
+
+                    <div class="nav-label">Learning</div>
+                    <li class="nav-item" data-target="academy">
+                        <i class="ri-graduation-cap-line"></i> <span>Academy</span>
+                    </li>
+                    <li class="nav-item" data-target="library">
+                        <i class="ri-book-open-line"></i> <span>My Library</span>
+                    </li>
+                    <li class="nav-item" data-target="reviews">
+                        <i class="ri-feedback-line"></i> <span>Reviews</span>
+                    </li>
+
+                    <div class="nav-label">Social</div>
+                    <li class="nav-item" data-target="goals">
+                        <i class="ri-focus-3-line"></i> <span>Goals</span>
+                    </li>
+                    <li class="nav-item" data-target="community">
+                        <i class="ri-group-line"></i> <span>Community</span>
+                    </li>
+
+                    <div class="nav-label">System</div>
+                    <li class="nav-item" data-target="settings">
+                        <i class="ri-settings-4-line"></i> <span>Settings</span>
+                    </li>
+                </ul>
+            </div>
 
             <div class="sidebar-footer">
                 <div class="user-profile">
@@ -189,6 +207,73 @@
                     </div>
                 </div>
 
+                <!-- VIEW: SCHEDULE / CALENDAR (NEW) -->
+                <div id="view-calendar" class="page-view" style="display: none;">
+                    <div class="google-card full-width">
+                        <div class="card-header">
+                            <span class="card-title">Study Schedule</span>
+                            <div class="actions">
+                                <button class="text-btn active"
+                                    style="background: #e8f0fe; color: #1a73e8;">Week</button>
+                                <button class="text-btn">Month</button>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 80px 1fr; gap: 10px; margin-top: 20px;">
+                            <!-- Time Column -->
+                            <div
+                                style="display: flex; flex-direction: column; gap: 30px; color: #5f6368; font-size: 0.85rem; padding-top: 10px;">
+                                <span>09:00 AM</span>
+                                <span>10:00 AM</span>
+                                <span>11:00 AM</span>
+                                <span>12:00 PM</span>
+                            </div>
+                            <!-- Events -->
+                            <div
+                                style="position: relative; height: 200px; background: repeating-linear-gradient(#f1f3f4 0 1px, transparent 1px 100%); background-size: 100% 45px;">
+                                <div
+                                    style="position: absolute; top: 10px; left: 10px; right: 80px; height: 80px; background: #CEEAD6; border-left: 4px solid #188038; padding: 10px; border-radius: 4px;">
+                                    <div style="font-weight: 500; color: #0d652d;">Python Fundamentals</div>
+                                    <div style="font-size: 0.8rem; color: #0d652d;">09:00 - 11:00 AM</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: ACADEMY (NEW) -->
+                <div id="view-academy" class="page-view" style="display: none;">
+                    <div class="section-title">Recommended Courses</div>
+                    <div class="dashboard-grid">
+                        <div class="google-card" style="padding: 0; overflow: hidden;">
+                            <div
+                                style="height: 120px; background: linear-gradient(135deg, #1a73e8 0%, #8ab4f8 100%); position: relative;">
+                                <span
+                                    style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.3); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Free</span>
+                            </div>
+                            <div style="padding: 16px;">
+                                <h3>Machine Learning 101</h3>
+                                <p class="text-secondary">Google AI • 4 Weeks</p>
+                                <div class="progress-bar" style="margin-top: 10px;">
+                                    <div class="fill" style="width: 20%"></div>
+                                </div>
+                                <button class="text-btn"
+                                    style="width: 100%; margin-top: 10px; justify-content: center;">Continue</button>
+                            </div>
+                        </div>
+                        <div class="google-card" style="padding: 0; overflow: hidden;">
+                            <div style="height: 120px; background: linear-gradient(135deg, #f9ab00 0%, #fdd663 100%);">
+                            </div>
+                            <div style="padding: 16px;">
+                                <h3>Web Accessibility</h3>
+                                <p class="text-secondary">Udacity • 2 Weeks</p>
+                                <button class="primary-btn"
+                                    style="width: 100%; margin-top: 15px; justify-content: center;">Start
+                                    Course</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- VIEW: LIBRARY -->
                 <div id="view-library" class="page-view" style="display: none;">
                     <div class="tabs-container" style="margin-bottom: 20px;">
@@ -247,6 +332,37 @@
                             </div>
                             <h3>Advanced CSS Grid</h3>
                             <p class="text-secondary">MDN Docs • Reference</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: REVIEWS (NEW) -->
+                <div id="view-reviews" class="page-view" style="display: none;">
+                    <div class="google-card full-width">
+                        <div class="card-header">
+                            <span class="card-title">Weekly Reflection</span>
+                            <button class="text-btn primary-text"><i class="ri-add-line"></i> New Entry</button>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <textarea placeholder="What did you learn this week? What challenges did you face?"
+                                style="width: 100%; height: 100px; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; font-family: 'Roboto', sans-serif; resize: none; margin-bottom: 10px;"></textarea>
+                            <div style="display: flex; justify-content: flex-end;">
+                                <button class="primary-btn">Save Reflection</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">Past Logs</div>
+                    <div class="dashboard-grid">
+                        <div class="google-card">
+                            <div style="font-size: 0.8rem; color: #5f6368; margin-bottom: 5px;">Nov 12, 2025</div>
+                            <h3 style="font-size: 1.1rem; margin: 0 0 10px 0;">Struggled with Recursion</h3>
+                            <p style="color: #5f6368; line-height: 1.5;">Need to revisit the base cases. The tower of
+                                hanoi problem was particularly tricky.</p>
+                            <div style="margin-top: 10px; display: flex; gap: 5px;">
+                                <span class="chip" style="padding: 4px 8px; font-size: 0.75rem;">Algo</span>
+                                <span class="chip" style="padding: 4px 8px; font-size: 0.75rem;">Hard</span>
+                            </div>
                         </div>
                     </div>
                 </div>

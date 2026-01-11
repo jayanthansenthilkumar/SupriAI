@@ -723,10 +723,30 @@ input:checked+.slider:before {
     color: var(--text-secondary);
 }
 
-.toolbar-search input {
-    border: none;
+/* Sidebar Updates */
+.nav-label {
+    padding: 16px 20px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-scroll {
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Custom Scrollbar for sidebar */
+.sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
     background: transparent;
-    outline: none;
-    font-size: 0.9rem;
-    width: 100%;
+}
+
+.sidebar:hover .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
 }

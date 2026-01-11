@@ -28,7 +28,10 @@ function setupNavigation() {
             const titleMap = {
                 'dashboard': 'Dashboard',
                 'analytics': 'Analytics',
+                'calendar': 'Schedule',
+                'academy': 'Academy',
                 'library': 'My Library',
+                'reviews': 'Reviews',
                 'goals': 'Goals & Streak',
                 'community': 'Community',
                 'settings': 'Settings'
