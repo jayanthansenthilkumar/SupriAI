@@ -4,7 +4,7 @@ Complete REST API for Learning Analytics System
 Clean, well-structured API endpoints
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import database
@@ -28,9 +28,20 @@ print("""
 """)
 
 
+
+# ==========================================
+# INDEX ROUTE
+# ==========================================
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
 # ==========================================
 # HEALTH & STATUS ENDPOINTS
 # ==========================================
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -654,6 +665,345 @@ def get_recommendations():
             "recommendations": recommendations
         })
         
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# TASKS / TODOS ENDPOINTS
+# ==========================================
+
+@app.route('/api/tasks', methods=['GET'])
+def get_tasks():
+    """Get all tasks"""
+    try:
+        status = request.args.get('status', None)
+        include_completed = request.args.get('include_completed', 'false').lower() == 'true'
+        
+        tasks = database.get_tasks(status=status, include_completed=include_completed)
+        
+        return jsonify({
+            "status": "success",
+            "tasks": tasks
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks', methods=['POST'])
+def create_task():
+    """Create a new task"""
+    try:
+        data = request.json
+        
+        if not data or not data.get('title'):
+            return jsonify({"status": "error", "message": "Title required"}), 400
+        
+        task_id = database.create_task(data)
+        
+        return jsonify({
+            "status": "success",
+            "task_id": task_id
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['GET'])
+def get_task(task_id):
+    """Get a single task"""
+    try:
+        task = database.get_task(task_id)
+        if task:
+            return jsonify({"status": "success", "task": task})
+        return jsonify({"status": "error", "message": "Task not found"}), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+    """Update a task"""
+    try:
+        data = request.json
+        database.update_task(task_id, data)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    """Delete a task"""
+    try:
+        database.delete_task(task_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/<int:task_id>/complete', methods=['POST'])
+def complete_task(task_id):
+    """Mark a task as completed"""
+    try:
+        database.complete_task(task_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/today', methods=['GET'])
+def get_tasks_due_today():
+    """Get tasks due today"""
+    try:
+        tasks = database.get_tasks_due_today()
+        return jsonify({
+            "status": "success",
+            "tasks": tasks
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# POMODORO / FOCUS TIMER ENDPOINTS
+# ==========================================
+
+@app.route('/api/pomodoro/start', methods=['POST'])
+def start_pomodoro():
+    """Start a new pomodoro session"""
+    try:
+        data = request.json or {}
+        
+        session_id = database.create_pomodoro_session({
+            'task_id': data.get('task_id'),
+            'session_type': data.get('session_type', 'focus'),
+            'duration_minutes': data.get('duration_minutes', 25),
+            'topic': data.get('topic'),
+            'notes': data.get('notes')
+        })
+        
+        return jsonify({
+            "status": "success",
+            "session_id": session_id,
+            "message": "Pomodoro session started"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/pomodoro/<int:session_id>/complete', methods=['POST'])
+def complete_pomodoro(session_id):
+    """Complete a pomodoro session"""
+    try:
+        data = request.json or {}
+        actual_duration = data.get('actual_duration', 25)
+        
+        database.complete_pomodoro_session(session_id, actual_duration)
+        
+        # Update task if linked
+        if data.get('task_id'):
+            task = database.get_task(data.get('task_id'))
+            if task:
+                new_actual = (task.get('actual_minutes', 0) or 0) + actual_duration
+                database.update_task(data.get('task_id'), {'actual_minutes': new_actual})
+        
+        return jsonify({
+            "status": "success",
+            "message": "Pomodoro session completed"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/pomodoro/<int:session_id>/cancel', methods=['POST'])
+def cancel_pomodoro(session_id):
+    """Cancel/interrupt a pomodoro session"""
+    try:
+        data = request.json or {}
+        actual_duration = data.get('actual_duration', 0)
+        
+        database.cancel_pomodoro_session(session_id, actual_duration)
+        
+        return jsonify({
+            "status": "success",
+            "message": "Pomodoro session cancelled"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/pomodoro/sessions', methods=['GET'])
+def get_pomodoro_sessions():
+    """Get pomodoro session history"""
+    try:
+        days = request.args.get('days', 7, type=int)
+        sessions = database.get_pomodoro_sessions(days=days)
+        
+        return jsonify({
+            "status": "success",
+            "sessions": sessions
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/pomodoro/stats', methods=['GET'])
+def get_pomodoro_stats():
+    """Get pomodoro statistics"""
+    try:
+        days = request.args.get('days', 7, type=int)
+        stats = database.get_pomodoro_stats(days=days)
+        
+        return jsonify({
+            "status": "success",
+            "stats": stats
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# FOCUS SETTINGS ENDPOINTS
+# ==========================================
+
+@app.route('/api/focus/settings', methods=['GET'])
+def get_focus_settings():
+    """Get focus/pomodoro settings"""
+    try:
+        settings = database.get_focus_settings()
+        return jsonify({
+            "status": "success",
+            "settings": settings
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/focus/settings', methods=['PUT'])
+def update_focus_settings():
+    """Update focus/pomodoro settings"""
+    try:
+        data = request.json
+        database.update_focus_settings(1, data)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/focus/stats', methods=['GET'])
+def get_focus_stats():
+    """Get daily focus stats"""
+    try:
+        days = request.args.get('days', 7, type=int)
+        stats = database.get_focus_stats(days=days)
+        
+        return jsonify({
+            "status": "success",
+            "stats": stats
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# REMINDERS ENDPOINTS
+# ==========================================
+
+@app.route('/api/reminders', methods=['GET'])
+def get_reminders():
+    """Get all reminders"""
+    try:
+        active_only = request.args.get('active_only', 'true').lower() == 'true'
+        reminders = database.get_reminders(active_only=active_only)
+        
+        return jsonify({
+            "status": "success",
+            "reminders": reminders
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders', methods=['POST'])
+def create_reminder():
+    """Create a new reminder"""
+    try:
+        data = request.json
+        
+        if not data or not data.get('title') or not data.get('reminder_time'):
+            return jsonify({"status": "error", "message": "Title and reminder_time required"}), 400
+        
+        reminder_id = database.create_reminder(data)
+        
+        return jsonify({
+            "status": "success",
+            "reminder_id": reminder_id
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders/upcoming', methods=['GET'])
+def get_upcoming_reminders():
+    """Get upcoming reminders"""
+    try:
+        hours = request.args.get('hours', 24, type=int)
+        reminders = database.get_upcoming_reminders(hours=hours)
+        
+        return jsonify({
+            "status": "success",
+            "reminders": reminders
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders/<int:reminder_id>', methods=['PUT'])
+def update_reminder(reminder_id):
+    """Update a reminder"""
+    try:
+        data = request.json
+        database.update_reminder(reminder_id, data)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders/<int:reminder_id>', methods=['DELETE'])
+def delete_reminder(reminder_id):
+    """Delete a reminder"""
+    try:
+        database.delete_reminder(reminder_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders/<int:reminder_id>/dismiss', methods=['POST'])
+def dismiss_reminder(reminder_id):
+    """Dismiss/deactivate a reminder"""
+    try:
+        database.deactivate_reminder(reminder_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# PRODUCTIVITY DASHBOARD ENDPOINT
+# ==========================================
+
+@app.route('/api/productivity', methods=['GET'])
+def get_productivity_dashboard():
+    """Get productivity summary for dashboard"""
+    try:
+        summary = database.get_productivity_summary()
+        
+        return jsonify({
+            "status": "success",
+            "productivity": summary
+        })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 

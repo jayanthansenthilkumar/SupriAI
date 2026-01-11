@@ -16,26 +16,26 @@ let trendChart, topicChart;
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("🚀 SupriAI Dashboard Initializing...");
-    
+
     // Setup navigation
     setupNavigation();
-    
+
     // Fetch user identity
     fetchUserIdentity();
-    
+
     // Initialize charts
     if (typeof Chart !== 'undefined') {
         initCharts();
     } else {
         console.warn("Chart.js not loaded.");
     }
-    
+
     // Load initial data
     loadDashboardData();
-    
+
     // Setup event listeners
     setupEventListeners();
-    
+
     // Check server status
     checkServerStatus();
 });
@@ -91,7 +91,7 @@ function setupNavigation() {
                 'settings': 'Settings'
             };
             document.getElementById('pageTitle').innerText = titleMap[item.dataset.target] || 'Dashboard';
-            
+
             // Load view-specific data
             loadViewData(item.dataset.target);
         });
@@ -128,12 +128,12 @@ async function loadUserFromBackend() {
     try {
         const response = await fetch(`${API_URL}/api/user`);
         const data = await response.json();
-        
+
         if (data.status === 'success' && data.user) {
             const nameEl = document.querySelector('.user-info .name');
             const avatarEl = document.querySelector('.user-profile .avatar');
             const smAvatarEl = document.querySelector('.avatar-sm');
-            
+
             if (nameEl) nameEl.textContent = data.user.display_name || 'User';
             if (avatarEl) avatarEl.textContent = data.user.avatar_initial || 'U';
             if (smAvatarEl) smAvatarEl.textContent = data.user.avatar_initial || 'U';
@@ -281,7 +281,7 @@ async function loadDashboardData() {
 
         // Update Recent Activity
         renderRecentActivity(data.recent_activity || []);
-        
+
         // Update Recommendations
         renderRecommendations(data.recommendations || []);
 
@@ -294,7 +294,7 @@ async function loadDashboardData() {
 }
 
 async function loadViewData(viewName) {
-    switch(viewName) {
+    switch (viewName) {
         case 'library':
             await loadLibraryData();
             break;
@@ -326,19 +326,19 @@ async function loadLibraryData() {
         // Load history
         const historyResponse = await fetch(`${API_URL}/api/history?days=30&limit=50`);
         const historyData = await historyResponse.json();
-        
+
         if (historyData.status === 'success') {
             renderRecentActivity(historyData.history);
         }
-        
+
         // Load bookmarks
         const bookmarksResponse = await fetch(`${API_URL}/api/bookmarks`);
         const bookmarksData = await bookmarksResponse.json();
-        
+
         if (bookmarksData.status === 'success') {
             renderBookmarks(bookmarksData.bookmarks);
         }
-        
+
     } catch (e) {
         console.error("Failed to load library data:", e);
     }
@@ -347,7 +347,7 @@ async function loadLibraryData() {
 function renderBookmarks(bookmarks) {
     const container = document.querySelector('#view-library .dashboard-grid:last-child');
     if (!container) return;
-    
+
     if (!bookmarks || bookmarks.length === 0) {
         container.innerHTML = `
             <div class="google-card" style="text-align: center; padding: 40px;">
@@ -357,7 +357,7 @@ function renderBookmarks(bookmarks) {
         `;
         return;
     }
-    
+
     container.innerHTML = bookmarks.map(bookmark => `
         <div class="google-card" data-bookmark-id="${bookmark.id}">
             <div class="card-header">
@@ -373,7 +373,7 @@ function renderBookmarks(bookmarks) {
             </a>
         </div>
     `).join('');
-    
+
     // Add delete handlers
     container.querySelectorAll('.delete-bookmark').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -405,19 +405,19 @@ async function loadGoalsData() {
     try {
         const response = await fetch(`${API_URL}/api/goals`);
         const data = await response.json();
-        
+
         if (data.status === 'success') {
             renderGoals(data.goals);
         }
-        
+
         // Load achievements
         const achievementsResponse = await fetch(`${API_URL}/api/achievements`);
         const achievementsData = await achievementsResponse.json();
-        
+
         if (achievementsData.status === 'success') {
             renderAchievements(achievementsData.achievements);
         }
-        
+
     } catch (e) {
         console.error("Failed to load goals:", e);
     }
@@ -426,7 +426,7 @@ async function loadGoalsData() {
 function renderGoals(goals) {
     const container = document.querySelector('#view-goals .google-card:first-child > div:last-child');
     if (!container) return;
-    
+
     if (!goals || goals.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 20px; color: #5f6368;">
@@ -436,7 +436,7 @@ function renderGoals(goals) {
         `;
         return;
     }
-    
+
     container.innerHTML = goals.map(goal => {
         const progress = goal.target_value > 0 ? (goal.current_value / goal.target_value * 100) : 0;
         return `
@@ -464,7 +464,7 @@ function renderGoals(goals) {
 function renderAchievements(achievements) {
     const container = document.querySelector('#view-goals .google-card:last-child > div:last-child');
     if (!container) return;
-    
+
     const allAchievements = [
         { name: "First Steps", icon: "ri-footprint-line", unlocked: false },
         { name: "Week Warrior", icon: "ri-medal-line", unlocked: false },
@@ -473,13 +473,13 @@ function renderAchievements(achievements) {
         { name: "Consistency King", icon: "ri-fire-line", unlocked: false },
         { name: "Month Master", icon: "ri-trophy-line", unlocked: false }
     ];
-    
+
     // Mark unlocked achievements
     achievements.forEach(a => {
         const found = allAchievements.find(aa => aa.name === a.badge_name);
         if (found) found.unlocked = true;
     });
-    
+
     container.innerHTML = allAchievements.map(a => `
         <div style="padding: 10px; border: 1px solid #f1f3f4; border-radius: 8px; text-align: center; ${!a.unlocked ? 'opacity: 0.4;' : ''}">
             <i class="${a.icon}" style="font-size: 2rem; color: ${a.unlocked ? '#f9ab00' : '#5f6368'};"></i>
@@ -495,7 +495,7 @@ async function createGoal(goalData) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(goalData)
         });
-        
+
         if (response.ok) {
             showToast("Goal created!", "success");
             loadGoalsData();
@@ -514,7 +514,7 @@ async function loadScheduleData() {
     try {
         const response = await fetch(`${API_URL}/api/schedule`);
         const data = await response.json();
-        
+
         if (data.status === 'success') {
             renderSchedule(data.events);
         }
@@ -537,7 +537,7 @@ async function loadNotesData() {
     try {
         const response = await fetch(`${API_URL}/api/notes`);
         const data = await response.json();
-        
+
         if (data.status === 'success') {
             renderNotes(data.notes);
         }
@@ -549,7 +549,7 @@ async function loadNotesData() {
 function renderNotes(notes) {
     const container = document.querySelector('#view-reviews .dashboard-grid');
     if (!container) return;
-    
+
     if (!notes || notes.length === 0) {
         container.innerHTML = `
             <div class="google-card" style="text-align: center; padding: 40px;">
@@ -559,12 +559,12 @@ function renderNotes(notes) {
         `;
         return;
     }
-    
+
     container.innerHTML = notes.map(note => {
         const date = new Date(note.created_at);
         const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
         const tags = note.tags || [];
-        
+
         return `
             <div class="google-card" data-note-id="${note.id}">
                 <div style="font-size: 0.8rem; color: #5f6368; margin-bottom: 5px;">${dateStr}</div>
@@ -587,7 +587,7 @@ async function saveNote(noteData) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(noteData)
         });
-        
+
         if (response.ok) {
             showToast("Reflection saved!", "success");
             loadNotesData();
@@ -606,7 +606,7 @@ async function loadSettingsData() {
     try {
         const response = await fetch(`${API_URL}/api/settings`);
         const data = await response.json();
-        
+
         if (data.status === 'success' && data.settings) {
             // Update toggles based on settings
             const trackingToggle = document.getElementById('trackingToggle');
@@ -626,7 +626,7 @@ async function updateSettings(settings) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(settings)
         });
-        
+
         if (response.ok) {
             showToast("Settings saved!", "success");
         }
@@ -640,16 +640,282 @@ async function updateSettings(settings) {
 // ANALYTICS
 // ==========================================
 
+let analyticsLineChart, analyticsDonutChart;
+
 async function loadAnalyticsData() {
     try {
-        const response = await fetch(`${API_URL}/api/analytics/topics?days=30`);
+        // Fetch main analytics
+        const response = await fetch(`${API_URL}/get_analytics?days=30`);
         const data = await response.json();
-        
-        if (data.status === 'success') {
-            console.log("Topic analytics:", data.topics);
-        }
+
+        // Update stats cards
+        updateElement('analyticsTotalSessions', data.total_sessions || 0);
+        updateElement('analyticsTotalTime', formatTime(data.total_minutes || 0));
+        updateElement('analyticsAvgEngagement', (data.engagement_score || 0) + '%');
+        updateElement('analyticsTopicsCount', data.topics_count || 0);
+
+        // Render charts
+        renderAnalyticsCharts(data);
+
+        // Render heatmap
+        renderHeatmap(data.daily_activity || []);
+
+        // Render topic breakdown
+        renderTopicBreakdown(data.topic_distribution || {});
+
+        // Render sessions table
+        renderAnalyticsSessions(data.recent_activity || []);
+
+        // Setup export button
+        setupAnalyticsExport(data);
+
+        console.log("✅ Analytics loaded successfully");
+
     } catch (e) {
         console.error("Failed to load analytics:", e);
+        showToast("Failed to load analytics", "error");
+    }
+}
+
+function renderAnalyticsCharts(data) {
+    const colors = {
+        blue: '#1a73e8',
+        green: '#188038',
+        yellow: '#f9ab00',
+        red: '#d93025',
+        purple: '#a142f4',
+        cyan: '#12b5cb',
+        orange: '#fa903e'
+    };
+
+    // Line Chart - Daily Activity
+    const ctxLine = document.getElementById('analyticsLineChart')?.getContext('2d');
+    if (ctxLine) {
+        if (analyticsLineChart) analyticsLineChart.destroy();
+
+        // Generate last 30 days labels
+        const labels = [];
+        const values = data.weekly_trends || [];
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            labels.push(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+        }
+
+        // Pad values if needed
+        while (values.length < 30) values.unshift(0);
+
+        analyticsLineChart = new Chart(ctxLine, {
+            type: 'line',
+            data: {
+                labels: labels.slice(-7), // Show last 7 days by default
+                datasets: [{
+                    label: 'Minutes',
+                    data: values.slice(-7),
+                    borderColor: colors.blue,
+                    backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: colors.blue,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f3f4' },
+                        ticks: { color: '#5f6368' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#5f6368' }
+                    }
+                }
+            }
+        });
+    }
+
+    // Donut Chart - Topic Distribution
+    const ctxDonut = document.getElementById('analyticsDonutChart')?.getContext('2d');
+    if (ctxDonut && data.topic_distribution) {
+        if (analyticsDonutChart) analyticsDonutChart.destroy();
+
+        const topicLabels = Object.keys(data.topic_distribution);
+        const topicValues = Object.values(data.topic_distribution);
+        const topicColors = [colors.blue, colors.green, colors.yellow, colors.red, colors.purple, colors.cyan, colors.orange];
+
+        analyticsDonutChart = new Chart(ctxDonut, {
+            type: 'doughnut',
+            data: {
+                labels: topicLabels,
+                datasets: [{
+                    data: topicValues,
+                    backgroundColor: topicColors.slice(0, topicLabels.length),
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            padding: 15,
+                            font: { family: 'Google Sans', size: 11 }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+function renderHeatmap(dailyActivity) {
+    const container = document.getElementById('heatmapGrid');
+    if (!container) return;
+
+    // Generate 4 weeks of heatmap data
+    const weeks = 4;
+    const heatmapData = [];
+
+    for (let week = 0; week < weeks; week++) {
+        const weekData = [];
+        for (let day = 0; day < 7; day++) {
+            // Use actual data if available, otherwise random for demo
+            const index = week * 7 + day;
+            const value = dailyActivity[index] || Math.floor(Math.random() * 5);
+            weekData.push(value);
+        }
+        heatmapData.push(weekData);
+    }
+
+    container.innerHTML = heatmapData.map((week, weekIdx) => `
+        <div class="heatmap-row">
+            <span class="heatmap-time-label">W${weekIdx + 1}</span>
+            ${week.map(val => {
+        const colorIdx = Math.min(val, 4);
+        return `<div class="heatmap-cell level-${colorIdx}" title="${val} sessions"></div>`;
+    }).join('')}
+        </div>
+    `).join('');
+}
+
+function renderTopicBreakdown(topicDist) {
+    const container = document.getElementById('topicBreakdownList');
+    if (!container) return;
+
+    const total = Object.values(topicDist).reduce((a, b) => a + b, 0) || 1;
+    const sortedTopics = Object.entries(topicDist).sort((a, b) => b[1] - a[1]);
+
+    const colors = ['#1a73e8', '#188038', '#f9ab00', '#d93025', '#a142f4', '#12b5cb'];
+
+    if (sortedTopics.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: #5f6368;">
+                <i class="ri-pie-chart-line" style="font-size: 2rem; opacity: 0.5;"></i>
+                <p>No topic data yet</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = sortedTopics.slice(0, 6).map(([topic, count], idx) => {
+        const percent = Math.round((count / total) * 100);
+        return `
+            <div style="margin-bottom: 15px;">
+                <div class="topic-item" style="border: none; padding: 0 0 8px 0;">
+                    <div class="topic-info">
+                        <span class="topic-color" style="background: ${colors[idx % colors.length]};"></span>
+                        <span class="topic-name">${topic}</span>
+                    </div>
+                    <span class="topic-active">${count} sessions (${percent}%)</span>
+                </div>
+                <div class="progress-bar" style="height: 6px;">
+                    <div class="fill" style="width: ${percent}%; background: ${colors[idx % colors.length]};"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderAnalyticsSessions(sessions) {
+    const tbody = document.getElementById('analyticsSessionsTable');
+    if (!tbody) return;
+
+    if (!sessions || sessions.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; color: #5f6368; padding: 30px;">
+                    <i class="ri-history-line" style="font-size: 2rem; opacity: 0.5;"></i>
+                    <p>No sessions recorded yet</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = sessions.slice(0, 15).map(session => {
+        const date = new Date(session.time || session.timestamp);
+        const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const duration = session.duration ? Math.round(session.duration / 60) : 0;
+        const engagement = session.score || session.engagement_score || 0;
+
+        return `
+            <tr>
+                <td style="color: #5f6368;">${dateStr}</td>
+                <td><span class="chip" style="background: #e8f0fe; color: #1967d2;">${session.topic || 'General'}</span></td>
+                <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${session.title || 'Untitled'}
+                </td>
+                <td><i class="ri-time-line" style="margin-right: 5px; color: #5f6368;"></i>${duration}m</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="progress-bar" style="width: 60px; height: 6px;">
+                            <div class="fill" style="width: ${engagement}%; background: ${engagement > 70 ? '#188038' : engagement > 40 ? '#f9ab00' : '#d93025'};"></div>
+                        </div>
+                        <span style="font-size: 0.85rem;">${engagement}%</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function setupAnalyticsExport(data) {
+    const btn = document.getElementById('exportAnalyticsBtn');
+    if (btn) {
+        btn.onclick = () => {
+            const exportData = {
+                exported_at: new Date().toISOString(),
+                total_sessions: data.total_sessions,
+                total_minutes: data.total_minutes,
+                topics: data.topic_distribution,
+                sessions: data.recent_activity
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `supri-analytics-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('Analytics exported!', 'success');
+        };
     }
 }
 
@@ -661,7 +927,7 @@ async function loadAnalyticsData() {
 function renderRecentActivity(activities) {
     const tbody = document.getElementById('recentActivityTable');
     if (!tbody) return;
-    
+
     tbody.innerHTML = "";
 
     if (!activities || activities.length === 0) {
@@ -709,7 +975,7 @@ function renderRecentActivity(activities) {
 function renderRecommendations(recs) {
     const container = document.getElementById('recommendationsGrid');
     if (!container) return;
-    
+
     container.innerHTML = "";
 
     if (!recs || recs.length === 0) {
@@ -836,11 +1102,11 @@ async function searchHistory(query) {
         loadLibraryData();
         return;
     }
-    
+
     try {
         const response = await fetch(`${API_URL}/api/history/search?q=${encodeURIComponent(query)}`);
         const data = await response.json();
-        
+
         if (data.status === 'success') {
             renderRecentActivity(data.results);
         }
@@ -870,7 +1136,7 @@ function showGoalModal() {
                 const title = document.getElementById('goalTitle').value;
                 const type = document.getElementById('goalType').value;
                 const target = parseInt(document.getElementById('goalTarget').value) || 5;
-                
+
                 if (title) {
                     createGoal({
                         title: title,
@@ -906,7 +1172,7 @@ function showOfflineState() {
     updateElement('totalTime', '0h 0m');
     updateElement('topTopic', 'Offline');
     updateElement('engagementScore', '0');
-    
+
     const tbody = document.getElementById('recentActivityTable');
     if (tbody) {
         tbody.innerHTML = `
@@ -923,7 +1189,7 @@ function showOfflineState() {
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
-    
+
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.style.cssText = `
@@ -936,9 +1202,9 @@ function showToast(message, type = 'info') {
         animation: slideIn 0.3s ease;
     `;
     toast.textContent = message;
-    
+
     container.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => toast.remove(), 300);

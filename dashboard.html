@@ -192,36 +192,125 @@
                     </div>
                 </div>
 
-                <!-- VIEW: ANALYTICS (NEW) -->
+                <!-- VIEW: ANALYTICS -->
                 <div id="view-analytics" class="page-view" style="display: none;">
-                    <div class="dashboard-grid">
+                    <!-- Analytics Stats Row -->
+                    <div class="dashboard-grid" style="grid-template-columns: repeat(4, 1fr);">
                         <div class="google-card">
-                            <div class="card-header"><span class="card-title">Deep Dive</span></div>
-                            <div
-                                style="height: 250px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #5f6368;">
-                                <div style="text-align: center;">
-                                    <i class="ri-bar-chart-2-fill" style="font-size: 2rem; opacity: 0.5;"></i>
-                                    <p>Advanced detailed charts coming soon.</p>
+                            <div class="card-header">
+                                <span class="card-title">Total Sessions</span>
+                                <i class="ri-stack-line" style="color: #1a73e8;"></i>
+                            </div>
+                            <div class="stat-value" id="analyticsTotalSessions">0</div>
+                            <div class="stat-trend positive"><i class="ri-arrow-up-line"></i> This month</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Total Time</span>
+                                <i class="ri-time-line" style="color: #188038;"></i>
+                            </div>
+                            <div class="stat-value" id="analyticsTotalTime">0h</div>
+                            <div class="stat-trend positive"><i class="ri-arrow-up-line"></i> Learning hours</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Avg. Engagement</span>
+                                <i class="ri-focus-3-line" style="color: #f9ab00;"></i>
+                            </div>
+                            <div class="stat-value" id="analyticsAvgEngagement">0%</div>
+                            <div class="stat-trend">Focus score</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Topics Explored</span>
+                                <i class="ri-compass-3-line" style="color: #a142f4;"></i>
+                            </div>
+                            <div class="stat-value" id="analyticsTopicsCount">0</div>
+                            <div class="stat-trend">Categories</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Daily Activity (Last 30 Days)</span>
+                                <div class="actions">
+                                    <button class="chip active" data-range="30">30 Days</button>
+                                    <button class="chip" data-range="7">7 Days</button>
+                                </div>
+                            </div>
+                            <div class="chart-container" style="height: 280px;">
+                                <canvas id="analyticsLineChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Topic Distribution</span>
+                            </div>
+                            <div class="chart-container" style="height: 280px;">
+                                <canvas id="analyticsDonutChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Stats -->
+                    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Productivity Heatmap</span>
+                            </div>
+                            <div id="heatmapContainer" class="heatmap-container">
+                                <div class="heatmap-header">
+                                    <span class="heatmap-time-label"></span>
+                                    <span class="heatmap-day-label">Mon</span>
+                                    <span class="heatmap-day-label">Tue</span>
+                                    <span class="heatmap-day-label">Wed</span>
+                                    <span class="heatmap-day-label">Thu</span>
+                                    <span class="heatmap-day-label">Fri</span>
+                                    <span class="heatmap-day-label">Sat</span>
+                                    <span class="heatmap-day-label">Sun</span>
+                                </div>
+                                <div id="heatmapGrid" class="heatmap-grid"></div>
+                                <div class="heatmap-legend">
+                                    <span class="heatmap-legend-label">Less</span>
+                                    <div class="heatmap-legend-item level-0"></div>
+                                    <div class="heatmap-legend-item level-1"></div>
+                                    <div class="heatmap-legend-item level-2"></div>
+                                    <div class="heatmap-legend-item level-3"></div>
+                                    <div class="heatmap-legend-item level-4"></div>
+                                    <span class="heatmap-legend-label">More</span>
                                 </div>
                             </div>
                         </div>
                         <div class="google-card">
-                            <div class="card-header"><span class="card-title">Productivity Heatmap</span></div>
-                            <div
-                                style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px;">
-                                <!-- Mock Heatmap -->
-                                <div style="height: 20px; background: #e8f0fe; border-radius: 2px;"></div>
-                                <div style="height: 20px; background: #c2e7ff; border-radius: 2px;"></div>
-                                <div style="height: 20px; background: #1a73e8; border-radius: 2px;"></div>
-                                <div style="height: 20px; background: #e8f0fe; border-radius: 2px;"></div>
-                                <div style="height: 20px; background: #1a73e8; border-radius: 2px;"></div>
-                                <div style="height: 20px; background: #c2e7ff; border-radius: 2px;"></div>
-                                <div style="height: 20px; background: #e8f0fe; border-radius: 2px;"></div>
+                            <div class="card-header">
+                                <span class="card-title">Top Topics Breakdown</span>
                             </div>
-                            <div
-                                style="display:flex; justify-content: space-between; font-size: 0.75rem; color: #5f6368; margin-top: 5px;">
-                                <span>Mon</span><span>Sun</span>
-                            </div>
+                            <div id="topicBreakdownList" style="margin-top: 15px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Sessions Table -->
+                    <div class="google-card full-width">
+                        <div class="card-header">
+                            <span class="card-title">Recent Learning Sessions</span>
+                            <button class="text-btn" id="exportAnalyticsBtn"><i class="ri-download-line"></i>
+                                Export</button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Topic</th>
+                                        <th>Title</th>
+                                        <th>Duration</th>
+                                        <th>Engagement</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analyticsSessionsTable"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

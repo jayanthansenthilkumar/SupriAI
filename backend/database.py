@@ -198,6 +198,111 @@ def init_db():
     ''')
     
     # ==========================================
+    # Tasks / Todos (Productivity)
+    # ==========================================
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            title TEXT NOT NULL,
+            description TEXT,
+            priority TEXT DEFAULT 'medium',
+            status TEXT DEFAULT 'pending',
+            due_date TEXT,
+            due_time TEXT,
+            topic TEXT,
+            estimated_minutes INTEGER DEFAULT 30,
+            actual_minutes INTEGER DEFAULT 0,
+            tags TEXT DEFAULT '[]',
+            is_recurring INTEGER DEFAULT 0,
+            recurrence_rule TEXT,
+            completed_at TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+    
+    # ==========================================
+    # Pomodoro Sessions (Focus Timer)
+    # ==========================================
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pomodoro_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            task_id INTEGER,
+            session_type TEXT DEFAULT 'focus',
+            duration_minutes INTEGER DEFAULT 25,
+            actual_duration INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'completed',
+            topic TEXT,
+            notes TEXT,
+            started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            ended_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (task_id) REFERENCES tasks(id)
+        )
+    ''')
+    
+    # ==========================================
+    # Focus Mode Settings
+    # ==========================================
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS focus_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1 UNIQUE,
+            focus_duration INTEGER DEFAULT 25,
+            short_break INTEGER DEFAULT 5,
+            long_break INTEGER DEFAULT 15,
+            sessions_before_long_break INTEGER DEFAULT 4,
+            auto_start_breaks INTEGER DEFAULT 0,
+            auto_start_focus INTEGER DEFAULT 0,
+            sound_enabled INTEGER DEFAULT 1,
+            notification_enabled INTEGER DEFAULT 1,
+            blocked_sites_during_focus TEXT DEFAULT '[]',
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+    
+    # ==========================================
+    # Reminders
+    # ==========================================
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS reminders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            title TEXT NOT NULL,
+            message TEXT,
+            reminder_time TEXT NOT NULL,
+            reminder_type TEXT DEFAULT 'once',
+            recurrence_rule TEXT,
+            is_active INTEGER DEFAULT 1,
+            task_id INTEGER,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (task_id) REFERENCES tasks(id)
+        )
+    ''')
+    
+    # ==========================================
+    # Daily Focus Stats
+    # ==========================================
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS focus_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            date TEXT NOT NULL,
+            total_focus_minutes INTEGER DEFAULT 0,
+            total_break_minutes INTEGER DEFAULT 0,
+            completed_pomodoros INTEGER DEFAULT 0,
+            completed_tasks INTEGER DEFAULT 0,
+            focus_score INTEGER DEFAULT 0,
+            UNIQUE(user_id, date),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+    
+    # ==========================================
     # Create Indexes for Performance
     # ==========================================
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON learning_logs(timestamp)')
@@ -942,6 +1047,580 @@ def get_total_stats(user_id: int = 1) -> Dict:
     conn.close()
     
     return dict(stats) if stats else {}
+
+
+# ==========================================
+# TASKS / TODOS OPERATIONS
+# ==========================================
+
+def create_task(data: Dict) -> int:
+    """Create a new task"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    tags = json.dumps(data.get('tags', []))
+    
+    cursor.execute('''
+        INSERT INTO tasks (title, description, priority, status, due_date, due_time, 
+                          topic, estimated_minutes, tags, is_recurring, recurrence_rule)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data.get('title', 'Untitled Task'),
+        data.get('description', ''),
+        data.get('priority', 'medium'),
+        data.get('status', 'pending'),
+        data.get('due_date'),
+        data.get('due_time'),
+        data.get('topic'),
+        data.get('estimated_minutes', 30),
+        tags,
+        data.get('is_recurring', 0),
+        data.get('recurrence_rule')
+    ))
+    
+    task_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return task_id
+
+
+def get_tasks(user_id: int = 1, status: str = None, include_completed: bool = False) -> List[Dict]:
+    """Get all tasks with optional filtering"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if status:
+        cursor.execute('''
+            SELECT * FROM tasks WHERE user_id = ? AND status = ?
+            ORDER BY 
+                CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+                due_date ASC NULLS LAST,
+                created_at DESC
+        ''', (user_id, status))
+    elif include_completed:
+        cursor.execute('''
+            SELECT * FROM tasks WHERE user_id = ?
+            ORDER BY 
+                CASE status WHEN 'pending' THEN 1 WHEN 'in_progress' THEN 2 ELSE 3 END,
+                CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+                due_date ASC NULLS LAST,
+                created_at DESC
+        ''', (user_id,))
+    else:
+        cursor.execute('''
+            SELECT * FROM tasks WHERE user_id = ? AND status != 'completed'
+            ORDER BY 
+                CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+                due_date ASC NULLS LAST,
+                created_at DESC
+        ''', (user_id,))
+    
+    tasks = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    for task in tasks:
+        task['tags'] = json.loads(task.get('tags', '[]'))
+    
+    return tasks
+
+
+def get_task(task_id: int) -> Optional[Dict]:
+    """Get a single task by ID"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM tasks WHERE id = ?', (task_id,))
+    task = cursor.fetchone()
+    conn.close()
+    
+    if task:
+        result = dict(task)
+        result['tags'] = json.loads(result.get('tags', '[]'))
+        return result
+    return None
+
+
+def update_task(task_id: int, data: Dict) -> bool:
+    """Update a task"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    tags = json.dumps(data.get('tags', []))
+    
+    cursor.execute('''
+        UPDATE tasks SET
+            title = COALESCE(?, title),
+            description = COALESCE(?, description),
+            priority = COALESCE(?, priority),
+            status = COALESCE(?, status),
+            due_date = COALESCE(?, due_date),
+            due_time = COALESCE(?, due_time),
+            topic = COALESCE(?, topic),
+            estimated_minutes = COALESCE(?, estimated_minutes),
+            actual_minutes = COALESCE(?, actual_minutes),
+            tags = ?,
+            completed_at = CASE WHEN ? = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (
+        data.get('title'),
+        data.get('description'),
+        data.get('priority'),
+        data.get('status'),
+        data.get('due_date'),
+        data.get('due_time'),
+        data.get('topic'),
+        data.get('estimated_minutes'),
+        data.get('actual_minutes'),
+        tags,
+        data.get('status'),
+        task_id
+    ))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+
+def delete_task(task_id: int) -> bool:
+    """Delete a task"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def complete_task(task_id: int) -> bool:
+    """Mark a task as completed"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE tasks SET 
+            status = 'completed',
+            completed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (task_id,))
+    conn.commit()
+    conn.close()
+    
+    # Update daily focus stats
+    update_focus_stats_tasks()
+    return True
+
+
+def get_tasks_due_today(user_id: int = 1) -> List[Dict]:
+    """Get tasks due today"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        SELECT * FROM tasks 
+        WHERE user_id = ? AND due_date = ? AND status != 'completed'
+        ORDER BY due_time ASC NULLS LAST, priority DESC
+    ''', (user_id, today))
+    
+    tasks = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    for task in tasks:
+        task['tags'] = json.loads(task.get('tags', '[]'))
+    
+    return tasks
+
+
+# ==========================================
+# POMODORO SESSIONS OPERATIONS
+# ==========================================
+
+def create_pomodoro_session(data: Dict) -> int:
+    """Start a new pomodoro session"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        INSERT INTO pomodoro_sessions (task_id, session_type, duration_minutes, topic, notes, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (
+        data.get('task_id'),
+        data.get('session_type', 'focus'),
+        data.get('duration_minutes', 25),
+        data.get('topic'),
+        data.get('notes'),
+        'active'
+    ))
+    
+    session_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return session_id
+
+
+def complete_pomodoro_session(session_id: int, actual_duration: int) -> bool:
+    """Complete a pomodoro session"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE pomodoro_sessions SET
+            status = 'completed',
+            actual_duration = ?,
+            ended_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (actual_duration, session_id))
+    
+    conn.commit()
+    conn.close()
+    
+    # Update daily focus stats
+    update_focus_stats_pomodoro(actual_duration)
+    return True
+
+
+def cancel_pomodoro_session(session_id: int, actual_duration: int = 0) -> bool:
+    """Cancel/interrupt a pomodoro session"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE pomodoro_sessions SET
+            status = 'cancelled',
+            actual_duration = ?,
+            ended_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (actual_duration, session_id))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_pomodoro_sessions(user_id: int = 1, days: int = 7) -> List[Dict]:
+    """Get pomodoro sessions for last N days"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+    
+    cursor.execute('''
+        SELECT * FROM pomodoro_sessions 
+        WHERE user_id = ? AND started_at >= ?
+        ORDER BY started_at DESC
+    ''', (user_id, cutoff_date))
+    
+    sessions = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return sessions
+
+
+def get_pomodoro_stats(user_id: int = 1, days: int = 7) -> Dict:
+    """Get pomodoro statistics"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+    
+    cursor.execute('''
+        SELECT 
+            COUNT(*) as total_sessions,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_sessions,
+            SUM(CASE WHEN status = 'completed' THEN actual_duration ELSE 0 END) as total_focus_minutes,
+            AVG(CASE WHEN status = 'completed' THEN actual_duration ELSE NULL END) as avg_session_duration
+        FROM pomodoro_sessions 
+        WHERE user_id = ? AND started_at >= ? AND session_type = 'focus'
+    ''', (user_id, cutoff_date))
+    
+    stats = cursor.fetchone()
+    conn.close()
+    
+    return dict(stats) if stats else {}
+
+
+# ==========================================
+# FOCUS SETTINGS OPERATIONS
+# ==========================================
+
+def get_focus_settings(user_id: int = 1) -> Dict:
+    """Get focus/pomodoro settings"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM focus_settings WHERE user_id = ?', (user_id,))
+    settings = cursor.fetchone()
+    
+    if not settings:
+        # Create default settings
+        cursor.execute('''
+            INSERT INTO focus_settings (user_id) VALUES (?)
+        ''', (user_id,))
+        conn.commit()
+        cursor.execute('SELECT * FROM focus_settings WHERE user_id = ?', (user_id,))
+        settings = cursor.fetchone()
+    
+    conn.close()
+    
+    if settings:
+        result = dict(settings)
+        result['blocked_sites_during_focus'] = json.loads(result.get('blocked_sites_during_focus', '[]'))
+        return result
+    return {}
+
+
+def update_focus_settings(user_id: int, data: Dict) -> bool:
+    """Update focus/pomodoro settings"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    blocked_sites = json.dumps(data.get('blocked_sites_during_focus', []))
+    
+    cursor.execute('''
+        UPDATE focus_settings SET
+            focus_duration = COALESCE(?, focus_duration),
+            short_break = COALESCE(?, short_break),
+            long_break = COALESCE(?, long_break),
+            sessions_before_long_break = COALESCE(?, sessions_before_long_break),
+            auto_start_breaks = COALESCE(?, auto_start_breaks),
+            auto_start_focus = COALESCE(?, auto_start_focus),
+            sound_enabled = COALESCE(?, sound_enabled),
+            notification_enabled = COALESCE(?, notification_enabled),
+            blocked_sites_during_focus = ?
+        WHERE user_id = ?
+    ''', (
+        data.get('focus_duration'),
+        data.get('short_break'),
+        data.get('long_break'),
+        data.get('sessions_before_long_break'),
+        data.get('auto_start_breaks'),
+        data.get('auto_start_focus'),
+        data.get('sound_enabled'),
+        data.get('notification_enabled'),
+        blocked_sites,
+        user_id
+    ))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+
+# ==========================================
+# REMINDERS OPERATIONS
+# ==========================================
+
+def create_reminder(data: Dict) -> int:
+    """Create a new reminder"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        INSERT INTO reminders (title, message, reminder_time, reminder_type, recurrence_rule, task_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (
+        data.get('title', 'Reminder'),
+        data.get('message'),
+        data.get('reminder_time'),
+        data.get('reminder_type', 'once'),
+        data.get('recurrence_rule'),
+        data.get('task_id')
+    ))
+    
+    reminder_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return reminder_id
+
+
+def get_reminders(user_id: int = 1, active_only: bool = True) -> List[Dict]:
+    """Get all reminders"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if active_only:
+        cursor.execute('''
+            SELECT * FROM reminders WHERE user_id = ? AND is_active = 1
+            ORDER BY reminder_time ASC
+        ''', (user_id,))
+    else:
+        cursor.execute('''
+            SELECT * FROM reminders WHERE user_id = ?
+            ORDER BY reminder_time ASC
+        ''', (user_id,))
+    
+    reminders = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return reminders
+
+
+def get_upcoming_reminders(user_id: int = 1, hours: int = 24) -> List[Dict]:
+    """Get reminders due in next N hours"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    now = datetime.now().isoformat()
+    cutoff = (datetime.now() + timedelta(hours=hours)).isoformat()
+    
+    cursor.execute('''
+        SELECT * FROM reminders 
+        WHERE user_id = ? AND is_active = 1 AND reminder_time >= ? AND reminder_time <= ?
+        ORDER BY reminder_time ASC
+    ''', (user_id, now, cutoff))
+    
+    reminders = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return reminders
+
+
+def update_reminder(reminder_id: int, data: Dict) -> bool:
+    """Update a reminder"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE reminders SET
+            title = COALESCE(?, title),
+            message = COALESCE(?, message),
+            reminder_time = COALESCE(?, reminder_time),
+            reminder_type = COALESCE(?, reminder_type),
+            recurrence_rule = COALESCE(?, recurrence_rule),
+            is_active = COALESCE(?, is_active)
+        WHERE id = ?
+    ''', (
+        data.get('title'),
+        data.get('message'),
+        data.get('reminder_time'),
+        data.get('reminder_type'),
+        data.get('recurrence_rule'),
+        data.get('is_active'),
+        reminder_id
+    ))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+
+def delete_reminder(reminder_id: int) -> bool:
+    """Delete a reminder"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM reminders WHERE id = ?', (reminder_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def deactivate_reminder(reminder_id: int) -> bool:
+    """Deactivate a reminder (mark as triggered)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE reminders SET is_active = 0 WHERE id = ?', (reminder_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+# ==========================================
+# FOCUS STATS OPERATIONS
+# ==========================================
+
+def update_focus_stats_pomodoro(minutes: int, user_id: int = 1):
+    """Update daily focus stats after a pomodoro session"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        INSERT INTO focus_stats (user_id, date, total_focus_minutes, completed_pomodoros)
+        VALUES (?, ?, ?, 1)
+        ON CONFLICT(user_id, date) DO UPDATE SET
+            total_focus_minutes = total_focus_minutes + ?,
+            completed_pomodoros = completed_pomodoros + 1
+    ''', (user_id, today, minutes, minutes))
+    
+    conn.commit()
+    conn.close()
+
+
+def update_focus_stats_tasks(user_id: int = 1):
+    """Update daily focus stats after completing a task"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        INSERT INTO focus_stats (user_id, date, completed_tasks)
+        VALUES (?, ?, 1)
+        ON CONFLICT(user_id, date) DO UPDATE SET
+            completed_tasks = completed_tasks + 1
+    ''', (user_id, today))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_focus_stats(user_id: int = 1, days: int = 7) -> List[Dict]:
+    """Get daily focus stats for last N days"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cutoff_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        SELECT * FROM focus_stats 
+        WHERE user_id = ? AND date >= ?
+        ORDER BY date DESC
+    ''', (user_id, cutoff_date))
+    
+    stats = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return stats
+
+
+def get_productivity_summary(user_id: int = 1) -> Dict:
+    """Get productivity summary for dashboard"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    # Today's stats
+    cursor.execute('''
+        SELECT * FROM focus_stats WHERE user_id = ? AND date = ?
+    ''', (user_id, today))
+    today_stats = cursor.fetchone()
+    
+    # Pending tasks count
+    cursor.execute('''
+        SELECT COUNT(*) as count FROM tasks WHERE user_id = ? AND status != 'completed'
+    ''', (user_id,))
+    pending_tasks = cursor.fetchone()['count']
+    
+    # Tasks due today
+    cursor.execute('''
+        SELECT COUNT(*) as count FROM tasks 
+        WHERE user_id = ? AND due_date = ? AND status != 'completed'
+    ''', (user_id, today))
+    due_today = cursor.fetchone()['count']
+    
+    # This week's total focus time
+    week_start = (datetime.now() - timedelta(days=datetime.now().weekday())).strftime('%Y-%m-%d')
+    cursor.execute('''
+        SELECT SUM(total_focus_minutes) as total FROM focus_stats 
+        WHERE user_id = ? AND date >= ?
+    ''', (user_id, week_start))
+    week_focus = cursor.fetchone()['total'] or 0
+    
+    conn.close()
+    
+    return {
+        'today_focus_minutes': today_stats['total_focus_minutes'] if today_stats else 0,
+        'today_pomodoros': today_stats['completed_pomodoros'] if today_stats else 0,
+        'today_completed_tasks': today_stats['completed_tasks'] if today_stats else 0,
+        'pending_tasks': pending_tasks,
+        'due_today': due_today,
+        'week_focus_minutes': week_focus
+    }
 
 
 # Initialize database when module is imported

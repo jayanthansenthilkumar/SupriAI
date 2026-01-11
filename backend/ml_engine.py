@@ -278,6 +278,9 @@ def aggregate_analytics(logs: List[Dict]) -> Dict:
                 pass
     most_active_day = day_counts.most_common(1)[0][0] if day_counts else "N/A"
     
+    # Daily activity for heatmap (last 28 days - 4 weeks)
+    daily_activity = calculate_daily_activity(logs, 28)
+    
     result = {
         "total_minutes": total_minutes,
         "total_sessions": len(logs),
@@ -290,7 +293,8 @@ def aggregate_analytics(logs: List[Dict]) -> Dict:
         "daily_average": daily_average,
         "most_active_day": most_active_day,
         "topic_icon": get_topic_icon(top_topic),
-        "topic_color": get_topic_color(top_topic)
+        "topic_color": get_topic_color(top_topic),
+        "daily_activity": daily_activity
     }
     
     # Update cache
@@ -321,6 +325,29 @@ def calculate_weekly_trends(logs: List[Dict]) -> List[int]:
             pass
     
     return [round(weekly_data[i]) for i in range(7)]
+
+
+def calculate_daily_activity(logs: List[Dict], days: int = 28) -> List[int]:
+    """Calculate session counts per day for heatmap (last N days)"""
+    today = datetime.now().date()
+    daily_counts = {i: 0 for i in range(days)}
+    
+    for log in logs:
+        timestamp = log.get('timestamp', '')
+        if not timestamp:
+            continue
+        
+        try:
+            log_date = datetime.fromisoformat(timestamp.replace('Z', '+00:00')).date()
+            days_ago = (today - log_date).days
+            
+            if 0 <= days_ago < days:
+                day_index = days - 1 - days_ago
+                daily_counts[day_index] += 1
+        except:
+            pass
+    
+    return [daily_counts[i] for i in range(days)]
 
 
 def get_topic_breakdown(logs: List[Dict]) -> List[Dict]:

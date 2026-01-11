@@ -750,3 +750,206 @@ input:checked+.slider:before {
 .sidebar:hover .sidebar-scroll::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.1);
 }
+
+/* --- Analytics & Dashboard Extras --- */
+
+/* Card Actions */
+.card-header .actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Table Wrapper */
+.table-wrapper {
+    overflow-x: auto;
+    width: 100%;
+    margin-top: 16px;
+    border-radius: 4px; /* Slight radius */
+}
+
+/* Ensure data-table styles apply broadly if needed, or specific fixes */
+.google-card table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.google-card table th,
+.google-card table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.google-card table th {
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.google-card table td {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.google-card table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Heatmap Styles */
+.heatmap-container {
+    margin-top: 16px;
+    padding: 8px 0;
+}
+
+.heatmap-header {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding-left: 35px; /* Align with grid cells (label width + gap) */
+}
+
+.heatmap-day-label {
+    flex: 1;
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.heatmap-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.heatmap-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.heatmap-time-label {
+    width: 30px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-align: right;
+    margin-right: 5px;
+}
+
+.heatmap-cell {
+    flex: 1;
+    height: 24px;
+    background-color: #ebedf0;
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.15);
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Heatmap Levels - Github Style Greens */
+.heatmap-cell.level-0 { background-color: #ebedf0; }
+.heatmap-cell.level-1 { background-color: #9be9a8; }
+.heatmap-cell.level-2 { background-color: #40c463; }
+.heatmap-cell.level-3 { background-color: #30a14e; }
+.heatmap-cell.level-4 { background-color: #216e39; }
+
+/* Dark Mode Adjustments for Heatmap (Preliminary) */
+@media (prefers-color-scheme: dark) {
+    .heatmap-cell.level-0 { background-color: #161b22; }
+    .heatmap-cell.level-1 { background-color: #0e4429; }
+    .heatmap-cell.level-2 { background-color: #006d32; }
+    .heatmap-cell.level-3 { background-color: #26a641; }
+    .heatmap-cell.level-4 { background-color: #39d353; }
+}
+
+.heatmap-legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    justify-content: flex-end;
+}
+
+.heatmap-legend-item {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+.heatmap-legend-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Buttons and Interactions */
+.primary-text {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.primary-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.primary-btn:hover {
+    background: #1765cc;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3);
+}
+
+/* Topic Breakdown in Analytics */
+.topic-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.topic-item:last-child {
+    border-bottom: none;
+}
+
+.topic-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.topic-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.topic-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.topic-active {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
