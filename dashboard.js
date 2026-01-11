@@ -1,25 +1,78 @@
-// Navigation Logic
-document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-        // Active State
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        item.classList.add('active');
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Navigation Logic
+    setupNavigation();
 
-        // View Switching
-        document.querySelectorAll('.page-view').forEach(view => view.style.display = 'none');
-        const targetId = `view-${item.dataset.target}`;
-        document.getElementById(targetId).style.display = 'block';
+    // 2. Fetch User Identity
+    fetchUserIdentity();
 
-        // Update Title
-        const titleMap = {
-            'dashboard': 'Dashboard',
-            'library': 'My Library',
-            'goals': 'Goals & Streak',
-            'settings': 'Settings'
-        };
-        document.getElementById('pageTitle').innerText = titleMap[item.dataset.target];
-    });
+    // 3. Init Charts & Load Data (with checks)
+    if (typeof Chart !== 'undefined') {
+        initCharts();
+    } else {
+        console.warn("Chart.js not loaded.");
+    }
+    loadData();
 });
+
+// Setup Navigation (extracted for cleaner init)
+function setupNavigation() {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+
+            document.querySelectorAll('.page-view').forEach(view => view.style.display = 'none');
+            const targetId = `view-${item.dataset.target}`;
+            document.getElementById(targetId).style.display = 'block';
+
+            const titleMap = {
+                'dashboard': 'Dashboard',
+                'analytics': 'Analytics',
+                'library': 'My Library',
+                'goals': 'Goals & Streak',
+                'community': 'Community',
+                'settings': 'Settings'
+            };
+            document.getElementById('pageTitle').innerText = titleMap[item.dataset.target];
+        });
+    });
+}
+
+// --- GOOGLE USER IDENTITY ---
+function fetchUserIdentity() {
+    // Check if running in extension context
+    if (!chrome || !chrome.identity) {
+        console.warn("chrome.identity API is not available (are you running this as a regular web page?).");
+        return;
+    }
+
+    // Try to get basic profile info from Chrome
+    // This requires 'identity' permission in manifest
+    chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
+        if (chrome.runtime.lastError) {
+            console.warn("Identity Error:", chrome.runtime.lastError);
+            return;
+        }
+
+        if (userInfo && userInfo.email) {
+            // Update Sidebar Profile
+            const nameEl = document.querySelector('.user-info .name');
+            const avatarEl = document.querySelector('.user-profile .avatar');
+            const smAvatarEl = document.querySelector('.avatar-sm');
+
+            // Format Name: "jayanth.s@gmail.com" -> "Jayanth S" (Simple formatting)
+            let displayName = userInfo.email.split('@')[0];
+            displayName = displayName.replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+            if (nameEl) nameEl.textContent = displayName;
+
+            // Initials for avatar
+            const initials = displayName.substring(0, 1).toUpperCase();
+            if (avatarEl) avatarEl.textContent = initials;
+            if (smAvatarEl) smAvatarEl.textContent = initials;
+        }
+    });
+}
 
 const API_URL = "http://localhost:5000";
 
@@ -133,6 +186,11 @@ async function loadData() {
 
     } catch (e) {
         console.error("Failed to load data", e);
+        // Fallback UI for error case
+        document.getElementById('totalTime').innerText = "0h 0m";
+        document.getElementById('topTopic').innerText = "Offline";
+        document.getElementById('engagementScore').innerText = "0";
+        document.getElementById('recentActivityTable').innerHTML = `<tr><td colspan="5" style="text-align:center;color:#d93025;">Server unavailable. Run 'python app.py'</td></tr>`;
     }
 }
 
@@ -146,21 +204,28 @@ function renderRecentActivity(activities) {
     }
 
     activities.forEach(item => {
-        const row = document.createElement('tr');
-        const date = new Date(item.time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        // Safety check for date
+        let dateStr = "Unknown";
+        if (item.time) {
+            const d = new Date(item.time);
+            if (!isNaN(d.getTime())) {
+                dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            }
+        }
 
-        row.innerHTML = `
-            <td><span style="font-weight:500; color: #1967d2;">${item.topic}</span></td>
-            <td style="max-width: 250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.title}</td>
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span style="font-weight:500; color: #1967d2;">${item.topic || 'General'}</span></td>
+            <td style="max-width: 250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.title || 'Untitled'}</td>
             <td>
-                <div style="display: items; align-items: center; gap: 8px;">
-                    <span style="font-size: 0.85rem; font-weight: 500;">${item.score}</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                     <span style="font-size: 0.85rem; font-weight: 500;">${item.score || 0}</span>
                 </div>
             </td>
-            <td style="color: #5f6368;">${date}</td>
+            <td style="color: #5f6368;">${dateStr}</td>
             <td><button class="icon-btn" style="width: 32px; height: 32px;"><i class="ri-more-2-fill"></i></button></td>
         `;
-        tbody.appendChild(row);
+        tbody.appendChild(tr);
     });
 }
 
@@ -206,6 +271,6 @@ document.querySelector('.danger-btn')?.addEventListener('click', () => {
     });
 });
 
-// Init
-initCharts();
-loadData();
+// Init handled by DOMContentLoaded
+// initCharts();
+// loadData();

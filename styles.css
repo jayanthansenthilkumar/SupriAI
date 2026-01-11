@@ -662,3 +662,71 @@ input:checked+.slider:before {
         opacity: 1;
     }
 }
+
+/* Tabs / Chips */
+.tabs-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-top: 10px;
+}
+
+.chip {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: white;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.chip:hover {
+    background: #f8f9fa;
+    border-color: #dadce0;
+}
+
+.chip.active {
+    background: #e8f0fe;
+    color: var(--primary-color);
+    border-color: transparent;
+    font-weight: 600;
+}
+
+/* Goals Styles */
+.goal-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 10px;
+}
+
+.goal-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    align-items: center;
+}
+
+/* Search Bar in Dashboard */
+.toolbar-search {
+    background: #f1f3f4;
+    border-radius: 8px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+
+.toolbar-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.9rem;
+    width: 100%;
+}

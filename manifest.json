@@ -1,15 +1,16 @@
 {
     "manifest_version": 3,
-    "name": "AI-Powered Learning Companion",
+    "name": "SupriAI",
     "version": "1.0",
-    "description": "An intelligent, browser-integrated learning companion tracking behavior and recommending study paths.",
+    "description": "SupriAI: Your Intelligent Learning Companion",
     "permissions": [
         "tabs",
         "storage",
         "webNavigation",
         "alarms",
         "activeTab",
-        "scripting"
+        "scripting",
+        "identity"
     ],
     "host_permissions": [
         "http://localhost:5000/*",
