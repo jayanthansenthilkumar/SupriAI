@@ -1,9 +1,3 @@
-"""
-SupriAI - Advanced ML Engine Module
-Content Classification, NLP Analysis, Deep Learning Patterns & AI Assistant
-Clean, well-structured ML operations with simulated AI capabilities
-"""
-
 import re
 import time
 import math
@@ -12,6 +6,27 @@ import hashlib
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional, Any
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+# Load environment variables
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+gemini_client = None
+
+if GEMINI_API_KEY:
+    try:
+        gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+        print("✨ Gemini API Client Initialized")
+    except Exception as e:
+        print(f"⚠️ Failed to initialize Gemini Client: {e}")
+else:
+    print("⚠️ Gemini API Key not found. Using simulated ML engine.")
 
 # ==========================================
 # TOPIC CLASSIFICATION KEYWORDS
@@ -220,12 +235,21 @@ class NLPProcessor:
 # ==========================================
 
 class DeepLearningEngine:
-    """Simulated deep learning patterns for learning behavior analysis"""
+    """Advanced learning pattern analysis using Gemini AI or Simulated Heuristics"""
     
     @staticmethod
     def analyze_learning_patterns(history: List[Dict]) -> Dict[str, Any]:
-        """Analyze browsing history to identify learning patterns using simulated neural network approach"""
+        """Analyze browsing history to identify learning patterns"""
         
+        # Try Gemini User Analysis first
+        if gemini_client:
+            try:
+                print("🧠 Analyzing patterns with Gemini AI...")
+                return DeepLearningEngine._analyze_with_gemini(history)
+            except Exception as e:
+                print(f"Gemini Analysis Failed: {e}. Falling back to simulation.")
+        
+        # Fallback to simulation
         if not history:
             return {
                 'pattern_type': 'new_learner',
@@ -236,10 +260,10 @@ class DeepLearningEngine:
         # Extract features from history
         features = DeepLearningEngine._extract_features(history)
         
-        # Simulated pattern classification (mimics neural network output)
+        # Simulated pattern classification
         patterns = DeepLearningEngine._classify_patterns(features)
         
-        # Generate insights based on patterns
+        # Generate insights
         insights = DeepLearningEngine._generate_insights(patterns, features)
         
         return {
@@ -249,6 +273,55 @@ class DeepLearningEngine:
             'features': features,
             'insights': insights
         }
+
+    @staticmethod
+    def _analyze_with_gemini(history: List[Dict]) -> Dict[str, Any]:
+        """Use Gemini to analyze learning history"""
+        # Prepare context (limit to last 50 items to avoid token limits)
+        recent_history = history[:50]
+        history_text = "\n".join([f"- {item.get('title', 'Untitled')} ({item.get('visitCount', 1)} visits)" for item in recent_history])
+        
+        prompt = f"""
+        Analyze this user's browsing history and act as an expert educational psychologist.
+        
+        History:
+        {history_text}
+        
+        Task:
+        1. Identify their primary learning interests (Topics).
+        2. Determine their learning style (Deep Diver, Explorer, Consistent, Binge Learner).
+        3. Provide 3 specific, encouraging insights/tips.
+        4. Estimate their skill level for top topics.
+
+        Return ONLY JSON in this format:
+        {{
+            "pattern_type": "one of: deep_learner, explorer, consistent, binge_learner, skill_builder",
+            "confidence": 0.85,
+            "features": {{
+                "primary_topic": "Topic Name",
+                "topic_distribution": {{ "Topic1": 10, "Topic2": 5 }}
+            }},
+            "insights": ["Insight 1", "Insight 2", "Insight 3"]
+        }}
+        """
+        
+        response = gemini_client.models.generate_content(
+            model="gemini-2.5-flash", 
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+        
+        # Clean response
+        text = response.text.strip()
+        # Remove markdown code blocks if present (though response_mime_type should handle it)
+        if text.startswith('```'):
+            text = text.split('\n', 1)[1]
+            if text.endswith('```'):
+                text = text[:-3]
+        
+        return json.loads(text)
     
     @staticmethod
     def _extract_features(history: List[Dict]) -> Dict[str, Any]:
@@ -412,59 +485,33 @@ class DeepLearningEngine:
 # ==========================================
 
 class ChatAssistant:
-    """AI-powered chat assistant for learning guidance"""
+    """AI-powered chat assistant using Gemini or Rule-based fallback"""
     
-    # Knowledge base for common queries
     KNOWLEDGE_BASE = {
         'greeting': [
-            "Hello! I'm SupriAI, your learning assistant. How can I help you today?",
-            "Hi there! Ready to enhance your learning journey. What would you like to know?",
-            "Welcome back! I'm here to help with your learning goals. Ask me anything!"
+            "Hello! I'm SupriAI, your intelligent learning assistant. How can I help you grow today?",
+            "Hi there! I'm ready to help you master new skills. What's on your mind?",
         ],
         'help': [
-            "I can help you with:\n• Learning recommendations based on your history\n• Study tips and techniques\n• Goal setting and tracking\n• Productivity advice\n• Career guidance in tech\nJust ask!",
-        ],
-        'motivation': [
-            "Remember, every expert was once a beginner. Keep pushing forward!",
-            "Small consistent steps lead to big achievements. You're doing great!",
-            "Your learning journey is unique. Embrace the challenges - they're making you stronger!"
-        ],
-        'study_tips': [
-            "Here are effective study techniques:\n1. **Pomodoro Technique**: 25 min focus, 5 min break\n2. **Active Recall**: Test yourself frequently\n3. **Spaced Repetition**: Review at increasing intervals\n4. **Teach Others**: Explaining reinforces understanding",
+            "I can help you with:\n• Personalized learning roadmaps\n• Explaining complex concepts\n• Finding the best resources\n• Debugging code or checking understanding\nJust ask!",
         ]
-    }
-    
-    # Topic-specific responses
-    TOPIC_RESPONSES = {
-        'programming': {
-            'beginner': "For programming beginners, I recommend:\n• Start with Python - it's beginner-friendly\n• Practice on Codecademy or freeCodeCamp\n• Build small projects like a calculator or to-do app\n• Don't just read - code every day!",
-            'intermediate': "To advance your programming skills:\n• Learn data structures and algorithms\n• Contribute to open source projects\n• Build full-stack applications\n• Study system design concepts",
-            'advanced': "For advanced developers:\n• Explore distributed systems\n• Learn about microservices architecture\n• Contribute to major open source projects\n• Consider specializing in ML/AI or security"
-        },
-        'data science': {
-            'beginner': "Starting data science? Here's your path:\n• Master Python and SQL basics\n• Learn pandas, numpy, matplotlib\n• Take a statistics course\n• Practice with Kaggle datasets",
-            'intermediate': "Level up your data science:\n• Deep dive into machine learning algorithms\n• Learn TensorFlow or PyTorch\n• Work on end-to-end ML projects\n• Study feature engineering techniques",
-        },
-        'web development': {
-            'beginner': "Web development starter pack:\n• HTML, CSS, JavaScript fundamentals\n• Build responsive layouts\n• Learn a framework like React\n• Create a portfolio website",
-            'intermediate': "Advancing in web dev:\n• Master state management\n• Learn backend with Node.js or Python\n• Study databases (SQL & NoSQL)\n• Implement authentication & security"
-        }
     }
     
     @staticmethod
     def process_message(message: str, context: Dict = None) -> Dict[str, Any]:
         """Process user message and generate intelligent response"""
         
+        if gemini_client:
+            try:
+                return ChatAssistant._process_with_gemini(message, context)
+            except Exception as e:
+                print(f"Gemini Chat Failed: {e}. Falling back to knowledge base.")
+        
+        # Fallback Logic
         message_lower = message.lower().strip()
         context = context or {}
-        
-        # Intent classification
         intent = ChatAssistant._classify_intent(message_lower)
-        
-        # Generate response based on intent
         response = ChatAssistant._generate_response(intent, message_lower, context)
-        
-        # Add suggested follow-ups
         suggestions = ChatAssistant._get_suggestions(intent, context)
         
         return {
@@ -473,153 +520,74 @@ class ChatAssistant:
             'suggestions': suggestions,
             'timestamp': datetime.now().isoformat()
         }
-    
+
+    @staticmethod
+    def _process_with_gemini(message: str, context: Dict) -> Dict[str, Any]:
+        """Use Gemini to generate chat response"""
+        context = context or {}
+        history_summary = context.get('historyAnalysis', {})
+        
+        system_instruction = f"""
+        You are SupriAI, an enthusiastic and knowledgeable AI Learning Assistant.
+        Your goal is to help the user learn effectively, stay motivated, and achieve their goals.
+        
+        User Context:
+        - Primary Interest: {history_summary.get('primary_topic', 'General')}
+        - Learning Style: {history_summary.get('pattern_type', 'Unknown')}
+        - Recent Progress: {history_summary.get('total_visits', 0)} sessions logged.
+        
+        Guidelines:
+        - Be encouraging, concise, and practical.
+        - Use markdown for formatting (bullet points, bold text).
+        - If asked for resources, suggest high-quality tutorials or documentation.
+        - If asked about code, explain it clearly.
+        
+        Response Format:
+        Return a JSON object:
+        {{
+            "response": "Your markdown response here...",
+            "intent": "detected_intent",
+            "suggestions": ["Follow-up 1", "Follow-up 2", "Follow-up 3"]
+        }}
+        """
+        
+        prompt = f"{system_instruction}\n\nUser Message: {message}"
+        
+        response = gemini_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+             config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+        text = response.text.strip()
+        
+        try:
+            return json.loads(text)
+        except:
+             return {
+                'response': response.text,
+                'intent': 'general',
+                'suggestions': ["Continue", "Explain more"],
+                'timestamp': datetime.now().isoformat()
+            }
+
     @staticmethod
     def _classify_intent(message: str) -> str:
-        """Classify user message intent"""
-        
-        # Greeting patterns
-        if any(word in message for word in ['hello', 'hi', 'hey', 'greetings', 'good morning', 'good evening']):
-            return 'greeting'
-        
-        # Help request
-        if any(word in message for word in ['help', 'what can you do', 'features', 'how to use']):
-            return 'help'
-        
-        # Motivation request
-        if any(word in message for word in ['motivat', 'stuck', 'tired', 'hard', 'difficult', 'frustrated', 'inspire']):
-            return 'motivation'
-        
-        # Study tips
-        if any(word in message for word in ['study', 'learn', 'tips', 'technique', 'effective', 'better']):
-            return 'study_tips'
-        
-        # Programming related
-        if any(word in message for word in ['program', 'code', 'coding', 'develop', 'software', 'python', 'javascript']):
-            return 'programming'
-        
-        # Data science related
-        if any(word in message for word in ['data science', 'machine learning', 'ml', 'ai', 'deep learning', 'analytics']):
-            return 'data_science'
-        
-        # Web development related
-        if any(word in message for word in ['web', 'frontend', 'backend', 'react', 'html', 'css', 'website']):
-            return 'web_development'
-        
-        # Career advice
-        if any(word in message for word in ['career', 'job', 'interview', 'salary', 'resume', 'portfolio']):
-            return 'career'
-        
-        # Progress query
-        if any(word in message for word in ['progress', 'stats', 'analytics', 'how am i doing', 'performance']):
-            return 'progress'
-        
-        # Recommendation request
-        if any(word in message for word in ['recommend', 'suggest', 'what should', 'next step', 'learn next']):
-            return 'recommendation'
-        
-        # Goal related
-        if any(word in message for word in ['goal', 'target', 'plan', 'roadmap', 'schedule']):
-            return 'goal'
-        
+        # Existing fallback implementation...
+        if any(word in message for word in ['hello', 'hi', 'hey']): return 'greeting'
+        if any(word in message for word in ['help', 'what can you do']): return 'help'
         return 'general'
-    
+
     @staticmethod
     def _generate_response(intent: str, message: str, context: Dict) -> str:
-        """Generate response based on intent"""
-        import random
-        
-        # Check knowledge base first
-        if intent in ChatAssistant.KNOWLEDGE_BASE:
-            responses = ChatAssistant.KNOWLEDGE_BASE[intent]
-            return random.choice(responses)
-        
-        # Topic-specific responses
-        if intent in ['programming', 'data_science', 'web_development']:
-            topic_key = intent.replace('_', ' ')
-            level = 'beginner'  # Default level
-            
-            if any(word in message for word in ['advanced', 'expert', 'senior']):
-                level = 'advanced'
-            elif any(word in message for word in ['intermediate', 'mid', 'improve']):
-                level = 'intermediate'
-            
-            responses = ChatAssistant.TOPIC_RESPONSES.get(topic_key, {})
-            if level in responses:
-                return responses[level]
-            return responses.get('beginner', f"I'd be happy to help with {topic_key}! What specific aspect are you interested in?")
-        
-        # Career advice
-        if intent == 'career':
-            return """Career advice for tech:
-• **Build a portfolio**: Showcase your best projects on GitHub
-• **Network**: Join tech communities, attend meetups
-• **Continuous learning**: Stay updated with industry trends
-• **Soft skills**: Communication and teamwork are crucial
-• **Prepare for interviews**: Practice coding challenges on LeetCode
+        # Simple fallback response
+        if intent == 'greeting': return "Hello! I'm SupriAI (Offline Mode). How can I help?"
+        return "I'm currently in offline mode using basic responses. Connect Gemini API for full intelligence!"
 
-Would you like specific advice for a particular role?"""
-        
-        # Progress query - use context
-        if intent == 'progress':
-            history = context.get('historyAnalysis', {})
-            if history:
-                return f"""Based on your learning data:
-• Total sessions tracked: {history.get('total_visits', 'N/A')}
-• Primary focus: {history.get('primary_topic', 'Various topics')}
-• Learning pattern: {history.get('pattern_type', 'Explorer')}
-
-Keep up the great work! Would you like specific improvement tips?"""
-            return "I don't have enough data about your learning yet. Keep exploring and I'll provide detailed insights!"
-        
-        # Recommendation
-        if intent == 'recommendation':
-            recommendations = context.get('recommendations', [])
-            if recommendations:
-                rec_text = "Based on your learning patterns, I recommend:\n"
-                for i, rec in enumerate(recommendations[:3], 1):
-                    rec_text += f"{i}. **{rec.get('title', 'Resource')}**: {rec.get('description', '')}\n"
-                return rec_text
-            return "To give better recommendations, I need to analyze your browsing history. Keep learning and I'll personalize suggestions for you!"
-        
-        # Goal setting
-        if intent == 'goal':
-            return """Smart goal setting tips:
-• **Be specific**: "Learn React" → "Build 3 React projects in 2 months"
-• **Track progress**: Use this dashboard to monitor your learning
-• **Break it down**: Large goals into weekly milestones
-• **Stay accountable**: Share your goals, set reminders
-
-Would you like help creating a learning roadmap?"""
-        
-        # General fallback
-        return """I understand you're looking for guidance! Here's what I can help with:
-• Learning recommendations tailored to your interests
-• Study techniques and productivity tips
-• Career guidance in tech
-• Goal setting and progress tracking
-
-Feel free to ask about any specific topic or skill you want to develop!"""
-    
     @staticmethod
     def _get_suggestions(intent: str, context: Dict) -> List[str]:
-        """Get contextual follow-up suggestions"""
-        
-        suggestion_map = {
-            'greeting': ["What can you help me with?", "Show my progress", "Give me learning tips"],
-            'help': ["Study tips", "Career advice", "What should I learn next?"],
-            'motivation': ["Study techniques", "Set a goal", "Show my achievements"],
-            'programming': ["Best resources?", "Project ideas?", "Career path?"],
-            'data_science': ["Learning roadmap", "Project suggestions", "Required math?"],
-            'web_development': ["Frontend vs Backend?", "Best frameworks?", "Portfolio tips"],
-            'career': ["Resume tips", "Interview prep", "Networking advice"],
-            'progress': ["Areas to improve?", "Set new goals", "Study recommendations"],
-            'recommendation': ["Explain more", "Other options?", "Create a plan"],
-            'goal': ["Create a roadmap", "Track progress", "Motivation tips"],
-            'general': ["Learning tips", "Career guidance", "What topics to explore?"]
-        }
-        
-        return suggestion_map.get(intent, suggestion_map['general'])
+        return ["Check Progress", "View Recommendations", "Set Goal"]
 
 
 # ==========================================
@@ -1238,7 +1206,7 @@ def get_next_recommendation(current_entry: Dict) -> Optional[Dict]:
 
 
 def generate_weekly_plan(logs: List[Dict]) -> List[Dict]:
-    """Generate personalized learning recommendations"""
+    """Generate personalized learning recommendations using Gemini or heuristics"""
     if not logs:
         return [{
             "type": "Getting Started",
@@ -1248,19 +1216,24 @@ def generate_weekly_plan(logs: List[Dict]) -> List[Dict]:
             "icon": "ri-rocket-line",
             "priority": "high"
         }]
-    
-    # Analyze dominant topics
+
+    if gemini_client:
+        try:
+            print("🎨 Generating weekly plan with Gemini...")
+            plan = _generate_plan_with_gemini(logs)
+            if plan: return plan
+        except Exception as e:
+            print(f"Gemini Plan Generation Failed: {e}. Using fallback.")
+
+    # Fallback/Offline Logic
     topic_counts = Counter(log.get('topic', 'General') for log in logs)
     dominant_topics = topic_counts.most_common(3)
     
     recommendations = []
-    
-    # Generate based on learning patterns
     for topic, count in dominant_topics:
         recs = get_recommendations_for_topic(topic, count)
         recommendations.extend(recs)
-    
-    # Add variety recommendation if user is too focused
+        
     if len(dominant_topics) == 1:
         recommendations.append({
             "type": "Explore",
@@ -1270,9 +1243,42 @@ def generate_weekly_plan(logs: List[Dict]) -> List[Dict]:
             "icon": "ri-compass-line",
             "priority": "medium"
         })
-    
-    # Limit to 4 recommendations
+        
     return recommendations[:4]
+
+def _generate_plan_with_gemini(logs: List[Dict]) -> List[Dict]:
+    """Use Gemini to generate a weekly learning plan"""
+    # Summarize user activity
+    recent = logs[:20]
+    activity_summary = "\n".join([f"- {item.get('title', 'Unknown')} ({item.get('topic', 'General')})" for item in recent])
+    
+    prompt = f"""
+    Based on this user's recent learning history, suggest 4 specific, high-quality learning resources or tasks for this week.
+    
+    History:
+    {activity_summary}
+    
+    Return a valid JSON array of objects with these keys:
+    - type: (Course, Project, Article, Challenge)
+    - title: Resource title
+    - description: Brief reason why
+    - url: A valid or placeholder URL
+    - icon: RemixIcon name (e.g., ri-book-line)
+    - priority: high/medium
+    
+    Respond ONLY with JSON.
+    """
+    
+    response = gemini_client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json"
+        )
+    )
+    
+    text = response.text.replace('```json', '').replace('```', '').strip()
+    return json.loads(text)
 
 
 def get_recommendations_for_topic(topic: str, session_count: int) -> List[Dict]:

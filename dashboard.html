@@ -64,17 +64,6 @@
                     <li class="nav-item" data-target="library">
                         <i class="ri-book-open-line"></i> <span>My Library</span>
                     </li>
-                    <li class="nav-item" data-target="reviews">
-                        <i class="ri-feedback-line"></i> <span>Reviews</span>
-                    </li>
-
-                    <div class="nav-label">Social</div>
-                    <li class="nav-item" data-target="goals">
-                        <i class="ri-focus-3-line"></i> <span>Goals</span>
-                    </li>
-                    <li class="nav-item" data-target="community">
-                        <i class="ri-group-line"></i> <span>Community</span>
-                    </li>
 
                     <div class="nav-label">AI Features</div>
                     <li class="nav-item" data-target="chat-assistant">
@@ -82,14 +71,6 @@
                     </li>
                     <li class="nav-item" data-target="resume-builder">
                         <i class="ri-file-user-line"></i> <span>Resume Builder</span>
-                    </li>
-
-                    <div class="nav-label">System</div>
-                    <li class="nav-item" data-target="settings">
-                        <i class="ri-settings-4-line"></i> <span>Settings</span>
-                    </li>
-                    <li class="nav-item" onclick="window.location.href='api_docs.html'">
-                        <i class="ri-server-line"></i> <span>API Docs</span>
                     </li>
                 </ul>
             </div>
@@ -123,11 +104,103 @@
                 <div class="header-actions">
                     <button class="icon-btn" title="Help" data-tooltip="Help Center"><i
                             class="ri-question-line"></i></button>
-                    <button class="icon-btn" title="Notifications" data-tooltip="Notifications"><i
-                            class="ri-notification-3-line"></i></button>
-                    <button class="icon-btn" title="Google Menu" data-tooltip="Apps"><i
-                            class="ri-grid-fill"></i></button>
-                    <div class="avatar-sm">S</div>
+                    
+                    <!-- Notification Dropdown -->
+                    <div class="header-dropdown-wrapper">
+                        <button class="icon-btn notification-btn" title="Notifications" data-tooltip="Notifications">
+                            <i class="ri-notification-3-line"></i>
+                        </button>
+                        <div class="header-dropdown notification-dropdown">
+                            <div class="dropdown-header">Notifications</div>
+                            <div class="dropdown-item" data-target="reviews">
+                                <i class="ri-feedback-line"></i>
+                                <span>Reviews</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Google Apps Menu -->
+                    <div class="header-dropdown-wrapper">
+                        <button class="icon-btn apps-menu-btn" title="Google Menu" data-tooltip="Apps">
+                            <i class="ri-grid-fill"></i>
+                        </button>
+                        <div class="header-dropdown apps-menu-dropdown">
+                            <div class="apps-grid">
+                                <div class="app-item" data-target="dashboard">
+                                    <div class="app-icon"><i class="ri-dashboard-line"></i></div>
+                                    <div class="app-label">Dashboard</div>
+                                </div>
+                                <div class="app-item" data-target="analytics">
+                                    <div class="app-icon"><i class="ri-bar-chart-grouped-fill"></i></div>
+                                    <div class="app-label">Analytics</div>
+                                </div>
+                                <div class="app-item" data-target="calendar">
+                                    <div class="app-icon"><i class="ri-calendar-event-line"></i></div>
+                                    <div class="app-label">Schedule</div>
+                                </div>
+                                <div class="app-item" data-target="academy">
+                                    <div class="app-icon"><i class="ri-graduation-cap-line"></i></div>
+                                    <div class="app-label">Academy</div>
+                                </div>
+                                <div class="app-item" data-target="library">
+                                    <div class="app-icon"><i class="ri-book-open-line"></i></div>
+                                    <div class="app-label">My Library</div>
+                                </div>
+                                <div class="app-item" data-target="reviews">
+                                    <div class="app-icon"><i class="ri-feedback-line"></i></div>
+                                    <div class="app-label">Reviews</div>
+                                </div>
+                                <div class="app-item" data-target="chat-assistant">
+                                    <div class="app-icon"><i class="ri-robot-line"></i></div>
+                                    <div class="app-label">AI Assistant</div>
+                                </div>
+                                <div class="app-item" data-target="resume-builder">
+                                    <div class="app-icon"><i class="ri-file-user-line"></i></div>
+                                    <div class="app-label">Resume</div>
+                                </div>
+                                <div class="app-item" data-target="goals">
+                                    <div class="app-icon"><i class="ri-focus-3-line"></i></div>
+                                    <div class="app-label">Goals</div>
+                                </div>
+                                <div class="app-item" data-target="community">
+                                    <div class="app-icon"><i class="ri-group-line"></i></div>
+                                    <div class="app-label">Community</div>
+                                </div>
+                                <div class="app-item" data-target="settings">
+                                    <div class="app-icon"><i class="ri-settings-4-line"></i></div>
+                                    <div class="app-label">Settings</div>
+                                </div>
+                                <div class="app-item" onclick="window.location.href='api_docs.html'">
+                                    <div class="app-icon"><i class="ri-server-line"></i></div>
+                                    <div class="app-label">API Docs</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- User Icon Dropdown -->
+                    <div class="header-dropdown-wrapper">
+                        <div class="avatar-sm usericon-btn">S</div>
+                        <div class="header-dropdown usericon-dropdown">
+                            <div class="dropdown-header">Account</div>
+                            <div class="dropdown-item" data-target="settings">
+                                <i class="ri-settings-4-line"></i>
+                                <span>Settings</span>
+                            </div>
+                            <div class="dropdown-item" onclick="window.location.href='api_docs.html'">
+                                <i class="ri-server-line"></i>
+                                <span>API Docs</span>
+                            </div>
+                            <div class="dropdown-item" data-target="community">
+                                <i class="ri-group-line"></i>
+                                <span>Community</span>
+                            </div>
+                            <div class="dropdown-item" data-target="goals">
+                                <i class="ri-focus-3-line"></i>
+                                <span>Goals</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </header>
 

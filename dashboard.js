@@ -64,18 +64,33 @@ async function checkServerStatus() {
 // ==========================================
 
 function setupNavigation() {
-    document.querySelectorAll('.nav-item').forEach(item => {
+    // Select all navigation elements: Sidebar items, App Menu items, User Dropdown items
+    const navElements = document.querySelectorAll('.nav-item, .app-item[data-target], .dropdown-item[data-target]');
+
+    navElements.forEach(item => {
         item.addEventListener('click', () => {
-            // Update active state
-            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
+            const target = item.dataset.target;
+            if (!target) return;
+
+            // Update sidebar active state (visual only)
+            document.querySelectorAll('.nav-item').forEach(nav => {
+                if (nav.dataset.target === target) {
+                    nav.classList.add('active');
+                } else {
+                    nav.classList.remove('active');
+                }
+            });
 
             // Show target view
             document.querySelectorAll('.page-view').forEach(view => view.style.display = 'none');
-            const targetId = `view-${item.dataset.target}`;
+            const targetId = `view-${target}`;
             const targetView = document.getElementById(targetId);
             if (targetView) {
                 targetView.style.display = 'block';
+                // Special handling for chat view to resize if needed
+                if (target === 'chat-assistant') {
+                    scrollToBottom();
+                }
             }
 
             // Update page title
@@ -92,10 +107,19 @@ function setupNavigation() {
                 'chat-assistant': 'AI Assistant',
                 'resume-builder': 'Resume Builder'
             };
-            document.getElementById('pageTitle').innerText = titleMap[item.dataset.target] || 'Dashboard';
+            const pageTitle = document.getElementById('pageTitle');
+            if (pageTitle) pageTitle.innerText = titleMap[target] || 'Dashboard';
+
+            // Hide any open dropdowns
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(wrapper => {
+                wrapper.classList.remove('active');
+                // Force blur to close hover states if any (though CSS hover handles most)
+                const btn = wrapper.querySelector('button');
+                if (btn) btn.blur();
+            });
 
             // Load view-specific data
-            loadViewData(item.dataset.target);
+            loadViewData(target);
         });
     });
 }
@@ -573,7 +597,8 @@ function renderNotes(notes) {
     container.innerHTML = notes.map(note => {
         const date = new Date(note.created_at);
         const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-        const tags = note.tags || [];
+        // Ensure tags is always an array
+        const tags = note.tags ? (typeof note.tags === 'string' ? note.tags.split(',').map(t => t.trim()) : Array.isArray(note.tags) ? note.tags : []) : [];
 
         return `
             <div class="google-card" data-note-id="${note.id}">
@@ -1093,6 +1118,9 @@ function setupEventListeners() {
         // Navigate to reviews/notes
         document.querySelector('[data-target="reviews"]')?.click();
     });
+
+    // Header dropdown functionality
+    setupHeaderDropdowns();
 }
 
 async function clearAllHistory() {
@@ -1339,11 +1367,15 @@ async function sendChatMessage() {
     // Clear input
     input.value = '';
 
+    // Hide welcome screen if first message
+    const welcomeScreen = document.getElementById('geminiWelcome');
+    if (welcomeScreen) welcomeScreen.style.display = 'none';
+
     // Add user message to chat
     appendChatMessage(message, 'user');
 
     // Show typing indicator
-    showTypingIndicator();
+    const typingId = showTypingIndicator();
 
     try {
         const response = await fetch(`${API_URL}/api/chat`, {
@@ -1358,60 +1390,24 @@ async function sendChatMessage() {
         const data = await response.json();
 
         // Hide typing indicator
-        hideTypingIndicator();
+        removeTypingIndicator(typingId);
 
         if (data.status === 'success') {
             appendChatMessage(data.response, 'ai');
 
-            // Update suggestions
-            toggleSendButton(input);
-
-            // Hide welcome screen if first message
-            const welcomeScreen = document.getElementById('geminiWelcome');
-            if (welcomeScreen) welcomeScreen.style.display = 'none';
-
-            // Add User Message
-            addMessageToChat('user', message);
-
-            // Show Typing Indicator
-            const typingId = showTypingIndicator();
-
-            try {
-                // In real app: const response = await fetch(`${API_URL}/api/chat`, {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify({
-                //         message: message,
-                //         context: { history: chatHistory.map(msg => ({ [msg.role]: msg.text })) } // Adapt history format
-                //     })
-                // });
-                // const data = await response.json();
-
-                // Simulate API delay
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                // Remove typing indicator
-                removeTypingIndicator(typingId);
-
-                // Generate mock AI response
-                const aiResponse = generateMockAIResponse(message);
-                addMessageToChat('ai', aiResponse);
-
-                // In a real app, you'd handle data.suggestions here
-                // if (data.status === 'success' && data.suggestions) {
-                //     updateChatSuggestions(data.suggestions);
-                // }
-
-            } catch (e) {
-                console.error("Chat error:", e);
-                removeTypingIndicator(typingId);
-                addMessageToChat('ai', "Sorry, I'm having trouble connecting right now.");
+            // Update suggestions if provided
+            if (data.suggestions && data.suggestions.length > 0) {
+                // Could render suggestions below the chat if desired
+                console.log('Suggestions:', data.suggestions);
             }
+        } else {
+            appendChatMessage("Sorry, I encountered an error. Please try again.", 'ai');
         }
+
     } catch (e) {
         console.error("Chat error:", e);
-        hideTypingIndicator(); // Ensure indicator is hidden on error
-        appendChatMessage("Sorry, I'm having trouble connecting right now.", 'ai');
+        removeTypingIndicator(typingId);
+        appendChatMessage("Sorry, I'm having trouble connecting to the server. Please make sure the backend is running.", 'ai');
     }
 }
 
@@ -1431,7 +1427,7 @@ function toggleSendButton(input) {
     }
 }
 
-function addMessageToChat(role, text) {
+function addMessageToChat(role, text, shouldScroll = true) {
     const chatContainer = document.getElementById('chatMessages');
 
     const messageDiv = document.createElement('div');
@@ -1456,10 +1452,17 @@ function addMessageToChat(role, text) {
     }
 
     chatContainer.appendChild(messageDiv);
-    scrollToBottom();
+    if (shouldScroll) {
+        scrollToBottom();
+    }
 
     // Save to history
     chatHistory.push({ role, text, timestamp: new Date() });
+}
+
+// Alias for compatibility with different parameter order
+function appendChatMessage(text, role, shouldScroll = true) {
+    addMessageToChat(role, text, shouldScroll);
 }
 
 function showTypingIndicator() {
@@ -1508,23 +1511,6 @@ function formatAIResponse(text) {
     return text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>');
-}
-
-function generateMockAIResponse(msg) {
-    msg = msg.toLowerCase();
-    if (msg.includes('python')) return "Python is a great language! You can start by learning about **variables**, **loops**, and **functions**. Would you like a curriculum?";
-    if (msg.includes('plan') || msg.includes('schedule')) return "I've drafted a study plan for you:\n\n1. **Day 1**: Basics & Syntax\n2. **Day 2**: Control Flow\n3. **Day 3**: Data Structures\n\nShall I add this to your calendar?";
-    if (msg.includes('quiz')) return "Sure! Here's a quick question:\n\n**What is the time complexity of accessing an element in an array?**\n\nA) O(1)\nB) O(n)\nC) O(log n)";
-    return "I can help you learn that! I've found some resources in your library that match. Would you like me to open them?";
-}
-
-function updateChatSuggestions(suggestions) {
-    const container = document.getElementById('chatSuggestions');
-    if (!container || !suggestions) return;
-
-    container.innerHTML = suggestions.map(s =>
-        `<button class="suggestion-chip" onclick="sendSuggestion('${s}')">${s}</button>`
-    ).join('');
 }
 
 async function clearChatHistory() {
@@ -1877,6 +1863,74 @@ async function syncBrowsingHistory() {
             console.error('History sync failed:', e);
         }
     }
+}
+
+// ==========================================
+// HEADER DROPDOWN FUNCTIONALITY
+// ==========================================
+
+function setupHeaderDropdowns() {
+    // Handle dropdown item clicks for navigation is now handled in setupNavigation() to avoid duplicate listeners.
+
+
+    // Toggle dropdowns on click (for mobile/touch devices)
+    const userBtn = document.querySelector('.usericon-btn');
+    const notificationBtn = document.querySelector('.notification-btn');
+    const appsBtn = document.querySelector('.apps-menu-btn');
+
+    if (userBtn) {
+        userBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const wrapper = this.closest('.header-dropdown-wrapper');
+            wrapper?.classList.toggle('active');
+
+            // Close other dropdowns
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(w => {
+                if (w !== wrapper) {
+                    w.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    if (notificationBtn) {
+        notificationBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const wrapper = this.closest('.header-dropdown-wrapper');
+            wrapper?.classList.toggle('active');
+
+            // Close other dropdowns
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(w => {
+                if (w !== wrapper) {
+                    w.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    if (appsBtn) {
+        appsBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const wrapper = this.closest('.header-dropdown-wrapper');
+            wrapper?.classList.toggle('active');
+
+            // Close other dropdowns
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(w => {
+                if (w !== wrapper) {
+                    w.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.header-dropdown-wrapper')) {
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(wrapper => {
+                wrapper.classList.remove('active');
+            });
+        }
+    });
 }
 
 
