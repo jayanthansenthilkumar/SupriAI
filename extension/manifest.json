@@ -1,0 +1,46 @@
+{
+    "manifest_version": 3,
+    "name": "AI-Powered Learning Companion",
+    "version": "1.0",
+    "description": "An intelligent, browser-integrated learning companion tracking behavior and recommending study paths.",
+    "permissions": [
+        "tabs",
+        "storage",
+        "webNavigation",
+        "alarms",
+        "activeTab",
+        "scripting"
+    ],
+    "host_permissions": [
+        "http://localhost:5000/*",
+        "<all_urls>"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "dashboard.html",
+                "chart.js",
+                "sweetalert2.all.min.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
+}

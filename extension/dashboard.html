@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AI Learning Companion</title>
+    <!-- Fonts: Inter & Roboto -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <!-- Fonts: Inter & Roboto -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <!-- Icons: Remix Icon (CDN for reliability) -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="cursor.css">
+    <script src="libs/chart.js"></script>
+    <script src="libs/sweetalert2.all.min.js"></script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <i class="ri-brain-line logo-icon"></i>
+                <span class="logo-text">Learning AI</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item active" data-target="dashboard">
+                    <i class="ri-dashboard-line"></i> <span>Dashboard</span>
+                </li>
+                <li class="nav-item" data-target="library">
+                    <i class="ri-book-open-line"></i> <span>My Library</span>
+                </li>
+                <li class="nav-item" data-target="goals">
+                    <i class="ri-focus-3-line"></i> <span>Goals & Streak</span>
+                </li>
+                <li class="nav-item" data-target="settings">
+                    <i class="ri-settings-4-line"></i> <span>Settings</span>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">U</div>
+                    <div class="user-info">
+                        <div class="name">User Name</div>
+                        <div class="status">Premium Plan</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Google-like Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h2 id="pageTitle">Dashboard</h2>
+                </div>
+
+                <div class="header-center">
+                    <div class="search-bar">
+                        <i class="ri-search-line"></i>
+                        <input type="text" placeholder="Search analytics, topics, or history...">
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button class="icon-btn" title="Help"><i class="ri-question-line"></i></button>
+                    <button class="icon-btn" title="Notifications"><i class="ri-notification-3-line"></i></button>
+                    <button class="icon-btn" title="Google Menu"><i class="ri-grid-fill"></i></button>
+                    <div class="avatar-sm">U</div>
+                </div>
+            </header>
+
+            <!-- Scrollable Page Views -->
+            <div class="dashboard-scroll-area">
+
+                <!-- VIEW: DASHBOARD -->
+                <div id="view-dashboard" class="page-view active">
+                    <div class="dashboard-grid">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Productive Time</span>
+                                <i class="ri-more-2-fill card-menu"></i>
+                            </div>
+                            <div class="stat-value" id="totalTime">0h 0m</div>
+                            <div class="stat-trend positive">
+                                <i class="ri-arrow-up-line"></i> 12% vs last week
+                            </div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Top Topic</span>
+                            </div>
+                            <div class="stat-value" id="topTopic" style="font-size: 1.6rem;">-</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Current Streak</span>
+                            </div>
+                            <div class="streak-container">
+                                <i class="ri-fire-fill fire-icon"></i>
+                                <div>
+                                    <div class="stat-value" id="streakDays">3</div>
+                                    <span class="stat-label">Days</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Engagement</span>
+                            </div>
+                            <div class="stat-value" id="engagementScore">0</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Learning Trends</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Topic Split</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="topicChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">Recommended for you</div>
+                    <div class="dashboard-grid" id="recommendationsGrid">
+                        <!-- Recs injected here -->
+                    </div>
+                </div>
+
+                <!-- VIEW: LIBRARY -->
+                <div id="view-library" class="page-view" style="display: none;">
+                    <div class="google-card full-width">
+                        <div class="card-header">
+                            <span class="card-title">Recent History</span>
+                            <div class="actions">
+                                <button class="text-btn"><i class="ri-download-line"></i> Export</button>
+                                <button class="text-btn"><i class="ri-filter-3-line"></i> Filter</button>
+                            </div>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Topic</th>
+                                    <th>Page Title</th>
+                                    <th>Focus Score</th>
+                                    <th>Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentActivityTable">
+                                <!-- Data -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- VIEW: GOALS -->
+                <div id="view-goals" class="page-view" style="display: none;">
+                    <div class="google-card">
+                        <h3><i class="ri-flag-line"></i> Weekly Goals</h3>
+                        <p class="text-secondary">Set your learning targets for the week.</p>
+                        <!-- Mock Goal UI -->
+                        <div style="margin-top:20px;">
+                            <div class="goal-item">
+                                <div class="goal-info">
+                                    <span>Read 5 Data Science Articles</span>
+                                    <span>3/5</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="fill" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <div class="goal-item">
+                                <div class="goal-info">
+                                    <span>30 mins of Python Practice</span>
+                                    <span>15/30 mins</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="fill" style="width: 50%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: SETTINGS -->
+                <div id="view-settings" class="page-view" style="display: none;">
+                    <div class="google-card" style="max-width: 600px;">
+                        <h3>Settings</h3>
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-title">Tracking Enabled</div>
+                                <div class="setting-desc">Pause tracking globally.</div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" checked id="trackingToggle">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-title">Data Privacy</div>
+                                <div class="setting-desc">Clear locally stored history.</div>
+                            </div>
+                            <button class="danger-btn">Clear Data</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="height: 50px;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+
+</html>
