@@ -48,6 +48,9 @@
                 "styles.css",
                 "libs/*",
                 "cursor.css",
+                "offline-manager.js",
+                "offline-analytics.js",
+                "offline-ai.js",
                 "dashboard.js",
                 "pages-functionality.js"
             ],
