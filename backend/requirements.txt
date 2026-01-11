@@ -5,6 +5,10 @@
 Flask==3.0.0
 Flask-Cors==4.0.0
 
+# AI/ML
+google-genai>=0.3.0
+python-dotenv>=1.0.0
+
 # Database (SQLite is built-in, no extra package needed)
 
 # Production Server (optional, for deployment)

@@ -1367,11 +1367,15 @@ async function sendChatMessage() {
     // Clear input
     input.value = '';
 
+    // Hide welcome screen if first message
+    const welcomeScreen = document.getElementById('geminiWelcome');
+    if (welcomeScreen) welcomeScreen.style.display = 'none';
+
     // Add user message to chat
     appendChatMessage(message, 'user');
 
     // Show typing indicator
-    showTypingIndicator();
+    const typingId = showTypingIndicator();
 
     try {
         const response = await fetch(`${API_URL}/api/chat`, {
@@ -1386,60 +1390,24 @@ async function sendChatMessage() {
         const data = await response.json();
 
         // Hide typing indicator
-        hideTypingIndicator();
+        removeTypingIndicator(typingId);
 
         if (data.status === 'success') {
             appendChatMessage(data.response, 'ai');
 
-            // Update suggestions
-            toggleSendButton(input);
-
-            // Hide welcome screen if first message
-            const welcomeScreen = document.getElementById('geminiWelcome');
-            if (welcomeScreen) welcomeScreen.style.display = 'none';
-
-            // Add User Message
-            addMessageToChat('user', message);
-
-            // Show Typing Indicator
-            const typingId = showTypingIndicator();
-
-            try {
-                // In real app: const response = await fetch(`${API_URL}/api/chat`, {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify({
-                //         message: message,
-                //         context: { history: chatHistory.map(msg => ({ [msg.role]: msg.text })) } // Adapt history format
-                //     })
-                // });
-                // const data = await response.json();
-
-                // Simulate API delay
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                // Remove typing indicator
-                removeTypingIndicator(typingId);
-
-                // Generate mock AI response
-                const aiResponse = generateMockAIResponse(message);
-                addMessageToChat('ai', aiResponse);
-
-                // In a real app, you'd handle data.suggestions here
-                // if (data.status === 'success' && data.suggestions) {
-                //     updateChatSuggestions(data.suggestions);
-                // }
-
-            } catch (e) {
-                console.error("Chat error:", e);
-                removeTypingIndicator(typingId);
-                addMessageToChat('ai', "Sorry, I'm having trouble connecting right now.");
+            // Update suggestions if provided
+            if (data.suggestions && data.suggestions.length > 0) {
+                // Could render suggestions below the chat if desired
+                console.log('Suggestions:', data.suggestions);
             }
+        } else {
+            appendChatMessage("Sorry, I encountered an error. Please try again.", 'ai');
         }
+
     } catch (e) {
         console.error("Chat error:", e);
-        hideTypingIndicator(); // Ensure indicator is hidden on error
-        appendChatMessage("Sorry, I'm having trouble connecting right now.", 'ai');
+        removeTypingIndicator(typingId);
+        appendChatMessage("Sorry, I'm having trouble connecting to the server. Please make sure the backend is running.", 'ai');
     }
 }
 
@@ -1459,7 +1427,7 @@ function toggleSendButton(input) {
     }
 }
 
-function addMessageToChat(role, text) {
+function addMessageToChat(role, text, shouldScroll = true) {
     const chatContainer = document.getElementById('chatMessages');
 
     const messageDiv = document.createElement('div');
@@ -1484,15 +1452,17 @@ function addMessageToChat(role, text) {
     }
 
     chatContainer.appendChild(messageDiv);
-    scrollToBottom();
+    if (shouldScroll) {
+        scrollToBottom();
+    }
 
     // Save to history
     chatHistory.push({ role, text, timestamp: new Date() });
 }
 
-// Alias for compatibility
-function appendChatMessage(text, role) {
-    addMessageToChat(role, text);
+// Alias for compatibility with different parameter order
+function appendChatMessage(text, role, shouldScroll = true) {
+    addMessageToChat(role, text, shouldScroll);
 }
 
 function showTypingIndicator() {
@@ -1541,23 +1511,6 @@ function formatAIResponse(text) {
     return text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>');
-}
-
-function generateMockAIResponse(msg) {
-    msg = msg.toLowerCase();
-    if (msg.includes('python')) return "Python is a great language! You can start by learning about **variables**, **loops**, and **functions**. Would you like a curriculum?";
-    if (msg.includes('plan') || msg.includes('schedule')) return "I've drafted a study plan for you:\n\n1. **Day 1**: Basics & Syntax\n2. **Day 2**: Control Flow\n3. **Day 3**: Data Structures\n\nShall I add this to your calendar?";
-    if (msg.includes('quiz')) return "Sure! Here's a quick question:\n\n**What is the time complexity of accessing an element in an array?**\n\nA) O(1)\nB) O(n)\nC) O(log n)";
-    return "I can help you learn that! I've found some resources in your library that match. Would you like me to open them?";
-}
-
-function updateChatSuggestions(suggestions) {
-    const container = document.getElementById('chatSuggestions');
-    if (!container || !suggestions) return;
-
-    container.innerHTML = suggestions.map(s =>
-        `<button class="suggestion-chip" onclick="sendSuggestion('${s}')">${s}</button>`
-    ).join('');
 }
 
 async function clearChatHistory() {
