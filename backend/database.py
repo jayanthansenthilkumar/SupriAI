@@ -317,7 +317,12 @@ def init_db():
     # ==========================================
     cursor.execute('''
         INSERT OR IGNORE INTO users (id, email, display_name, avatar_initial, plan_type)
-        VALUES (1, 'user@supri.ai', 'User', 'U', 'Premium')
+        VALUES (1, 'user@supri.ai', 'Supriya', 'S', 'Premium')
+    ''')
+    
+    # Ensure existing user is updated (migration fix)
+    cursor.execute('''
+        UPDATE users SET display_name = 'Supriya', avatar_initial = 'S' WHERE id = 1
     ''')
     
     cursor.execute('''
@@ -923,6 +928,150 @@ def get_settings(user_id: int = 1) -> Dict:
         result['blocked_sites'] = json.loads(result.get('blocked_sites', '[]'))
         return result
     return {}
+
+
+def update_settings(user_id: int, data: Dict) -> bool:
+    """Update user settings"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE settings SET
+            productivity_mode = ?, break_reminder = ?, deep_focus_mode = ?,
+            daily_goal_minutes = ?, break_interval_minutes = ?,
+            blocked_sites = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+    ''', (
+        data.get('productivity_mode', True),
+        data.get('break_reminder', True),
+        data.get('deep_focus_mode', False),
+        data.get('daily_goal_minutes', 120),
+        data.get('break_interval_minutes', 25),
+        json.dumps(data.get('blocked_sites', [])),
+        user_id
+    ))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+
+# ==========================================
+# COMMUNITY & LEADERBOARD OPERATIONS
+# ==========================================
+
+def get_leaderboard(timeframe: str = 'all', limit: int = 10) -> List[Dict]:
+    """Get community leaderboard"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Build query based on timeframe
+    if timeframe == 'week':
+        time_filter = "AND l.timestamp >= datetime('now', '-7 days')"
+    elif timeframe == 'month':
+        time_filter = "AND l.timestamp >= datetime('now', '-30 days')"
+    else:
+        time_filter = ""
+    
+    query = f'''
+        SELECT 
+            u.id,
+            u.display_name,
+            u.avatar_initial,
+            u.total_points,
+            u.streak_days,
+            COUNT(DISTINCT l.id) as sessions,
+            CAST(SUM(IFNULL(l.duration, 0)) / 60.0 AS INTEGER) as total_minutes
+        FROM users u
+        LEFT JOIN learning_logs l ON u.id = l.user_id {time_filter}
+        GROUP BY u.id
+        ORDER BY u.total_points DESC
+        LIMIT ?
+    '''
+    
+    cursor.execute(query, (limit,))
+    leaderboard = [dict(row) for row in cursor.fetchall()]
+    
+    # Add rank
+    for i, user in enumerate(leaderboard, 1):
+        user['rank'] = i
+    
+    conn.close()
+    return leaderboard
+
+
+def get_user_rank(user_id: int) -> Dict:
+    """Get user's rank in leaderboard"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT COUNT(*) + 1 as rank
+        FROM users
+        WHERE total_points > (SELECT total_points FROM users WHERE id = ?)
+    ''', (user_id,))
+    
+    result = cursor.fetchone()
+    rank = result['rank'] if result else 0
+    
+    # Get user data
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user_data = cursor.fetchone()
+    
+    conn.close()
+    
+    if user_data:
+        return {
+            "rank": rank,
+            "display_name": user_data['display_name'],
+            "total_points": user_data['total_points'],
+            "streak_days": user_data['streak_days']
+        }
+    return {"rank": 0, "total_points": 0}
+
+
+def get_total_users() -> int:
+    """Get total number of users"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) as count FROM users')
+    result = cursor.fetchone()
+    conn.close()
+    return result['count'] if result else 0
+
+
+def get_total_learning_hours() -> int:
+    """Get total learning hours across all users"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT SUM(duration) / 3600 as total_hours FROM learning_logs')
+    result = cursor.fetchone()
+    conn.close()
+    return int(result['total_hours']) if result and result['total_hours'] else 0
+
+
+def get_total_achievements_unlocked() -> int:
+    """Get total achievements unlocked"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) as count FROM achievements')
+    result = cursor.fetchone()
+    conn.close()
+    return result['count'] if result else 0
+
+
+def get_active_users_today() -> int:
+    """Get number of active users today"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT COUNT(DISTINCT user_id) as count
+        FROM learning_logs
+        WHERE DATE(timestamp) = DATE('now')
+    ''')
+    result = cursor.fetchone()
+    conn.close()
+    return result['count'] if result else 0
 
 
 def update_settings(user_id: int, data: Dict) -> bool:

@@ -654,6 +654,85 @@ def check_achievements():
 
 
 # ==========================================
+# COMMUNITY & LEADERBOARD ENDPOINTS
+# ==========================================
+
+@app.route('/api/community/leaderboard', methods=['GET'])
+def get_leaderboard():
+    """Get community leaderboard"""
+    try:
+        timeframe = request.args.get('timeframe', 'all')  # all, week, month
+        limit = request.args.get('limit', 10, type=int)
+        
+        # Get top users by points
+        leaderboard = database.get_leaderboard(timeframe=timeframe, limit=limit)
+        
+        # Get current user ranking
+        user_rank = database.get_user_rank(1)
+        
+        return jsonify({
+            "status": "success",
+            "leaderboard": leaderboard,
+            "user_rank": user_rank
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/community/stats', methods=['GET'])
+def get_community_stats():
+    """Get community statistics"""
+    try:
+        stats = {
+            "total_users": database.get_total_users(),
+            "total_learning_hours": database.get_total_learning_hours(),
+            "total_achievements": database.get_total_achievements_unlocked(),
+            "active_today": database.get_active_users_today()
+        }
+        
+        return jsonify({
+            "status": "success",
+            "stats": stats
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# STATS ENDPOINTS
+# ==========================================
+
+@app.route('/api/stats/week', methods=['GET'])
+def get_week_stats():
+    """Get this week's statistics"""
+    try:
+        # Get goals completed this week
+        goals = database.get_goals(active_only=False)
+        week_ago = datetime.now() - timedelta(days=7)
+        
+        goals_completed = sum(1 for g in goals 
+                            if g.get('completed_at') and 
+                            datetime.fromisoformat(g['completed_at']) > week_ago)
+        
+        # Get learning sessions this week
+        logs = database.get_recent_logs(days=7)
+        sessions = len(logs)
+        total_minutes = sum(log.get('duration', 0) for log in logs) // 60
+        
+        return jsonify({
+            "status": "success",
+            "goals_completed": goals_completed,
+            "sessions": sessions,
+            "total_minutes": total_minutes
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
 # RECOMMENDATIONS ENDPOINT
 # ==========================================
 

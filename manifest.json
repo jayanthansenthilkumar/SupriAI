@@ -20,12 +20,7 @@
         "<all_urls>"
     ],
     "action": {
-        "default_popup": "popup.html",
-        "default_icon": {
-            "16": "libs/icon16.png",
-            "48": "libs/icon48.png",
-            "128": "libs/icon128.png"
-        }
+        "default_popup": "popup.html"
     },
     "background": {
         "service_worker": "background.js"

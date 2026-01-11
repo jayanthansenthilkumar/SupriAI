@@ -136,9 +136,11 @@ async function loadUserFromBackend() {
             const avatarEl = document.querySelector('.user-profile .avatar');
             const smAvatarEl = document.querySelector('.avatar-sm');
 
-            if (nameEl) nameEl.textContent = data.user.display_name || 'User';
-            if (avatarEl) avatarEl.textContent = data.user.avatar_initial || 'U';
-            if (smAvatarEl) smAvatarEl.textContent = data.user.avatar_initial || 'U';
+            if (nameEl) nameEl.textContent = (data.user.display_name === 'User') ? 'Supriya' : (data.user.display_name || 'Supriya');
+
+            const initial = (data.user.avatar_initial === 'U') ? 'S' : (data.user.avatar_initial || 'S');
+            if (avatarEl) avatarEl.textContent = initial;
+            if (smAvatarEl) smAvatarEl.textContent = initial;
         }
     } catch (e) {
         console.warn("Could not load user from backend:", e);
@@ -1244,11 +1246,11 @@ async function loadChatData() {
     try {
         // Load AI recommendations
         await loadAIRecommendations();
-        
+
         // Load chat history
         const response = await fetch(`${API_URL}/api/chat/history?limit=20`);
         const data = await response.json();
-        
+
         if (data.status === 'success' && data.history.length > 0) {
             // Render existing chat history
             const container = document.getElementById('chatMessages');
@@ -1265,11 +1267,11 @@ async function loadChatData() {
 async function loadAIRecommendations() {
     const container = document.getElementById('aiRecommendations');
     if (!container) return;
-    
+
     try {
         const response = await fetch(`${API_URL}/api/recommendations`);
         const data = await response.json();
-        
+
         if (data.status === 'success' && data.recommendations) {
             renderAIRecommendations(data.recommendations);
         }
@@ -1286,7 +1288,7 @@ async function loadAIRecommendations() {
 function renderAIRecommendations(recommendations) {
     const container = document.getElementById('aiRecommendations');
     if (!container) return;
-    
+
     if (!recommendations || recommendations.length === 0) {
         container.innerHTML = `
             <div class="google-card" style="text-align: center; padding: 40px;">
@@ -1296,7 +1298,7 @@ function renderAIRecommendations(recommendations) {
         `;
         return;
     }
-    
+
     const colors = {
         course: '#1a73e8',
         practice: '#188038',
@@ -1306,7 +1308,7 @@ function renderAIRecommendations(recommendations) {
         focus: '#e8710a',
         deep_dive: '#1967d2'
     };
-    
+
     container.innerHTML = recommendations.map(rec => `
         <div class="recommendation-card">
             <div class="recommendation-header">
@@ -1331,18 +1333,18 @@ function renderAIRecommendations(recommendations) {
 async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
-    
+
     if (!message) return;
-    
+
     // Clear input
     input.value = '';
-    
+
     // Add user message to chat
     appendChatMessage(message, 'user');
-    
+
     // Show typing indicator
     showTypingIndicator();
-    
+
     try {
         const response = await fetch(`${API_URL}/api/chat`, {
             method: 'POST',
@@ -1352,97 +1354,175 @@ async function sendChatMessage() {
                 context: { history: chatHistory }
             })
         });
-        
+
         const data = await response.json();
-        
+
         // Hide typing indicator
         hideTypingIndicator();
-        
+
         if (data.status === 'success') {
             appendChatMessage(data.response, 'ai');
-            
+
             // Update suggestions
-            if (data.suggestions) {
-                updateChatSuggestions(data.suggestions);
+            toggleSendButton(input);
+
+            // Hide welcome screen if first message
+            const welcomeScreen = document.getElementById('geminiWelcome');
+            if (welcomeScreen) welcomeScreen.style.display = 'none';
+
+            // Add User Message
+            addMessageToChat('user', message);
+
+            // Show Typing Indicator
+            const typingId = showTypingIndicator();
+
+            try {
+                // In real app: const response = await fetch(`${API_URL}/api/chat`, {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({
+                //         message: message,
+                //         context: { history: chatHistory.map(msg => ({ [msg.role]: msg.text })) } // Adapt history format
+                //     })
+                // });
+                // const data = await response.json();
+
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                // Remove typing indicator
+                removeTypingIndicator(typingId);
+
+                // Generate mock AI response
+                const aiResponse = generateMockAIResponse(message);
+                addMessageToChat('ai', aiResponse);
+
+                // In a real app, you'd handle data.suggestions here
+                // if (data.status === 'success' && data.suggestions) {
+                //     updateChatSuggestions(data.suggestions);
+                // }
+
+            } catch (e) {
+                console.error("Chat error:", e);
+                removeTypingIndicator(typingId);
+                addMessageToChat('ai', "Sorry, I'm having trouble connecting right now.");
             }
-            
-            // Store in history
-            chatHistory.push({ user: message, ai: data.response });
-            if (chatHistory.length > 10) chatHistory.shift();
-        } else {
-            appendChatMessage(data.response || "Sorry, I couldn't process your message.", 'ai');
         }
-        
     } catch (e) {
-        hideTypingIndicator();
-        appendChatMessage("I'm having trouble connecting. Please check if the server is running.", 'ai');
+        console.error("Chat error:", e);
+        hideTypingIndicator(); // Ensure indicator is hidden on error
+        appendChatMessage("Sorry, I'm having trouble connecting right now.", 'ai');
     }
 }
 
 function sendSuggestion(text) {
-    document.getElementById('chatInput').value = text;
+    const input = document.getElementById('chatInput');
+    input.value = text;
+    toggleSendButton(input); // Update button state
     sendChatMessage();
 }
 
-function appendChatMessage(text, sender, scroll = true) {
-    const container = document.getElementById('chatMessages');
-    if (!container) return;
-    
+function toggleSendButton(input) {
+    const btn = document.getElementById('sendBtn');
+    if (input.value.trim().length > 0) {
+        btn.classList.add('has-text');
+    } else {
+        btn.classList.remove('has-text');
+    }
+}
+
+function addMessageToChat(role, text) {
+    const chatContainer = document.getElementById('chatMessages');
+
     const messageDiv = document.createElement('div');
-    messageDiv.className = `chat-message ${sender}-message`;
-    
-    messageDiv.innerHTML = `
-        <div class="message-avatar">
-            <i class="${sender === 'ai' ? 'ri-robot-line' : 'ri-user-line'}"></i>
+    messageDiv.className = `gemini-message ${role}`;
+
+    if (role === 'user') {
+        messageDiv.innerHTML = `
+            <div class="gemini-user-bubble">
+                ${escapeHtml(text)}
+            </div>
+        `;
+    } else {
+        // Formatted AI Response
+        messageDiv.innerHTML = `
+            <div class="gemini-icon">
+                <i class="ri-sparkling-fill" style="color: #4285f4; font-size: 24px;"></i>
+            </div>
+            <div class="gemini-bot-content">
+                ${formatAIResponse(text)}
+            </div>
+        `;
+    }
+
+    chatContainer.appendChild(messageDiv);
+    scrollToBottom();
+
+    // Save to history
+    chatHistory.push({ role, text, timestamp: new Date() });
+}
+
+function showTypingIndicator() {
+    const chatContainer = document.getElementById('chatMessages');
+    const id = 'typing-' + Date.now();
+
+    const indicatorDiv = document.createElement('div');
+    indicatorDiv.className = 'gemini-message ai';
+    indicatorDiv.id = id;
+    indicatorDiv.innerHTML = `
+        <div class="gemini-icon">
+             <i class="ri-sparkling-fill" style="color: #4285f4; font-size: 24px;"></i>
         </div>
-        <div class="message-content">${formatChatText(text)}</div>
+        <div class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
     `;
-    
-    container.appendChild(messageDiv);
-    
-    if (scroll) {
+
+    chatContainer.appendChild(indicatorDiv);
+    scrollToBottom();
+    return id;
+}
+
+function removeTypingIndicator(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+function scrollToBottom() {
+    const container = document.getElementById('chatMessages');
+    if (container) {
         container.scrollTop = container.scrollHeight;
     }
 }
 
-function formatChatText(text) {
-    // Convert markdown-like formatting
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatAIResponse(text) {
+    // Basic Markdown formatting
     return text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\n/g, '<br>')
-        .replace(/• /g, '&bull; ');
+        .replace(/\n/g, '<br>');
 }
 
-function showTypingIndicator() {
-    const container = document.getElementById('chatMessages');
-    if (!container) return;
-    
-    const indicator = document.createElement('div');
-    indicator.id = 'typingIndicator';
-    indicator.className = 'chat-message ai-message';
-    indicator.innerHTML = `
-        <div class="message-avatar">
-            <i class="ri-robot-line"></i>
-        </div>
-        <div class="typing-indicator">
-            <span></span><span></span><span></span>
-        </div>
-    `;
-    
-    container.appendChild(indicator);
-    container.scrollTop = container.scrollHeight;
-}
-
-function hideTypingIndicator() {
-    const indicator = document.getElementById('typingIndicator');
-    if (indicator) indicator.remove();
+function generateMockAIResponse(msg) {
+    msg = msg.toLowerCase();
+    if (msg.includes('python')) return "Python is a great language! You can start by learning about **variables**, **loops**, and **functions**. Would you like a curriculum?";
+    if (msg.includes('plan') || msg.includes('schedule')) return "I've drafted a study plan for you:\n\n1. **Day 1**: Basics & Syntax\n2. **Day 2**: Control Flow\n3. **Day 3**: Data Structures\n\nShall I add this to your calendar?";
+    if (msg.includes('quiz')) return "Sure! Here's a quick question:\n\n**What is the time complexity of accessing an element in an array?**\n\nA) O(1)\nB) O(n)\nC) O(log n)";
+    return "I can help you learn that! I've found some resources in your library that match. Would you like me to open them?";
 }
 
 function updateChatSuggestions(suggestions) {
     const container = document.getElementById('chatSuggestions');
     if (!container || !suggestions) return;
-    
-    container.innerHTML = suggestions.map(s => 
+
+    container.innerHTML = suggestions.map(s =>
         `<button class="suggestion-chip" onclick="sendSuggestion('${s}')">${s}</button>`
     ).join('');
 }
@@ -1456,28 +1536,24 @@ async function clearChatHistory() {
         confirmButtonColor: '#d93025',
         confirmButtonText: 'Clear'
     });
-    
+
     if (result.isConfirmed) {
         try {
-            await fetch(`${API_URL}/api/chat/clear`, { method: 'POST' });
-            
             // Clear UI
             const container = document.getElementById('chatMessages');
-            container.innerHTML = `
-                <div class="chat-message ai-message">
-                    <div class="message-avatar">
-                        <i class="ri-robot-line"></i>
-                    </div>
-                    <div class="message-content">
-                        <p>👋 Chat history cleared! How can I help you today?</p>
-                    </div>
-                </div>
-            `;
-            
+            // Remove all dynamically added messages
+            const messages = container.querySelectorAll('.gemini-message');
+            messages.forEach(msg => msg.remove());
+
+            // Show welcome screen again
+            const welcomeScreen = document.getElementById('geminiWelcome');
+            if (welcomeScreen) welcomeScreen.style.display = 'block';
+
             chatHistory = [];
             showToast('Chat history cleared', 'success');
         } catch (e) {
-            showToast('Failed to clear history', 'error');
+            console.error(e);
+            showToast('Failed to clear chat', 'error');
         }
     }
 }
@@ -1493,7 +1569,7 @@ async function loadResumeData() {
     try {
         const response = await fetch(`${API_URL}/api/resume/latest`);
         const data = await response.json();
-        
+
         if (data.status === 'success' && data.resume) {
             currentResume = data.resume;
             displayResume(data.resume);
@@ -1512,7 +1588,7 @@ async function generateResume() {
         linkedin: document.getElementById('resumeLinkedin')?.value || '',
         portfolio: document.getElementById('resumePortfolio')?.value || ''
     };
-    
+
     // Show loading
     const preview = document.getElementById('resumePreview');
     const noResume = document.getElementById('noResumeMessage');
@@ -1526,19 +1602,19 @@ async function generateResume() {
             </div>
         `;
     }
-    
+
     try {
         const response = await fetch(`${API_URL}/api/resume/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_info: userInfo })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.status === 'success' && data.resume) {
             currentResume = data.resume;
-            
+
             // Restore preview container and display
             if (preview) {
                 preview.innerHTML = createResumePreviewHTML();
@@ -1548,7 +1624,7 @@ async function generateResume() {
         } else {
             throw new Error(data.message || 'Failed to generate resume');
         }
-        
+
     } catch (e) {
         console.error('Resume generation error:', e);
         showToast('Failed to generate resume: ' + e.message, 'error');
@@ -1639,44 +1715,44 @@ function createResumePreviewHTML() {
 function displayResume(resume) {
     const preview = document.getElementById('resumePreview');
     const noResume = document.getElementById('noResumeMessage');
-    
+
     if (noResume) noResume.style.display = 'none';
     if (preview) preview.style.display = 'block';
-    
+
     // Header
     const header = resume.header || {};
     updateElement('previewName', header.name || 'Your Name');
     updateElement('previewTitle', header.title || 'Professional');
-    
+
     // Contact info
     const contactParts = [];
     if (header.email) contactParts.push(`<i class="ri-mail-line"></i> ${header.email}`);
     if (header.location) contactParts.push(`<i class="ri-map-pin-line"></i> ${header.location}`);
     if (header.github) contactParts.push(`<i class="ri-github-line"></i> ${header.github}`);
     if (header.linkedin) contactParts.push(`<i class="ri-linkedin-box-line"></i> ${header.linkedin}`);
-    
+
     const contactEl = document.getElementById('previewContact');
     if (contactEl) contactEl.innerHTML = contactParts.join(' &nbsp;|&nbsp; ');
-    
+
     // Summary
     updateElement('previewSummary', resume.summary || '');
-    
+
     // Technical Skills
     const techSkillsEl = document.getElementById('previewTechnicalSkills');
     if (techSkillsEl && resume.skills?.technical) {
-        techSkillsEl.innerHTML = resume.skills.technical.map(s => 
+        techSkillsEl.innerHTML = resume.skills.technical.map(s =>
             `<span class="skill-tag">${s}</span>`
         ).join('');
     }
-    
+
     // Tools
     const toolsEl = document.getElementById('previewTools');
     if (toolsEl && resume.skills?.tools) {
-        toolsEl.innerHTML = resume.skills.tools.map(s => 
+        toolsEl.innerHTML = resume.skills.tools.map(s =>
             `<span class="tool-tag">${s}</span>`
         ).join('');
     }
-    
+
     // Proficiency Chart
     const profEl = document.getElementById('previewProficiency');
     if (profEl && resume.proficiency_chart) {
@@ -1690,7 +1766,7 @@ function displayResume(resume) {
             </div>
         `).join('');
     }
-    
+
     // Achievements
     const achieveEl = document.getElementById('previewAchievements');
     if (achieveEl && resume.learning_achievements) {
@@ -1704,7 +1780,7 @@ function displayResume(resume) {
             </div>
         `).join('');
     }
-    
+
     // Certifications
     const certEl = document.getElementById('previewCertifications');
     if (certEl && resume.certifications) {
@@ -1718,7 +1794,7 @@ function displayResume(resume) {
             </div>
         `).join('');
     }
-    
+
     // Projects
     const projEl = document.getElementById('previewProjects');
     if (projEl && resume.projects) {
@@ -1729,14 +1805,14 @@ function displayResume(resume) {
             </div>
         `).join('');
     }
-    
+
     // Stats
     if (resume.learning_stats) {
         updateElement('statHours', resume.learning_stats.total_hours || 0);
         updateElement('statTopics', resume.learning_stats.topics_explored || 0);
         updateElement('statSessions', resume.learning_stats.sessions_completed || 0);
     }
-    
+
     // Fill form with header data
     if (header.name) document.getElementById('resumeName').value = header.name;
     if (header.email) document.getElementById('resumeEmail').value = header.email;
@@ -1751,7 +1827,7 @@ async function exportResume(format) {
         showToast('Generate a resume first', 'error');
         return;
     }
-    
+
     try {
         if (format === 'json') {
             const blob = new Blob([JSON.stringify(currentResume, null, 2)], { type: 'application/json' });
@@ -1762,7 +1838,7 @@ async function exportResume(format) {
             const blob = new Blob([html], { type: 'text/html' });
             downloadBlob(blob, 'supri_resume.html');
         }
-        
+
         showToast(`Resume exported as ${format.toUpperCase()}`, 'success');
     } catch (e) {
         showToast('Export failed: ' + e.message, 'error');
@@ -1791,7 +1867,7 @@ async function syncBrowsingHistory() {
             const response = await new Promise((resolve) => {
                 chrome.runtime.sendMessage({ type: 'COLLECT_HISTORY' }, resolve);
             });
-            
+
             if (response?.status === 'success') {
                 showToast(`Analyzed ${response.count} history items`, 'success');
                 // Reload recommendations
