@@ -47,7 +47,7 @@ class PopupController {
             this.isTracking = !this.isTracking;
             await chrome.storage.local.set({ trackingEnabled: this.isTracking });
             this.updateTrackingUI();
-            
+
             try {
                 await safeSendMessage({ type: 'TOGGLE_TRACKING', enabled: this.isTracking });
             } catch (error) {
@@ -86,7 +86,7 @@ class PopupController {
     async loadQuickStats() {
         try {
             const stats = await this.storage.getTodayStats();
-            
+
             document.getElementById('todayTopics').textContent = stats.topicsCount || 0;
             document.getElementById('todayTime').textContent = formatTime(stats.totalTime || 0);
             document.getElementById('streakDays').textContent = stats.streak || 0;
@@ -98,7 +98,7 @@ class PopupController {
     async loadCurrentPage() {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            
+
             if (!tab || !tab.url) {
                 this.showCurrentPageFallback('No active tab', 'Open a webpage to track');
                 return;
@@ -106,7 +106,7 @@ class PopupController {
 
             // Check if this is a trackable page
             const isTrackable = tab.url.startsWith('http://') || tab.url.startsWith('https://');
-            
+
             if (!isTrackable) {
                 this.showCurrentPageFallback(tab.title || 'Browser Page', 'Not trackable');
                 return;
@@ -115,20 +115,20 @@ class PopupController {
             // Try to get session info from background script
             if (isExtensionContextValid()) {
                 try {
-                    const response = await safeSendMessage({ 
+                    const response = await safeSendMessage({
                         type: 'GET_CURRENT_SESSION',
-                        tabId: tab.id 
+                        tabId: tab.id
                     });
 
                     if (response && response.session) {
                         const session = response.session;
                         document.getElementById('currentPageTitle').textContent = session.title || tab.title || 'Unknown Page';
                         document.getElementById('currentPageCategory').textContent = session.category || 'Analyzing...';
-                        
+
                         const engagement = session.engagementScore || 0;
                         document.getElementById('engagementMeter').style.width = `${engagement}%`;
                         document.getElementById('engagementValue').textContent = `${Math.round(engagement)}%`;
-                        
+
                         this.updateFocusDots(session.focusLevel || 0);
                         return;
                     }
@@ -144,7 +144,7 @@ class PopupController {
             document.getElementById('engagementMeter').style.width = '0%';
             document.getElementById('engagementValue').textContent = '0%';
             this.updateFocusDots(0);
-            
+
         } catch (error) {
             console.error('Error loading current page:', error);
             this.showCurrentPageFallback('Unable to load', 'Try refreshing');
@@ -167,7 +167,7 @@ class PopupController {
     updateFocusDots(level) {
         const dots = document.querySelectorAll('.focus-dot');
         const activeDots = Math.ceil(level / 20);
-        
+
         dots.forEach((dot, index) => {
             if (index < activeDots) {
                 dot.classList.add('active');
@@ -181,12 +181,12 @@ class PopupController {
         try {
             const topics = await this.storage.getTopTopics(3);
             const container = document.getElementById('topTopicsList');
-            
+
             if (topics.length === 0) {
                 container.innerHTML = `
                     <div class="topic-item">
                         <div class="topic-info">
-                            <div class="topic-icon">📖</div>
+                            <div class="topic-icon"><i class="ri-book-open-line"></i></div>
                             <div>
                                 <div class="topic-name">Start Learning!</div>
                                 <div class="topic-time">Browse educational content to see topics</div>
@@ -197,8 +197,17 @@ class PopupController {
                 return;
             }
 
-            const topicIcons = ['💻', '📊', '🔬', '📚', '🎨', '🧮', '🌐', '⚙️'];
-            
+            const topicIcons = [
+                '<i class="ri-computer-line"></i>',
+                '<i class="ri-bar-chart-line"></i>',
+                '<i class="ri-microscope-line"></i>',
+                '<i class="ri-book-2-line"></i>',
+                '<i class="ri-palette-line"></i>',
+                '<i class="ri-calculator-line"></i>',
+                '<i class="ri-global-line"></i>',
+                '<i class="ri-settings-line"></i>'
+            ];
+
             container.innerHTML = topics.map((topic, index) => `
                 <div class="topic-item">
                     <div class="topic-info">
@@ -222,11 +231,11 @@ class PopupController {
         try {
             const recommendations = await this.storage.getRecommendations(2);
             const container = document.getElementById('recommendationsList');
-            
+
             if (recommendations.length === 0) {
                 container.innerHTML = `
                     <div class="recommendation-card">
-                        <div class="rec-icon">💡</div>
+                        <div class="rec-icon"><i class="ri-lightbulb-line"></i></div>
                         <div class="rec-content">
                             <div class="rec-title">Personalized Recommendations Coming</div>
                             <div class="rec-description">Keep learning! AI will generate recommendations based on your patterns.</div>
@@ -237,8 +246,14 @@ class PopupController {
                 return;
             }
 
-            const recIcons = ['📖', '🎥', '📝', '🔗', '💡'];
-            
+            const recIcons = [
+                '<i class="ri-book-read-line"></i>',
+                '<i class="ri-movie-line"></i>',
+                '<i class="ri-article-line"></i>',
+                '<i class="ri-links-line"></i>',
+                '<i class="ri-lightbulb-line"></i>'
+            ];
+
             container.innerHTML = recommendations.map((rec, index) => `
                 <a href="${rec.url || '#'}" 
                    class="recommendation-card" 

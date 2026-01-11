@@ -2,7 +2,6 @@ import { StorageManager } from './storage.js';
 import { ContentClassifier } from './classifier.js';
 import { AnalyticsEngine } from './analytics.js';
 import { RecommendationEngine } from './recommendations.js';
-import { checkServer, startLocalServer, LOCAL_SERVER } from './server-manager.js';
 
 class BackgroundController {
     constructor() {
@@ -10,11 +9,10 @@ class BackgroundController {
         this.classifier = new ContentClassifier();
         this.analytics = new AnalyticsEngine();
         this.recommendations = new RecommendationEngine();
-        
+
         this.activeSessions = new Map();
         this.trackingEnabled = true;
-        this.backendUrl = LOCAL_SERVER;
-        
+
         this.config = {
             minSessionDuration: 5000,
             updateInterval: 10000,
@@ -27,18 +25,16 @@ class BackgroundController {
 
     async init() {
         console.log('SupriAI Background Service Starting...');
-        
-        await startLocalServer();
-        
+
         await this.loadSettings();
-        
+
         await this.storage.init();
-        
+
         this.setupTabListeners();
         this.setupNavigationListeners();
         this.setupMessageListeners();
         this.setupAlarms();
-        
+
         console.log('SupriAI Background Service Ready');
     }
 
@@ -53,7 +49,7 @@ class BackgroundController {
     setupTabListeners() {
         chrome.tabs.onActivated.addListener(async (activeInfo) => {
             if (!this.trackingEnabled) return;
-            
+
             try {
                 const tab = await chrome.tabs.get(activeInfo.tabId);
                 await this.handleTabChange(tab);
@@ -65,7 +61,7 @@ class BackgroundController {
         chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
             if (!this.trackingEnabled) return;
             if (changeInfo.status !== 'complete') return;
-            
+
             await this.handleTabUpdate(tab);
         });
 
@@ -75,7 +71,7 @@ class BackgroundController {
 
         chrome.windows.onFocusChanged.addListener(async (windowId) => {
             if (!this.trackingEnabled) return;
-            
+
             if (windowId === chrome.windows.WINDOW_ID_NONE) {
                 this.pauseAllSessions();
             } else {
@@ -103,7 +99,7 @@ class BackgroundController {
 
     async handleTabUpdate(tab) {
         const existingSession = this.activeSessions.get(tab.id);
-        
+
         if (existingSession && existingSession.url !== tab.url) {
             await this.endSession(tab.id);
             await this.startSession(tab);
@@ -118,7 +114,7 @@ class BackgroundController {
         }
 
         const classification = await this.classifier.classifyUrl(tab.url, tab.title);
-        
+
         const session = {
             tabId: tab.id,
             windowId: tab.windowId,
@@ -144,9 +140,9 @@ class BackgroundController {
         };
 
         this.activeSessions.set(tab.id, session);
-        
+
         try {
-            await chrome.tabs.sendMessage(tab.id, { 
+            await chrome.tabs.sendMessage(tab.id, {
                 type: 'START_TRACKING',
                 sessionId: tab.id
             });
@@ -161,15 +157,15 @@ class BackgroundController {
         if (!session) return;
 
         const duration = Date.now() - session.startTime;
-        
+
         if (duration >= this.config.minSessionDuration) {
             session.endTime = Date.now();
             session.duration = duration;
-            
+
             session.engagementScore = this.calculateEngagement(session);
-            
+
             await this.storage.saveSession(session);
-            
+
             console.log(`Session ended: ${session.title} - ${Math.round(duration / 1000)}s`);
         }
 
@@ -193,14 +189,14 @@ class BackgroundController {
         };
 
         const durationScore = Math.min(session.duration / (30 * 60 * 1000), 1) * 100;
-        
+
         const scrollScore = session.scrollDepth;
-        
+
         const mouseScore = Math.min(
             (session.mouseMetrics.movements + session.mouseMetrics.clicks * 5) / 100,
             1
         ) * 100;
-        
+
         const activeTime = session.duration - session.mouseMetrics.idleTime;
         const focusScore = (activeTime / session.duration) * 100;
 
@@ -216,7 +212,7 @@ class BackgroundController {
         chrome.webNavigation.onCompleted.addListener(async (details) => {
             if (!this.trackingEnabled) return;
             if (details.frameId !== 0) return;
-            
+
             await this.storage.recordNavigation({
                 url: details.url,
                 timestamp: details.timeStamp,
@@ -226,7 +222,7 @@ class BackgroundController {
 
         chrome.history.onVisited.addListener(async (historyItem) => {
             if (!this.trackingEnabled) return;
-            
+
             const classification = await this.classifier.classifyUrl(historyItem.url, historyItem.title);
             if (classification.isEducational) {
                 await this.storage.recordVisit({
@@ -308,11 +304,6 @@ class BackgroundController {
                     sendResponse({ recommendations: recs });
                     break;
 
-                case 'SYNC_WITH_BACKEND':
-                    await this.syncWithPythonBackend();
-                    sendResponse({ success: true });
-                    break;
-
                 default:
                     sendResponse({ error: 'Unknown message type' });
             }
@@ -339,7 +330,7 @@ class BackgroundController {
             session.mouseMetrics.hoverEvents += metrics.hoverEvents || 0;
             session.mouseMetrics.idleTime += metrics.idleTime || 0;
             session.lastUpdate = Date.now();
-            
+
             session.focusLevel = this.calculateFocusLevel(session.mouseMetrics);
         }
     }
@@ -350,7 +341,7 @@ class BackgroundController {
             1
         );
         const activeScore = mouseMetrics.idleTime < 30000 ? 1 : 0.5;
-        
+
         return (activityScore * 0.6 + activeScore * 0.4) * 100;
     }
 
@@ -395,25 +386,23 @@ class BackgroundController {
 
     async runPeriodicAnalysis() {
         console.log('Running periodic analysis...');
-        
+
         for (const session of this.activeSessions.values()) {
             session.engagementScore = this.calculateEngagement(session);
         }
 
         await this.analytics.detectPatterns();
-        
+
         await this.recommendations.generate();
     }
 
     async generateDailySummary() {
         console.log('Generating daily summary...');
-        
+
         const summary = await this.analytics.generateDailySummary();
         await this.storage.saveDailySummary(summary);
-        
+
         await this.generateLocalInsights();
-        
-        await this.syncWithPythonBackend();
     }
 
     async generateLocalInsights() {
@@ -468,38 +457,6 @@ class BackgroundController {
         } catch (error) {
             console.log('Error generating local insights:', error.message);
         }
-    }
-
-    async syncWithPythonBackend() {
-        try {
-            const data = await this.storage.getDataForSync();
-            
-            const response = await fetch('http://localhost:5000/api/sync', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                
-                if (result.insights) {
-                    await this.storage.saveAIInsights(result.insights);
-                }
-                
-                if (result.recommendations) {
-                    await this.storage.saveRecommendations(result.recommendations);
-                }
-                
-                console.log('Synced with Python backend successfully');
-                return true;
-            }
-        } catch (error) {
-            console.log('Backend not available - using local analysis only');
-        }
-        return false;
     }
 }
 

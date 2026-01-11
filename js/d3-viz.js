@@ -8,18 +8,18 @@
 export class D3Visualizations {
     constructor() {
         this.colors = {
-            primary: '#6366f1',
-            success: '#10b981',
-            warning: '#f59e0b',
-            danger: '#ef4444',
-            info: '#3b82f6',
+            primary: '#1a73e8',
+            success: '#34A853',
+            warning: '#FBBC05',
+            danger: '#EA4335',
+            info: '#4285F4',
             categories: [
-                '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
-                '#f59e0b', '#10b981', '#14b8a6', '#06b6d4',
-                '#3b82f6', '#6366f1'
+                '#4285F4', '#EA4335', '#FBBC05', '#34A853',
+                '#A142F4', '#24C1E0', '#FA7B17', '#F439A0',
+                '#9334E6', '#4285F4'
             ]
         };
-        
+
         this.d3Available = false;
         // Silent initialization - Chart.js is the primary visualization library
     }

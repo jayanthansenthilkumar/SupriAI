@@ -1,11 +1,10 @@
-
+// SupriAI Dashboard Controller v2.0 - Backend-Free Version
 
 import { StorageManager } from '../js/storage.js';
 import { AnalyticsEngine } from '../js/analytics.js';
 import { RecommendationEngine } from '../js/recommendations.js';
 import { D3Visualizations } from '../js/d3-viz.js';
 import { formatTime, formatDate, getCategoryColor, getCategoryIcon, getRelativeTime } from '../js/utils.js';
-import CONFIG, { BackendConnection } from '../js/config.js';
 
 class DashboardController {
     constructor() {
@@ -13,11 +12,10 @@ class DashboardController {
         this.analytics = new AnalyticsEngine();
         this.recommendations = new RecommendationEngine();
         this.d3viz = new D3Visualizations();
-        this.backend = new BackendConnection();
-        
+
         this.currentTimeRange = 'week';
         this.charts = {};
-        
+
         // History filters state
         this.historyFilters = {
             category: '',
@@ -35,20 +33,19 @@ class DashboardController {
 
         // Export settings
         this.selectedExportRange = 'all';
-        
+
         this.init();
     }
 
     async init() {
         await this.storage.ensureInitialized();
-        
+
         this.initTheme();
         this.setupNavigation();
         this.setupEventListeners();
-        this.setupBackendConnection();
-        
+
         await this.loadDashboard();
-        
+
         this.handleHashChange();
         window.addEventListener('hashchange', () => this.handleHashChange());
     }
@@ -67,7 +64,7 @@ class DashboardController {
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('supriai-theme', newTheme);
-            
+
             this.updateChartsTheme();
         });
     }
@@ -76,7 +73,7 @@ class DashboardController {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const textColor = isDark ? '#f1f5f9' : '#1e293b';
         const gridColor = isDark ? '#334155' : '#e2e8f0';
-        
+
         Object.values(this.charts).forEach(chart => {
             if (chart && chart.options) {
                 if (chart.options.scales) {
@@ -95,16 +92,16 @@ class DashboardController {
 
     setupNavigation() {
         const navItems = document.querySelectorAll('.nav-item');
-        
+
         navItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 const section = item.dataset.section;
                 this.showSection(section);
-                
+
                 navItems.forEach(n => n.classList.remove('active'));
                 item.classList.add('active');
-                
+
                 window.location.hash = section;
             });
         });
@@ -113,7 +110,7 @@ class DashboardController {
     handleHashChange() {
         const hash = window.location.hash.slice(1) || 'overview';
         this.showSection(hash);
-        
+
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.toggle('active', item.dataset.section === hash);
         });
@@ -123,12 +120,12 @@ class DashboardController {
         document.querySelectorAll('.section').forEach(section => {
             section.classList.remove('active');
         });
-        
+
         const targetSection = document.getElementById(sectionId);
         if (targetSection) {
             targetSection.classList.add('active');
         }
-        
+
         const titles = {
             'overview': { title: 'Overview', subtitle: 'Your learning journey at a glance' },
             'analytics': { title: 'Analytics', subtitle: 'Deep dive into your learning patterns' },
@@ -138,7 +135,7 @@ class DashboardController {
             'history': { title: 'History', subtitle: 'Your complete learning timeline' },
             'settings': { title: 'Settings', subtitle: 'Customize your experience' }
         };
-        
+
         const headerInfo = titles[sectionId] || { title: 'Dashboard', subtitle: '' };
         const sectionTitleEl = document.getElementById('sectionTitle');
         const headerSubtitleEl = document.getElementById('headerSubtitle');
@@ -156,32 +153,6 @@ class DashboardController {
             });
         });
 
-        document.getElementById('syncBtn').addEventListener('click', () => this.syncWithBackend());
-
-        document.getElementById('backendToggle')?.addEventListener('change', (e) => {
-            chrome.storage.local.set({ backendEnabled: e.target.checked });
-            if (e.target.checked) {
-                this.backend.startHealthChecks();
-            } else {
-                this.backend.stopHealthChecks();
-            }
-        });
-
-        document.getElementById('backendUrl')?.addEventListener('change', (e) => {
-            chrome.storage.local.set({ backendUrl: e.target.value });
-            this.backend.baseUrl = e.target.value;
-        });
-
-        document.getElementById('testBackendBtn')?.addEventListener('click', () => this.testBackendConnection());
-
-        document.getElementById('autoSyncToggle')?.addEventListener('change', (e) => {
-            chrome.storage.local.set({ autoSync: e.target.checked });
-            if (e.target.checked) {
-                this.startAutoSync();
-            } else {
-                this.stopAutoSync();
-            }
-        });
 
         document.getElementById('trackingToggle').addEventListener('change', (e) => {
             chrome.storage.local.set({ trackingEnabled: e.target.checked });
@@ -353,157 +324,50 @@ class DashboardController {
 
     async loadDashboard() {
         try {
-            let analytics;
-            
-            if (this.backend.isConnected && CONFIG.BACKEND_ENABLED) {
-                console.log('Fetching analytics from backend...');
-                const backendData = await this.backend.fetchAnalytics(this.currentTimeRange);
-                if (backendData && backendData.success) {
-                    analytics = this.mergeBackendAndLocalAnalytics(backendData);
-                } else {
-                    console.log('Backend fetch failed, using local storage');
-                    analytics = await this.analytics.getAnalytics(this.currentTimeRange);
-                }
-            } else {
-                console.log('Using local storage for analytics');
-                analytics = await this.analytics.getAnalytics(this.currentTimeRange);
-            }
-            
+            console.log('Using local storage for analytics');
+            const analytics = await this.analytics.getAnalytics(this.currentTimeRange);
+
             this.updateOverviewStats(analytics);
-            
+
             this.renderTrendChart(analytics.learningTrends);
             this.renderTopicChart(analytics.topicDistribution);
-            
+
             this.loadRecentSessions();
             this.loadQuickRecommendations();
-            
+
             this.renderEngagementChart(analytics.engagementMetrics);
             this.renderHourlyChart(analytics.learningTrends.hourlyDistribution);
             this.renderCategoryChart(analytics.topicDistribution);
             this.renderPatterns(analytics.patterns);
-            
+
             this.renderD3CategoryPie(analytics.topicDistribution);
             this.renderD3Timeline(analytics.learningTrends);
-            
+
             await this.loadTopics();
-            
+
             await this.loadSkills();
-            
+
             await this.loadRecommendations();
-            
+
             await this.loadHistory();
-            
+
             // Load productivity insights (includes streak)
             await this.loadProductivityInsights();
-            
+
         } catch (error) {
             console.error('Error loading dashboard:', error);
         }
     }
 
-    mergeBackendAndLocalAnalytics(backendData) {
-        const { data, summary } = backendData;
-        return {
-            overview: {
-                totalTime: summary.totalTime || 0,
-                totalSessions: summary.totalSessions || 0,
-                avgEngagement: summary.avgEngagement || 0,
-                uniqueTopics: summary.uniqueTopics || 0,
-                uniqueDays: summary.uniqueDays || 0,
-                avgSessionDuration: summary.totalSessions > 0 ? summary.totalTime / summary.totalSessions : 0,
-                dailyAverage: summary.uniqueDays > 0 ? summary.totalTime / summary.uniqueDays : 0
-            },
-            topicDistribution: {
-                byCategory: this.transformCategoryBreakdown(summary.categoryBreakdown),
-                byTopic: data.topics?.slice(0, 10).map(t => ({ name: t.name, time: t.total_time })) || [],
-                totalCategories: Object.keys(summary.categoryBreakdown || {}).length,
-                totalTopics: data.topics?.length || 0
-            },
-            learningTrends: this.transformToLearningTrends(data.sessions),
-            engagementMetrics: this.calculateEngagementMetrics(data.sessions),
-            skillProgress: [],
-            patterns: []
-        };
-    }
-
-    transformCategoryBreakdown(breakdown) {
-        if (!breakdown) return [];
-        return Object.entries(breakdown).map(([category, stats]) => ({
-            category,
-            count: stats.count,
-            totalTime: stats.time,
-            avgEngagement: 0
-        })).sort((a, b) => b.totalTime - a.totalTime);
-    }
-
-    transformToLearningTrends(sessions) {
-        if (!sessions || sessions.length === 0) {
-            return {
-                daily: [],
-                hourlyDistribution: Array(24).fill(0),
-                weeklyPattern: Array(7).fill(0)
-            };
-        }
-
-        const dailyMap = {};
-        const hourlyDist = Array(24).fill(0);
-        const weeklyPattern = Array(7).fill(0);
-
-        sessions.forEach(session => {
-            const date = session.date || new Date(session.created_at).toISOString().split('T')[0];
-            if (!dailyMap[date]) {
-                dailyMap[date] = { date, totalTime: 0, sessionCount: 0, avgEngagement: 0 };
-            }
-            dailyMap[date].totalTime += session.duration || 0;
-            dailyMap[date].sessionCount += 1;
-            dailyMap[date].avgEngagement += session.engagement_score || 0;
-
-            const timestamp = session.timestamp || new Date(session.created_at).getTime();
-            const hour = new Date(timestamp).getHours();
-            hourlyDist[hour] += session.duration || 0;
-
-            const day = new Date(timestamp).getDay();
-            weeklyPattern[day] += session.duration || 0;
-        });
-
-        const daily = Object.values(dailyMap).map(d => ({
-            ...d,
-            avgEngagement: d.sessionCount > 0 ? Math.round(d.avgEngagement / d.sessionCount) : 0
-        }));
-
-        return { daily, hourlyDistribution: hourlyDist, weeklyPattern };
-    }
-
-    calculateEngagementMetrics(sessions) {
-        if (!sessions || sessions.length === 0) {
-            return { overall: 0, byCategory: {}, trend: [] };
-        }
-
-        const overall = sessions.reduce((sum, s) => sum + (s.engagement_score || 0), 0) / sessions.length;
-        const byCategory = {};
-        
-        sessions.forEach(s => {
-            const cat = s.category || 'Other';
-            if (!byCategory[cat]) byCategory[cat] = { total: 0, count: 0 };
-            byCategory[cat].total += s.engagement_score || 0;
-            byCategory[cat].count += 1;
-        });
-
-        Object.keys(byCategory).forEach(cat => {
-            byCategory[cat] = byCategory[cat].total / byCategory[cat].count;
-        });
-
-        return { overall: Math.round(overall), byCategory, trend: [] };
-    }
 
     updateOverviewStats(analytics) {
         const { overview } = analytics;
-        
+
         const totalTimeEl = document.getElementById('totalTime');
         const totalTopicsEl = document.getElementById('totalTopics');
         const avgEngagementEl = document.getElementById('avgEngagement');
         const currentStreakEl = document.getElementById('currentStreak');
-        
+
         if (totalTimeEl) totalTimeEl.textContent = formatTime(overview.totalTime);
         if (totalTopicsEl) totalTopicsEl.textContent = overview.uniqueTopics;
         if (avgEngagementEl) avgEngagementEl.textContent = `${overview.avgEngagement}%`;
@@ -530,8 +394,8 @@ class DashboardController {
                     {
                         label: 'Time (minutes)',
                         data: timeData,
-                        borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderColor: '#4285F4',
+                        backgroundColor: 'rgba(66, 133, 244, 0.1)',
                         fill: true,
                         tension: 0.4,
                         yAxisID: 'y'
@@ -539,7 +403,7 @@ class DashboardController {
                     {
                         label: 'Engagement %',
                         data: engagementData,
-                        borderColor: '#10b981',
+                        borderColor: '#34A853',
                         backgroundColor: 'transparent',
                         borderDash: [5, 5],
                         tension: 0.4,
@@ -592,7 +456,7 @@ class DashboardController {
         const topTopics = distribution.byTopic.slice(0, 5);
         const labels = topTopics.map(t => t.name);
         const data = topTopics.map(t => Math.round(t.time / 60000));
-        const colors = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'];
+        const colors = ['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#A142F4'];
 
         this.charts.topic = new Chart(ctx, {
             type: 'doughnut',
@@ -610,7 +474,7 @@ class DashboardController {
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { 
+                        labels: {
                             color: '#94a3b8',
                             padding: 12,
                             usePointStyle: true
@@ -636,7 +500,7 @@ class DashboardController {
                 labels: ['High', 'Medium', 'Low'],
                 datasets: [{
                     data: [metrics.levels.high, metrics.levels.medium, metrics.levels.low],
-                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                    backgroundColor: ['#34A853', '#FBBC05', '#EA4335'],
                     borderRadius: 8
                 }]
             },
@@ -677,7 +541,7 @@ class DashboardController {
                 labels,
                 datasets: [{
                     data,
-                    backgroundColor: '#6366f1',
+                    backgroundColor: '#4285F4',
                     borderRadius: 4
                 }]
             },
@@ -690,7 +554,7 @@ class DashboardController {
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { 
+                        ticks: {
                             color: '#94a3b8',
                             maxTicksLimit: 8
                         }
@@ -725,13 +589,13 @@ class DashboardController {
                     {
                         label: 'Time (min)',
                         data: timeData,
-                        backgroundColor: '#6366f1',
+                        backgroundColor: '#4285F4',
                         borderRadius: 4
                     },
                     {
                         label: 'Engagement',
                         data: engagementData,
-                        backgroundColor: '#10b981',
+                        backgroundColor: '#34A853',
                         borderRadius: 4
                     }
                 ]
@@ -764,15 +628,15 @@ class DashboardController {
         if (!container) return;
 
         const patternIcons = {
-            'time_preference': '⏰',
-            'session_duration': '⏱️',
-            'topic_sequence': '🔀',
-            'revisit_pattern': '🔄'
+            'time_preference': '<i class="ri-time-line"></i>',
+            'session_duration': '<i class="ri-timer-line"></i>',
+            'topic_sequence': '<i class="ri-shuffle-line"></i>',
+            'revisit_pattern': '<i class="ri-repeat-line"></i>'
         };
 
         container.innerHTML = patterns.map(pattern => `
             <div class="pattern-item">
-                <span class="pattern-icon">${patternIcons[pattern.type] || '📊'}</span>
+                <span class="pattern-icon">${patternIcons[pattern.type] || '<i class="ri-bar-chart-2-line"></i>'}</span>
                 <div class="pattern-title">${this.getPatternTitle(pattern)}</div>
                 <div class="pattern-value">${this.getPatternValue(pattern)}</div>
             </div>
@@ -807,7 +671,7 @@ class DashboardController {
     async loadRecentSessions() {
         const sessions = await this.storage.getSessions({ limit: 5 });
         const container = document.getElementById('recentSessions');
-        
+
         if (!container) return;
 
         if (sessions.length === 0) {
@@ -835,7 +699,7 @@ class DashboardController {
     async loadQuickRecommendations() {
         const recs = await this.storage.getRecommendations(3);
         const container = document.getElementById('quickRecommendations');
-        
+
         if (!container) return;
 
         if (recs.length === 0) {
@@ -865,7 +729,7 @@ class DashboardController {
     async loadTopics() {
         const topics = await this.storage.getTopTopics(20);
         const tbody = document.querySelector('#topicsTable tbody');
-        
+
         if (!tbody) return;
 
         if (topics.length === 0) {
@@ -905,7 +769,7 @@ class DashboardController {
     filterTopics(searchTerm) {
         const rows = document.querySelectorAll('#topicsTable tbody tr');
         const term = searchTerm.toLowerCase();
-        
+
         rows.forEach(row => {
             const topicName = row.dataset.topic?.toLowerCase() || '';
             row.style.display = topicName.includes(term) ? '' : 'none';
@@ -915,7 +779,7 @@ class DashboardController {
     async showTopicDetails(topicName) {
         const topics = await this.storage.getTopTopics(100);
         const topic = topics.find(t => t.name === topicName);
-        
+
         const container = document.getElementById('topicDetails');
         if (!container || !topic) return;
 
@@ -951,7 +815,7 @@ class DashboardController {
     async loadSkills() {
         const skills = await this.storage.getSkills();
         const container = document.getElementById('skillsList');
-        
+
         if (!container) return;
 
         if (skills.length === 0) {
@@ -1026,37 +890,11 @@ class DashboardController {
     }
 
     async loadRecommendations() {
-        let recs = [];
-        
-        if (this.backend.isConnected && CONFIG.BACKEND_ENABLED) {
-            try {
-                console.log('Fetching recommendations from backend...');
-                const backendRecs = await this.backend.fetchRecommendations(20);
-                if (backendRecs && backendRecs.success && backendRecs.recommendations) {
-                    recs = backendRecs.recommendations.map(r => ({
-                        title: r.title,
-                        description: r.description,
-                        url: r.url,
-                        type: r.rec_type || r.type,
-                        priority: r.priority,
-                        difficulty: this.inferDifficulty(r.description),
-                        icon: this.getRecommendationIcon(r.rec_type || r.type),
-                        score: r.score
-                    }));
-                    console.log(`Loaded ${recs.length} recommendations from backend`);
-                }
-            } catch (error) {
-                console.error('Failed to fetch backend recommendations:', error);
-            }
-        }
-        
-        if (recs.length === 0) {
-            console.log('Using local recommendations');
-            recs = await this.recommendations.generate();
-        }
-        
+        console.log('Using local recommendations');
+        const recs = await this.recommendations.generate();
+
         const container = document.getElementById('fullRecommendations');
-        
+
         if (!container) return;
 
         if (recs.length === 0) {
@@ -1096,7 +934,7 @@ class DashboardController {
         `).join('');
 
         this.loadWeeklySummary();
-        
+
         this.loadCuratedResources();
 
         // Load knowledge profile and learning paths
@@ -1112,7 +950,7 @@ class DashboardController {
 
         try {
             const recs = await this.recommendations.getRecommendationsByType(type);
-            
+
             if (recs.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -1159,7 +997,7 @@ class DashboardController {
     async loadKnowledgeProfile() {
         const container = document.getElementById('knowledgeAreas');
         const levelBadge = document.getElementById('overallKnowledgeLevel');
-        
+
         if (!container) return;
 
         try {
@@ -1190,7 +1028,7 @@ class DashboardController {
                     'Expert': 'var(--accent-primary)'
                 };
                 const color = levelColors[area.level] || 'var(--accent-primary)';
-                
+
                 return `
                     <div class="knowledge-area-item">
                         <div class="knowledge-area-header">
@@ -1242,7 +1080,7 @@ class DashboardController {
                     'Machine Learning': 'var(--warning)'
                 };
                 const color = iconColors[path.category] || 'var(--accent-primary)';
-                
+
                 return `
                     <div class="learning-path-item">
                         <div class="learning-path-icon" style="background: ${color}20; color: ${color}">
@@ -1295,7 +1133,7 @@ class DashboardController {
     async loadWeeklySummary() {
         const report = await this.analytics.generateWeeklyReport();
         const container = document.getElementById('weeklySummary');
-        
+
         if (!container) return;
 
         container.innerHTML = `
@@ -1325,16 +1163,16 @@ class DashboardController {
         const paginationContainer = document.getElementById('historyPagination');
         const pageNumbers = document.getElementById('pageNumbers');
         const datatableInfo = document.querySelector('.datatable-info');
-        
+
         if (!tableBody) return;
 
         // Build filter options
         const filterOptions = {};
-        
+
         if (this.historyFilters.category) {
             filterOptions.category = this.historyFilters.category;
         }
-        
+
         if (this.historyFilters.date) {
             filterOptions.startDate = this.historyFilters.date;
             filterOptions.endDate = this.historyFilters.date;
@@ -1342,21 +1180,21 @@ class DashboardController {
 
         // Get all sessions for filtering
         let allSessions = await this.storage.getSessions(filterOptions);
-        
+
         // Apply search filter
         if (this.historyFilters.searchQuery) {
             const query = this.historyFilters.searchQuery.toLowerCase();
-            allSessions = allSessions.filter(s => 
+            allSessions = allSessions.filter(s =>
                 s.title?.toLowerCase().includes(query) ||
                 s.domain?.toLowerCase().includes(query) ||
                 s.category?.toLowerCase().includes(query) ||
                 (s.topics && s.topics.some(t => t.toLowerCase().includes(query)))
             );
         }
-        
+
         // Sort sessions
         allSessions = this.sortSessions(allSessions);
-        
+
         // Populate category filter (only on initial load)
         const categoryFilter = document.getElementById('categoryFilter');
         if (categoryFilter && !this.historyFilters.category && !this.historyFilters.date) {
@@ -1413,10 +1251,10 @@ class DashboardController {
 
         // Update sort indicators
         this.updateSortIndicators();
-        
+
         // Setup row event listeners
         this.setupTableRowListeners();
-        
+
         // Reset select all checkbox
         const selectAllCheckbox = document.getElementById('selectAllRows');
         if (selectAllCheckbox) selectAllCheckbox.checked = false;
@@ -1428,11 +1266,11 @@ class DashboardController {
         const topics = session.topics || [];
         const displayTopics = topics.slice(0, 2);
         const moreTopics = topics.length > 2 ? topics.length - 2 : 0;
-        
+
         const dateObj = new Date(session.timestamp);
         const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-        
+
         return `
             <tr data-session-id="${session.id}">
                 <td class="col-checkbox">
@@ -1496,7 +1334,7 @@ class DashboardController {
         const maxVisible = 5;
         let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
         let end = Math.min(totalPages, start + maxVisible - 1);
-        
+
         if (end - start + 1 < maxVisible) {
             start = Math.max(1, end - maxVisible + 1);
         }
@@ -1520,10 +1358,10 @@ class DashboardController {
 
     sortSessions(sessions) {
         const { sortBy, sortOrder } = this.historyFilters;
-        
+
         return sessions.sort((a, b) => {
             let valueA, valueB;
-            
+
             switch (sortBy) {
                 case 'title':
                     valueA = (a.title || '').toLowerCase();
@@ -1547,7 +1385,7 @@ class DashboardController {
                     valueB = b.timestamp || 0;
                     break;
             }
-            
+
             if (typeof valueA === 'string') {
                 return sortOrder === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA);
             }
@@ -1577,7 +1415,7 @@ class DashboardController {
                 this.updateDeleteSelectedButton();
             });
         });
-        
+
         // Select all checkbox
         const selectAll = document.getElementById('selectAllRows');
         if (selectAll) {
@@ -1594,7 +1432,7 @@ class DashboardController {
                 this.updateDeleteSelectedButton();
             });
         }
-        
+
         // Delete buttons
         document.querySelectorAll('.datatable .action-btn.delete').forEach(btn => {
             btn.addEventListener('click', async (e) => {
@@ -1605,7 +1443,7 @@ class DashboardController {
                 }
             });
         });
-        
+
         // View buttons
         document.querySelectorAll('.datatable .action-btn.view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -1634,10 +1472,10 @@ class DashboardController {
     }
 
     clearHistoryFilters() {
-        this.historyFilters = { 
-            category: '', 
-            date: '', 
-            page: 1, 
+        this.historyFilters = {
+            category: '',
+            date: '',
+            page: 1,
             pageSize: 15,
             sortBy: 'timestamp',
             sortOrder: 'desc',
@@ -1665,35 +1503,36 @@ class DashboardController {
     async analyzeHistoryWithAI() {
         const analyzeBtn = document.getElementById('analyzeHistoryBtn');
         const insightsPanel = document.getElementById('historyInsightsPanel');
-        
-        if (!analyzeBtn || this.aiAnalysisLoading) return;
-        
+
+        if (!analyzeBtn || !insightsPanel) return;
+
+        if (this.aiAnalysisLoading) return;
+
+        this.aiAnalysisLoading = true;
+        analyzeBtn.classList.add('loading');
+        analyzeBtn.innerHTML = '<i class="ri-loader-4-line"></i> Analyzing...';
+
         try {
-            // Show loading state
-            this.aiAnalysisLoading = true;
-            analyzeBtn.classList.add('loading');
-            analyzeBtn.innerHTML = '<i class="ri-loader-4-line"></i> Analyzing...';
-            
             // Get all sessions for analysis
             const sessions = await this.storage.getSessions({});
-            
+
             if (sessions.length === 0) {
                 alert('No history data to analyze. Start browsing to collect learning data.');
                 return;
             }
-            
-            // Call AI backend for analysis
-            const insights = await this.backend.analyzeHistory(sessions);
-            
+
+            // Generate local insights since backend is removed
+            const insights = await this.analytics.generateInsights(sessions);
+
             if (insights && insightsPanel) {
                 this.aiInsights = insights;
                 this.renderAIInsights(insights);
                 insightsPanel.classList.add('active');
             }
-            
+
         } catch (error) {
             console.error('AI Analysis failed:', error);
-            alert('Failed to analyze history. Please ensure the backend server is running.');
+            alert('Failed to analyze history. Please try again.');
         } finally {
             this.aiAnalysisLoading = false;
             if (analyzeBtn) {
@@ -1706,7 +1545,7 @@ class DashboardController {
     renderAIInsights(insights) {
         const insightsGrid = document.querySelector('#historyInsightsPanel .ai-insights-grid');
         if (!insightsGrid) return;
-        
+
         const cards = [
             {
                 icon: 'ri-focus-3-line',
@@ -1733,7 +1572,7 @@ class DashboardController {
                 change: null
             }
         ];
-        
+
         insightsGrid.innerHTML = cards.map(card => `
             <div class="ai-insight-card">
                 <div class="insight-icon">
@@ -1768,7 +1607,7 @@ class DashboardController {
     async generatePdfReport() {
         const generateBtn = document.getElementById('generatePdf');
         const originalText = generateBtn?.innerHTML || '<i class="ri-file-pdf-line"></i> Generate PDF';
-        
+
         try {
             // Show loading state
             if (generateBtn) {
@@ -1864,7 +1703,7 @@ class DashboardController {
 
         } catch (error) {
             console.error('Error generating PDF:', error);
-            
+
             // Try fallback method
             try {
                 const allSessions = await this.storage.getSessions({});
@@ -1875,10 +1714,10 @@ class DashboardController {
                     includeSessions: true,
                     includeCharts: false
                 }, null, 0, Date.now());
-                
+
                 const dateStr = new Date().toISOString().split('T')[0];
                 this.downloadAsHtml(pdfContent, `SupriAI_Report_${dateStr}`);
-                
+
                 if (generateBtn) {
                     generateBtn.innerHTML = originalText;
                     generateBtn.disabled = false;
@@ -1903,7 +1742,7 @@ class DashboardController {
                 const container = document.createElement('div');
                 container.id = 'pdf-export-container';
                 container.style.cssText = 'position: absolute; left: 0; top: 0; width: 900px; background: white; z-index: 99999; visibility: hidden;';
-                
+
                 // Add styles and content directly
                 container.innerHTML = `
                     <style>
@@ -1946,12 +1785,12 @@ class DashboardController {
                         #pdf-export-container .footer-date { margin-top: 12px; font-size: 12px; opacity: 0.6; }
                     </style>
                 `;
-                
+
                 // Parse and append body content
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlContent, 'text/html');
                 const reportContainer = doc.querySelector('.report-container');
-                
+
                 if (reportContainer) {
                     container.appendChild(reportContainer.cloneNode(true));
                 } else {
@@ -1961,7 +1800,7 @@ class DashboardController {
                     div.innerHTML = bodyContent;
                     container.appendChild(div);
                 }
-                
+
                 document.body.appendChild(container);
 
                 // Make visible for rendering
@@ -1973,10 +1812,10 @@ class DashboardController {
                 setTimeout(async () => {
                     try {
                         const element = container.querySelector('.report-container') || container;
-                        
+
                         console.log('PDF Element found:', !!element);
                         console.log('PDF Element innerHTML length:', element.innerHTML.length);
-                        
+
                         if (!element || element.innerHTML.trim().length < 100) {
                             throw new Error('Report content is empty or too short');
                         }
@@ -1985,7 +1824,7 @@ class DashboardController {
                             margin: [10, 10, 10, 10],
                             filename: `${filename}.pdf`,
                             image: { type: 'jpeg', quality: 0.98 },
-                            html2canvas: { 
+                            html2canvas: {
                                 scale: 2,
                                 useCORS: true,
                                 logging: false,
@@ -1993,16 +1832,16 @@ class DashboardController {
                                 width: 900,
                                 windowWidth: 900
                             },
-                            jsPDF: { 
-                                unit: 'mm', 
-                                format: 'a4', 
-                                orientation: 'portrait' 
+                            jsPDF: {
+                                unit: 'mm',
+                                format: 'a4',
+                                orientation: 'portrait'
                             },
                             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
                         };
 
                         await html2pdf().set(pdfOptions).from(element).save();
-                        
+
                         // Cleanup
                         document.body.removeChild(container);
                         resolve();
@@ -2053,13 +1892,13 @@ class DashboardController {
         const totalTime = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
         const categories = [...new Set(sessions.map(s => s.category).filter(Boolean))];
         const domains = [...new Set(sessions.map(s => s.domain).filter(Boolean))];
-        const avgEngagement = sessions.length > 0 
-            ? Math.round(sessions.reduce((sum, s) => sum + (s.engagementScore || 0), 0) / sessions.length) 
+        const avgEngagement = sessions.length > 0
+            ? Math.round(sessions.reduce((sum, s) => sum + (s.engagementScore || 0), 0) / sessions.length)
             : 0;
 
         // Date range text
-        const dateRangeText = startTime === 0 
-            ? 'All Time' 
+        const dateRangeText = startTime === 0
+            ? 'All Time'
             : `${new Date(startTime).toLocaleDateString()} - ${new Date(endTime).toLocaleDateString()}`;
 
         // Category stats
@@ -2076,10 +1915,10 @@ class DashboardController {
 
         // Sort categories by time
         const sortedCategories = Object.entries(categoryStats)
-            .map(([name, stats]) => ({ 
-                name, 
-                ...stats, 
-                avgEngagement: stats.sessions > 0 ? Math.round(stats.engagement / stats.sessions) : 0 
+            .map(([name, stats]) => ({
+                name,
+                ...stats,
+                avgEngagement: stats.sessions > 0 ? Math.round(stats.engagement / stats.sessions) : 0
             }))
             .sort((a, b) => b.time - a.time);
 
@@ -2407,9 +2246,9 @@ class DashboardController {
             </div>
             <div class="category-list">
                 ${sortedCategories.slice(0, 8).map((cat, i) => {
-                    const maxTime = sortedCategories[0]?.time || 1;
-                    const percentage = Math.round((cat.time / maxTime) * 100);
-                    return `
+            const maxTime = sortedCategories[0]?.time || 1;
+            const percentage = Math.round((cat.time / maxTime) * 100);
+            return `
                     <div class="category-item">
                         <div class="category-rank">${i + 1}</div>
                         <div class="category-info">
@@ -2421,7 +2260,7 @@ class DashboardController {
                         </div>
                     </div>
                     `;
-                }).join('')}
+        }).join('')}
             </div>
         </div>
         ` : ''}
@@ -2499,7 +2338,7 @@ class DashboardController {
         const seconds = Math.floor(ms / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
-        
+
         if (hours > 0) {
             return `${hours}h ${minutes % 60}m`;
         } else if (minutes > 0) {
@@ -2557,7 +2396,7 @@ class DashboardController {
         try {
             const sessions = await this.storage.getSessions({});
             const toDelete = sessions.filter(s => s.timestamp >= cutoffTime);
-            
+
             if (toDelete.length === 0) {
                 alert('No sessions found in this time range.');
                 return;
@@ -2574,7 +2413,7 @@ class DashboardController {
             this.closeDeleteModal();
             await this.loadHistory();
             await this.loadDashboard();
-            
+
             alert(`Successfully deleted ${toDelete.length} session(s).`);
         } catch (error) {
             console.error('Error deleting history:', error);
@@ -2625,7 +2464,7 @@ class DashboardController {
         const deleteBtn = document.getElementById('deleteSelectedBtn');
         if (deleteBtn) {
             deleteBtn.disabled = checkboxes.length === 0;
-            deleteBtn.innerHTML = checkboxes.length > 0 
+            deleteBtn.innerHTML = checkboxes.length > 0
                 ? `<i class="ri-delete-bin-line"></i> Delete Selected (${checkboxes.length})`
                 : `<i class="ri-delete-bin-line"></i> Delete Selected`;
         }
@@ -2663,19 +2502,19 @@ class DashboardController {
     async loadProductivityInsights() {
         try {
             const insights = await this.storage.getProductivityInsights();
-            
+
             // Update best learning time
             const bestLearningTimeEl = document.getElementById('bestLearningTime');
             if (bestLearningTimeEl) {
                 bestLearningTimeEl.textContent = insights.bestHourFormatted || 'Not enough data';
             }
-            
+
             // Update top category
             const topCategoryEl = document.getElementById('topCategoryInsight');
             if (topCategoryEl) {
                 topCategoryEl.textContent = insights.topCategory || 'Learning';
             }
-            
+
             // Update daily average
             const dailyAverageEl = document.getElementById('dailyAverageInsight');
             if (dailyAverageEl) {
@@ -2686,7 +2525,7 @@ class DashboardController {
                     dailyAverageEl.textContent = `${avgMinutes} min`;
                 }
             }
-            
+
             // Update consistency (streak info)
             const consistencyEl = document.getElementById('consistencyInsight');
             if (consistencyEl) {
@@ -2701,317 +2540,24 @@ class DashboardController {
                     consistencyEl.textContent = 'Start learning today!';
                 }
             }
-            
+
             // Update sidebar streak
             const sidebarStreak = document.getElementById('sidebarStreak');
             if (sidebarStreak) {
                 sidebarStreak.textContent = insights.streak || 0;
             }
-            
+
             // Update main streak card
             const currentStreakEl = document.getElementById('currentStreak');
             if (currentStreakEl) {
                 currentStreakEl.textContent = insights.streak || 0;
             }
-            
+
         } catch (error) {
             console.error('Error loading productivity insights:', error);
         }
     }
 
-    setupBackendConnection() {
-        this.backend.addStatusListener((status) => {
-            this.updateBackendStatus(status);
-        });
-
-        chrome.storage.local.get(['backendEnabled', 'backendUrl', 'autoSync'], (settings) => {
-            const backendToggle = document.getElementById('backendToggle');
-            const backendUrl = document.getElementById('backendUrl');
-            const autoSyncToggle = document.getElementById('autoSyncToggle');
-
-            if (backendToggle) {
-                backendToggle.checked = settings.backendEnabled !== false;
-            }
-
-            if (backendUrl) {
-                backendUrl.value = settings.backendUrl || CONFIG.BACKEND_URL;
-                this.backend.baseUrl = backendUrl.value;
-            }
-
-            if (autoSyncToggle) {
-                autoSyncToggle.checked = settings.autoSync || false;
-            }
-
-            if (settings.backendEnabled !== false) {
-                this.backend.startHealthChecks();
-            }
-
-            if (settings.autoSync) {
-                this.startAutoSync();
-            }
-        });
-
-        document.querySelector('.backend-status')?.addEventListener('click', () => {
-            window.location.hash = 'settings';
-        });
-    }
-
-    updateBackendStatus(status) {
-        const statusIndicator = document.querySelector('.status-indicator');
-        const statusText = document.querySelector('.status-text');
-        const connectionStatus = document.getElementById('connectionStatus');
-
-        if (!statusIndicator || !statusText) return;
-
-        statusIndicator.classList.remove('connected', 'disconnected', 'checking');
-        statusText.classList.remove('connected', 'disconnected');
-
-        if (status === 'checking') {
-            statusIndicator.classList.add('checking');
-            statusIndicator.innerHTML = '<i class="ri-loader-4-line"></i>';
-            statusText.textContent = 'Checking...';
-            statusText.classList.remove('connected', 'disconnected');
-            if (connectionStatus) connectionStatus.textContent = 'Checking connection...';
-        } else if (status === 'connected') {
-            statusIndicator.classList.add('connected');
-            statusIndicator.innerHTML = '<i class="ri-database-2-line"></i>';
-            statusText.textContent = 'Backend Online';
-            statusText.classList.add('connected');
-            if (connectionStatus) connectionStatus.textContent = 'Connected';
-        } else {
-            statusIndicator.classList.add('disconnected');
-            statusIndicator.innerHTML = '<i class="ri-database-2-line"></i>';
-            statusText.textContent = 'Backend Offline';
-            statusText.classList.add('disconnected');
-            if (connectionStatus) connectionStatus.textContent = 'Disconnected';
-        }
-    }
-
-    async testBackendConnection() {
-        const testBtn = document.getElementById('testBackendBtn');
-        if (!testBtn) return;
-
-        const originalText = testBtn.textContent;
-        testBtn.disabled = true;
-        testBtn.textContent = 'Testing...';
-
-        try {
-            const status = await this.backend.getDetailedStatus();
-            
-            if (status && status.status === 'operational') {
-                this.showNotification('Backend connection successful!', 'success');
-                
-                const statusDesc = document.getElementById('connectionStatusDesc');
-                if (statusDesc) {
-                    statusDesc.textContent = `Connected - ${status.ai_models.mode}`;
-                    statusDesc.style.color = 'var(--success)';
-                }
-                
-                this.displayAIModelStatus(status);
-            } else {
-                this.showNotification('Backend is not responding. Make sure the server is running.', 'error');
-                document.getElementById('aiModelStatus')?.style.setProperty('display', 'none');
-            }
-        } catch (error) {
-            this.showNotification(`Connection failed: ${error.message}`, 'error');
-            const statusDesc = document.getElementById('connectionStatusDesc');
-            if (statusDesc) {
-                statusDesc.textContent = 'Disconnected - Server not responding';
-                statusDesc.style.color = 'var(--danger)';
-            }
-            document.getElementById('aiModelStatus')?.style.setProperty('display', 'none');
-        } finally {
-            testBtn.disabled = false;
-            testBtn.textContent = originalText;
-        }
-    }
-
-    displayAIModelStatus(status) {
-        const aiPanel = document.getElementById('aiModelStatus');
-        if (!aiPanel || !status.ai_models) return;
-
-        aiPanel.style.display = 'block';
-
-        const aiMode = document.getElementById('aiMode');
-        if (aiMode) {
-            aiMode.textContent = status.ai_models.mode;
-            aiMode.className = 'ai-status-value ' + 
-                (status.ai_models.ai_engine.ml_enabled ? 'status-success' : 'status-warning');
-        }
-
-        const numpyStatus = document.getElementById('numpyStatus');
-        const sklearnStatus = document.getElementById('sklearnStatus');
-        const mlClusteringStatus = document.getElementById('mlClusteringStatus');
-        
-        if (numpyStatus) {
-            numpyStatus.textContent = status.ml_libraries.numpy ? '✓ Installed' : '✗ Not Installed';
-            numpyStatus.className = 'ai-status-value ' + 
-                (status.ml_libraries.numpy ? 'status-success' : 'status-warning');
-        }
-        
-        if (sklearnStatus) {
-            sklearnStatus.textContent = status.ml_libraries.scikit_learn ? '✓ Installed' : '✗ Not Installed';
-            sklearnStatus.className = 'ai-status-value ' + 
-                (status.ml_libraries.scikit_learn ? 'status-success' : 'status-warning');
-        }
-        
-        if (mlClusteringStatus) {
-            mlClusteringStatus.textContent = status.features.ml_clustering ? 'Enabled' : 'Disabled';
-            mlClusteringStatus.className = 'ai-status-value ' + 
-                (status.features.ml_clustering ? 'status-success' : 'status-warning');
-        }
-
-        const recommendationMode = document.getElementById('recommendationMode');
-        if (recommendationMode && status.ai_models.recommendation_engine) {
-            recommendationMode.textContent = status.ai_models.recommendation_engine.mode;
-            recommendationMode.className = 'ai-status-value ' + 
-                (status.ai_models.recommendation_engine.ml_enabled ? 'status-success' : 'status-info');
-        }
-
-        const resourceCount = document.getElementById('resourceCount');
-        if (resourceCount && status.ai_models.recommendation_engine?.resources) {
-            resourceCount.textContent = `${status.ai_models.recommendation_engine.resources.total} resources`;
-            resourceCount.className = 'ai-status-value status-info';
-        }
-
-        const statusNote = document.getElementById('aiStatusNote');
-        if (statusNote) {
-            if (!status.ml_libraries.installed) {
-                statusNote.innerHTML = `
-                    <i class="ri-information-line"></i>
-                    For enhanced ML analysis, install: <code>pip install numpy scikit-learn</code>
-                `;
-                statusNote.className = 'ai-status-note warning';
-            } else {
-                statusNote.innerHTML = `
-                    <i class="ri-check-line"></i>
-                    All ML libraries installed - Full AI capabilities active
-                `;
-                statusNote.className = 'ai-status-note success';
-            }
-        }
-    }
-
-    startAutoSync() {
-        this.stopAutoSync();
-
-        this.autoSyncInterval = setInterval(() => {
-            chrome.storage.local.get(['backendEnabled'], (settings) => {
-                if (settings.backendEnabled !== false) {
-                    this.syncWithBackend();
-                }
-            });
-        }, 5 * 60 * 1000);
-
-        console.log('Auto-sync started (every 5 minutes)');
-    }
-
-    stopAutoSync() {
-        if (this.autoSyncInterval) {
-            clearInterval(this.autoSyncInterval);
-            this.autoSyncInterval = null;
-            console.log('Auto-sync stopped');
-        }
-    }
-
-    async syncWithBackend() {
-        const syncBtn = document.getElementById('syncBtn');
-        if (!syncBtn) return;
-        
-        syncBtn.classList.add('syncing');
-        
-        try {
-            const data = await this.storage.getDataForSync();
-            
-            console.log('Syncing data with backend...', {
-                sessions: data.sessions?.length || 0,
-                topics: data.topics?.length || 0
-            });
-            
-            const result = await this.backend.syncData(data);
-
-            if (result && result.success) {
-                if (result.insights && Array.isArray(result.insights)) {
-                    await this.storage.saveAIInsights(result.insights);
-                }
-                        
-                if (result.recommendations && Array.isArray(result.recommendations)) {
-                    await this.storage.saveRecommendations(result.recommendations);
-                }
-                
-                const stats = result.data || {};
-                console.log('Sync complete:', {
-                    sessions: stats.sessions_stored,
-                    insights: stats.insights_generated,
-                    recommendations: stats.recommendations_generated
-                });
-                
-                this.showNotification(
-                    `Synced! ${stats.insights_generated || 0} insights, ${stats.recommendations_generated || 0} recommendations`,
-                    'success'
-                );
-                await this.loadDashboard();
-                return;
-            } else {
-                console.error('Sync failed, using local insights');
-                await this.generateLocalInsights(data);
-                this.showNotification('Generated local insights (backend unavailable)', 'info');
-                await this.loadDashboard();
-            }
-            
-        } catch (error) {
-            console.error('Sync error:', error);
-            try {
-                const data = await this.storage.getDataForSync();
-                await this.generateLocalInsights(data);
-                this.showNotification('Sync failed. Using local data.', 'warning');
-            } catch (localError) {
-                console.error('Local insight generation failed:', localError);
-                this.showNotification('Error generating insights', 'warning');
-            }
-        } finally {
-            syncBtn.classList.remove('syncing');
-        }
-    }
-
-    async generateLocalInsights(data) {
-        const sessions = data.sessions || [];
-        const topics = data.topics || [];
-        
-        const totalTime = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
-        const avgEngagement = sessions.length > 0 
-            ? Math.round(sessions.reduce((sum, s) => sum + (s.engagement || 0), 0) / sessions.length)
-            : 0;
-        
-        const categoryMap = {};
-        sessions.forEach(s => {
-            if (s.category) {
-                categoryMap[s.category] = (categoryMap[s.category] || 0) + (s.duration || 0);
-            }
-        });
-        
-        const topCategory = Object.entries(categoryMap)
-            .sort((a, b) => b[1] - a[1])[0];
-        
-        const insights = {
-            summary: `You've spent ${Math.round(totalTime / 60000)} minutes learning across ${topics.length} topics.`,
-            topCategory: topCategory ? topCategory[0] : 'General',
-            avgEngagement,
-            recommendations: [
-                {
-                    title: 'Keep up the momentum!',
-                    description: `Your engagement is at ${avgEngagement}%. Try to maintain focused learning sessions.`,
-                    type: 'motivation',
-                    icon: '🎯'
-                }
-            ],
-            generatedAt: Date.now(),
-            source: 'local'
-        };
-        
-        await this.storage.saveAIInsights(insights);
-        return insights;
-    }
 
     showNotification(message, type = 'info') {
         const notification = document.createElement('div');
@@ -3020,7 +2566,7 @@ class DashboardController {
             <span class="notification-icon">${type === 'success' ? '✓' : type === 'warning' ? '⚠' : 'ℹ'}</span>
             <span class="notification-message">${message}</span>
         `;
-        
+
         if (!document.getElementById('notification-styles')) {
             const style = document.createElement('style');
             style.id = 'notification-styles';
@@ -3050,9 +2596,9 @@ class DashboardController {
             `;
             document.head.appendChild(style);
         }
-        
+
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.style.animation = 'slideIn 0.3s ease-out reverse';
             setTimeout(() => notification.remove(), 300);
@@ -3063,12 +2609,12 @@ class DashboardController {
         const data = await this.storage.getDataForSync();
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = `supriai-data-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
-        
+
         URL.revokeObjectURL(url);
     }
 
@@ -3080,9 +2626,9 @@ class DashboardController {
                     indexedDB.deleteDatabase(db.name);
                 }
             }
-            
+
             await chrome.storage.local.clear();
-            
+
             alert('All data has been cleared.');
             window.location.reload();
         }
@@ -3093,10 +2639,10 @@ class DashboardController {
         return str.length > length ? str.substring(0, length) + '...' : str;
     }
 
-    
+
     renderD3CategoryPie(distribution) {
         if (!distribution || !distribution.byCategory) return;
-        
+
         try {
             const total = distribution.byCategory.reduce((sum, cat) => sum + cat.totalTime, 0);
             const pieData = distribution.byCategory.map(cat => ({
@@ -3104,7 +2650,7 @@ class DashboardController {
                 time: cat.totalTime,
                 percentage: (cat.totalTime / total) * 100
             }));
-            
+
             this.d3viz.createCategoryPieChart(pieData, 'categoryPieChart');
         } catch (error) {
             // D3 not available - Chart.js handles this visualization
@@ -3113,37 +2659,37 @@ class DashboardController {
 
     renderD3Timeline(trends) {
         if (!trends || !trends.daily) return;
-        
+
         try {
             const timelineData = trends.daily.map(d => ({
                 date: new Date(d.date).toISOString().split('T')[0],
                 time: d.totalTime,
                 sessions: d.sessions || 1
             }));
-            
+
             this.d3viz.createTimelineChart(timelineData, 'timelineChart');
         } catch (error) {
             // D3 not available - Chart.js handles this visualization
         }
     }
 
-    
+
     async loadCuratedResources() {
         const container = document.getElementById('resourcesList');
         if (!container) return;
 
         const topics = await this.storage.getTopTopics(3);
         const categories = [...new Set(topics.map(t => t.category || t.name))];
-        
+
         const resources = this.recommendations.resourceDatabase;
-        
+
         let displayResources = [];
         categories.forEach(category => {
             if (resources[category]) {
                 displayResources.push(...resources[category].slice(0, 2));
             }
         });
-        
+
         if (displayResources.length === 0 && resources['Programming']) {
             displayResources = resources['Programming'].slice(0, 5);
         }

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,9 +11,10 @@
     <script src="../js/chart.min.js"></script>
     <script src="../js/html2pdf.min.js"></script>
 </head>
+
 <body>
     <div class="dashboard-container">
-        
+
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -20,7 +22,7 @@
                     <h1>SupriAI</h1>
                 </div>
             </div>
-            
+
             <nav class="nav-menu">
                 <a href="#overview" class="nav-item active" data-section="overview">
                     <span class="nav-icon"><i class="ri-dashboard-3-line"></i></span>
@@ -65,38 +67,28 @@
             </div>
         </aside>
 
-        
+
         <main class="main-content">
-            
+
             <header class="main-header">
                 <div class="header-left">
                     <h2 id="sectionTitle">Overview</h2>
                     <p class="header-subtitle" id="headerSubtitle">Your learning journey at a glance</p>
                 </div>
                 <div class="header-right">
-                    <div class="backend-status" id="backendStatus" title="Backend connection status">
-                        <div class="status-indicator" id="statusIndicator">
-                            <i class="ri-cloud-off-line"></i>
-                        </div>
-                        <span class="status-text" id="statusText">Checking...</span>
-                    </div>
                     <div class="time-range-selector">
                         <button class="range-btn active" data-range="week">Week</button>
                         <button class="range-btn" data-range="month">Month</button>
                         <button class="range-btn" data-range="year">Year</button>
                     </div>
-                    <button class="sync-btn" id="syncBtn">
-                        <i class="ri-refresh-line"></i>
-                        Sync
-                    </button>
                 </div>
             </header>
 
-            
+
             <div class="sections-container">
-                
+
                 <section id="overview" class="section active">
-                    
+
                     <div class="stats-grid">
                         <div class="stat-card primary">
                             <div class="stat-icon"><i class="ri-time-line"></i></div>
@@ -171,7 +163,7 @@
                         </div>
                     </div>
 
-                    
+
                     <div class="charts-row">
                         <div class="chart-card large">
                             <div class="chart-header">
@@ -192,36 +184,37 @@
                         </div> -->
                     </div>
 
-                    
+
                     <div class="bottom-row">
-                        
+
                         <div class="card">
                             <div class="card-header">
                                 <h3><i class="ri-history-line"></i> Recent Sessions</h3>
                                 <a href="#history" class="view-all">View All <i class="ri-arrow-right-s-line"></i></a>
                             </div>
                             <div class="sessions-list" id="recentSessions">
-                                
+
                             </div>
                         </div>
 
-                        
+
                         <div class="card">
                             <div class="card-header">
                                 <h3><i class="ri-lightbulb-flash-line"></i> AI Recommendations</h3>
-                                <a href="#recommendations" class="view-all">View All <i class="ri-arrow-right-s-line"></i></a>
+                                <a href="#recommendations" class="view-all">View All <i
+                                        class="ri-arrow-right-s-line"></i></a>
                             </div>
                             <div class="recommendations-list" id="quickRecommendations">
-                                
+
                             </div>
                         </div>
                     </div>
                 </section>
 
-                
+
                 <section id="analytics" class="section">
                     <div class="analytics-grid">
-                        
+
                         <div class="chart-card">
                             <div class="chart-header">
                                 <h3><i class="ri-pulse-line"></i> Engagement Levels</h3>
@@ -231,7 +224,7 @@
                             </div>
                         </div>
 
-                        
+
                         <div class="chart-card">
                             <div class="chart-header">
                                 <h3><i class="ri-time-line"></i> Learning by Hour</h3>
@@ -241,7 +234,7 @@
                             </div>
                         </div>
 
-                        
+
                         <div class="chart-card">
                             <div class="chart-header">
                                 <h3><i class="ri-pie-chart-line"></i> Category Distribution</h3>
@@ -251,7 +244,7 @@
                             </div>
                         </div>
 
-                        
+
                         <div class="chart-card large">
                             <div class="chart-header">
                                 <h3><i class="ri-line-chart-line"></i> Learning Timeline</h3>
@@ -261,7 +254,7 @@
                             </div>
                         </div>
 
-                        
+
                         <div class="chart-card large">
                             <div class="chart-header">
                                 <h3><i class="ri-bar-chart-grouped-line"></i> Category Progress</h3>
@@ -271,19 +264,19 @@
                             </div>
                         </div>
 
-                        
+
                         <div class="card patterns-card">
                             <div class="card-header">
                                 <h3><i class="ri-search-eye-line"></i> Learning Patterns</h3>
                             </div>
                             <div class="patterns-list" id="patternsList">
-                                
+
                             </div>
                         </div>
                     </div>
                 </section>
 
-                
+
                 <section id="topics" class="section">
                     <div class="topics-grid">
                         <div class="card topics-overview">
@@ -306,7 +299,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        
+
                                     </tbody>
                                 </table>
                             </div>
@@ -321,15 +314,15 @@
                     </div>
                 </section>
 
-                
+
                 <section id="skills" class="section">
                     <div class="skills-grid">
-                        
+
                         <div class="skills-list" id="skillsList">
-                            
+
                         </div>
 
-                        
+
                         <div class="card skill-tree-card">
                             <div class="card-header">
                                 <h3><i class="ri-node-tree"></i> Learning Path</h3>
@@ -340,16 +333,16 @@
                                 </select>
                             </div>
                             <div class="skill-tree" id="skillTree">
-                                
+
                             </div>
                         </div>
                     </div>
                 </section>
 
-                
+
                 <section id="recommendations" class="section">
                     <div class="recommendations-grid">
-                        
+
                         <!-- Knowledge Level Overview -->
                         <div class="card knowledge-overview">
                             <div class="card-header">
@@ -365,7 +358,8 @@
                         <div class="card">
                             <div class="card-header">
                                 <h3><i class="ri-robot-line"></i> AI-Powered Recommendations</h3>
-                                <button class="refresh-btn" id="refreshRecs"><i class="ri-refresh-line"></i> Refresh</button>
+                                <button class="refresh-btn" id="refreshRecs"><i class="ri-refresh-line"></i>
+                                    Refresh</button>
                             </div>
                             <div class="rec-info-banner">
                                 <i class="ri-magic-line"></i>
@@ -378,17 +372,17 @@
                                 <button class="rec-tab" data-tab="advanced">Level Up</button>
                             </div>
                             <div class="full-recommendations-list" id="fullRecommendations">
-                                
+
                             </div>
                         </div>
 
-                        
+
                         <div class="card">
                             <div class="card-header">
                                 <h3><i class="ri-book-open-line"></i> Curated Resources</h3>
                             </div>
                             <div class="resources-list" id="resourcesList">
-                                
+
                             </div>
                         </div>
 
@@ -402,19 +396,19 @@
                             </div>
                         </div>
 
-                        
+
                         <div class="card weekly-summary">
                             <div class="card-header">
                                 <h3><i class="ri-file-list-3-line"></i> Weekly Summary</h3>
                             </div>
                             <div class="summary-content" id="weeklySummary">
-                                
+
                             </div>
                         </div>
                     </div>
                 </section>
 
-                
+
                 <section id="history" class="section">
                     <div class="history-container">
                         <div class="card">
@@ -432,12 +426,13 @@
                                     </button>
                                 </div>
                             </div>
-                            
+
                             <!-- AI Insights Panel -->
                             <div class="ai-insights-panel" id="historyInsightsPanel" style="display: none;">
                                 <div class="ai-panel-header">
                                     <h4><i class="ri-sparkling-line"></i> AI Learning Insights</h4>
-                                    <button class="btn btn-sm" id="closeInsightsPanel"><i class="ri-close-line"></i></button>
+                                    <button class="btn btn-sm" id="closeInsightsPanel"><i
+                                            class="ri-close-line"></i></button>
                                 </div>
                                 <div class="ai-insights-content" id="historyInsightsContent">
                                     <div class="ai-loading">
@@ -457,7 +452,8 @@
                                         <option value="">All Categories</option>
                                     </select>
                                     <input type="date" id="dateFilter">
-                                    <button class="btn btn-sm" id="clearFilters"><i class="ri-filter-off-line"></i> Clear</button>
+                                    <button class="btn btn-sm" id="clearFilters"><i class="ri-filter-off-line"></i>
+                                        Clear</button>
                                 </div>
                                 <div class="history-selection">
                                     <label class="checkbox-label">
@@ -504,7 +500,7 @@
                                         <!-- Data rows will be inserted here -->
                                     </tbody>
                                 </table>
-                                
+
                                 <div class="datatable-empty" id="historyEmpty" style="display: none;">
                                     <i class="ri-inbox-line"></i>
                                     <p>No learning history found</p>
@@ -517,9 +513,11 @@
                                     <span id="historyInfo">Showing 0 entries</span>
                                 </div>
                                 <div class="datatable-pagination" id="historyPagination">
-                                    <button class="page-btn" id="prevPage" disabled><i class="ri-arrow-left-s-line"></i></button>
+                                    <button class="page-btn" id="prevPage" disabled><i
+                                            class="ri-arrow-left-s-line"></i></button>
                                     <div class="page-numbers" id="pageNumbers"></div>
-                                    <button class="page-btn" id="nextPage"><i class="ri-arrow-right-s-line"></i></button>
+                                    <button class="page-btn" id="nextPage"><i
+                                            class="ri-arrow-right-s-line"></i></button>
                                 </div>
                                 <div class="datatable-page-size">
                                     <span>Show</span>
@@ -534,7 +532,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Delete History Modal -->
                     <div class="modal" id="deleteHistoryModal">
                         <div class="modal-content">
@@ -658,7 +656,7 @@
                     </div>
                 </section>
 
-                
+
                 <section id="settings" class="section">
                     <div class="settings-container">
                         <div class="card settings-card">
@@ -666,129 +664,31 @@
                                 <h3><i class="ri-settings-3-line"></i> Extension Settings</h3>
                             </div>
                             <div class="settings-list">
-                                
-                                <div class="setting-section">
-                                    <h4 class="setting-section-title">
-                                        <i class="ri-server-line"></i> Backend Connection
-                                    </h4>
-                                    
-                                    <div class="setting-item">
-                                        <div class="setting-info">
-                                            <span class="setting-label">Backend Server</span>
-                                            <span class="setting-desc">Python backend for enhanced AI analysis</span>
-                                        </div>
-                                        <label class="toggle">
-                                            <input type="checkbox" id="backendEnabled" checked>
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                    </div>
 
-                                    <div class="setting-item">
-                                        <div class="setting-info">
-                                            <span class="setting-label">Backend URL</span>
-                                            <span class="setting-desc">Server address (default: http://localhost:5000)</span>
-                                        </div>
-                                        <input type="text" id="backendUrl" class="setting-input" 
-                                               value="http://localhost:5000" placeholder="http://localhost:5000">
-                                    </div>
-
-                                    <div class="setting-item">
-                                        <div class="setting-info">
-                                            <span class="setting-label">Connection Status</span>
-                                            <span class="setting-desc" id="connectionStatusDesc">Click test to check connection</span>
-                                        </div>
-                                        <button class="btn btn-primary" id="testBackendBtn">
-                                            <i class="ri-wifi-line"></i> Test Connection
-                                        </button>
-                                    </div>
-
-                                    <div class="setting-item">
-                                        <div class="setting-info">
-                                            <span class="setting-label">Auto Sync</span>
-                                            <span class="setting-desc">Automatically sync data every 5 minutes</span>
-                                        </div>
-                                        <label class="toggle">
-                                            <input type="checkbox" id="autoSync">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                    </div>
-
-                                    
-                                    <div id="aiModelStatus" class="ai-status-panel" style="display: none; margin-top: 15px;">
-                                        <div class="ai-status-header">
-                                            <i class="ri-cpu-line"></i>
-                                            <span>AI Model Status</span>
-                                        </div>
-                                        <div class="ai-status-grid">
-                                            <div class="ai-status-item">
-                                                <span class="ai-status-label">Analysis Mode:</span>
-                                                <span class="ai-status-value" id="aiMode">-</span>
-                                            </div>
-                                            <div class="ai-status-item">
-                                                <span class="ai-status-label">NumPy:</span>
-                                                <span class="ai-status-value" id="numpyStatus">-</span>
-                                            </div>
-                                            <div class="ai-status-item">
-                                                <span class="ai-status-label">Scikit-learn:</span>
-                                                <span class="ai-status-value" id="sklearnStatus">-</span>
-                                            </div>
-                                            <div class="ai-status-item">
-                                                <span class="ai-status-label">ML Clustering:</span>
-                                                <span class="ai-status-value" id="mlClusteringStatus">-</span>
-                                            </div>
-                                            <div class="ai-status-item">
-                                                <span class="ai-status-label">Recommendations:</span>
-                                                <span class="ai-status-value" id="recommendationMode">-</span>
-                                            </div>
-                                            <div class="ai-status-item">
-                                                <span class="ai-status-label">Curated Resources:</span>
-                                                <span class="ai-status-value" id="resourceCount">-</span>
-                                            </div>
-                                        </div>
-                                        <div class="ai-status-note" id="aiStatusNote"></div>
-                                    </div>
-                                </div>
-
-                                
                                 <div class="setting-section">
                                     <h4 class="setting-section-title">
                                         <i class="ri-settings-4-line"></i> General
                                     </h4>
 
-                                <div class="setting-item">
-                                    <div class="setting-info">
-                                        <span class="setting-label">Enable Tracking</span>
-                                        <span class="setting-desc">Track your learning activity</span>
+                                    <div class="setting-item">
+                                        <div class="setting-info">
+                                            <span class="setting-label">Enable Tracking</span>
+                                            <span class="setting-desc">Track your learning activity</span>
+                                        </div>
+                                        <label class="toggle">
+                                            <input type="checkbox" id="trackingToggle" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
                                     </div>
-                                    <label class="toggle">
-                                        <input type="checkbox" id="trackingToggle" checked>
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </div>
-                                </div>
-                                <div class="setting-item">
-                                    <div class="setting-info">
-                                        <span class="setting-label">Backend Sync</span>
-                                        <span class="setting-desc">Sync with AI analysis server</span>
+
+                                    <div class="setting-item">
+                                        <div class="setting-info">
+                                            <span class="setting-label">Daily Goal (minutes)</span>
+                                            <span class="setting-desc">Set your daily learning target</span>
+                                        </div>
+                                        <input type="number" id="dailyGoal" class="setting-input" value="30" min="5"
+                                            max="480">
                                     </div>
-                                    <label class="toggle">
-                                        <input type="checkbox" id="syncToggle" checked>
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </div>
-                                <div class="setting-item">
-                                    <div class="setting-info">
-                                        <span class="setting-label">Daily Goal (minutes)</span>
-                                        <span class="setting-desc">Set your daily learning target</span>
-                                    </div>
-                                    <input type="number" id="dailyGoal" class="setting-input" value="30" min="5" max="480">
-                                </div>
-                                <div class="setting-item">
-                                    <div class="setting-info">
-                                        <span class="setting-label">Backend URL</span>
-                                        <span class="setting-desc">Python AI server address</span>
-                                    </div>
-                                    <input type="text" id="backendUrl" class="setting-input" value="http://localhost:5000">
                                 </div>
                             </div>
                         </div>
@@ -803,14 +703,16 @@
                                         <span class="setting-label">Export Data</span>
                                         <span class="setting-desc">Download your learning data as JSON</span>
                                     </div>
-                                    <button class="btn btn-secondary" id="exportBtn"><i class="ri-download-2-line"></i> Export</button>
+                                    <button class="btn btn-secondary" id="exportBtn"><i class="ri-download-2-line"></i>
+                                        Export</button>
                                 </div>
                                 <div class="setting-item danger">
                                     <div class="setting-info">
                                         <span class="setting-label">Clear All Data</span>
                                         <span class="setting-desc">Permanently delete all stored data</span>
                                     </div>
-                                    <button class="btn btn-danger" id="clearDataBtn"><i class="ri-delete-bin-line"></i> Clear</button>
+                                    <button class="btn btn-danger" id="clearDataBtn"><i class="ri-delete-bin-line"></i>
+                                        Clear</button>
                                 </div>
                             </div>
                         </div>
@@ -837,4 +739,5 @@
 
     <script src="dashboard.js" type="module"></script>
 </body>
+
 </html>
