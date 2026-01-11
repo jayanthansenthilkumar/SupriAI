@@ -13,7 +13,7 @@ let libraryData = [];
 async function loadLibraryData() {
     try {
         showLoadingState('libraryHistoryTable');
-        
+
         // Load history
         const historyResponse = await fetch(`${API_URL}/api/history?days=30&limit=100`);
         const historyData = await historyResponse.json();
@@ -39,46 +39,62 @@ async function loadLibraryData() {
 }
 
 function updateLibraryStats(history) {
-    // Total items
-    document.getElementById('libraryTotalItems').textContent = history.length;
-    
+    // Update stats if elements exist
+    const totalEl = document.getElementById('libraryTotalItems');
+    const bookmarksEl = document.getElementById('libraryBookmarks');
+    const weekEl = document.getElementById('libraryThisWeek');
+    const topicEl = document.getElementById('libraryTopTopic');
+
+    if (totalEl) totalEl.textContent = history.length;
+
     // Count bookmarks
-    fetch(`${API_URL}/api/bookmarks`)
-        .then(r => r.json())
-        .then(data => {
-            const count = data.bookmarks?.length || 0;
-            document.getElementById('libraryBookmarks').textContent = count;
-        });
-    
+    if (bookmarksEl) {
+        fetch(`${API_URL}/api/bookmarks`)
+            .then(r => r.json())
+            .then(data => {
+                const count = data.bookmarks?.length || 0;
+                bookmarksEl.textContent = count;
+            });
+    }
+
     // This week count
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const thisWeek = history.filter(h => new Date(h.timestamp) > weekAgo).length;
-    document.getElementById('libraryThisWeek').textContent = thisWeek;
-    
+    if (weekEl) {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const thisWeek = history.filter(h => new Date(h.timestamp) > weekAgo).length;
+        weekEl.textContent = thisWeek;
+    }
+
     // Top topic
-    const topics = {};
-    history.forEach(h => {
-        topics[h.topic] = (topics[h.topic] || 0) + 1;
-    });
-    const topTopic = Object.keys(topics).sort((a, b) => topics[b] - topics[a])[0] || 'None';
-    document.getElementById('libraryTopTopic').textContent = topTopic;
+    if (topicEl) {
+        const topics = {};
+        history.forEach(h => {
+            topics[h.topic] = (topics[h.topic] || 0) + 1;
+        });
+        const topTopic = Object.keys(topics).sort((a, b) => topics[b] - topics[a])[0] || 'None';
+        topicEl.textContent = topTopic;
+    }
 }
 
 function renderLibraryHistory(history) {
-    const tbody = document.getElementById('libraryHistoryTable');
-    
+    const tbody = document.getElementById('recentActivityTable') || document.getElementById('libraryHistoryTable');
+
+    if (!tbody) {
+        console.warn('Library history table not found');
+        return;
+    }
+
     if (!history || history.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #5f6368;">No learning history yet</td></tr>';
         return;
     }
-    
+
     tbody.innerHTML = history.map(item => {
         const duration = formatDuration(item.duration);
         const engagement = item.engagement_score || calculateEngagement(item);
         const date = formatDate(item.timestamp);
         const bookmarked = item.is_bookmarked ? '<i class="ri-bookmark-fill" style="color: #f9ab00;"></i>' : '';
-        
+
         return `
             <tr>
                 <td><span class="chip">${item.topic || 'General'}</span></td>
@@ -115,7 +131,7 @@ function renderLibraryHistory(history) {
 
 function renderBookmarks(bookmarks) {
     const grid = document.getElementById('bookmarksGrid');
-    
+
     if (!bookmarks || bookmarks.length === 0) {
         grid.innerHTML = `
             <div class="google-card" style="text-align: center; padding: 40px;">
@@ -125,7 +141,7 @@ function renderBookmarks(bookmarks) {
         `;
         return;
     }
-    
+
     grid.innerHTML = bookmarks.map(bookmark => `
         <div class="google-card">
             <div class="card-header">
@@ -146,15 +162,15 @@ function renderBookmarks(bookmarks) {
 
 function filterLibrary(filter) {
     libraryFilter = filter;
-    
+
     // Update active button
     document.querySelectorAll('#view-library .chip').forEach(btn => {
         btn.classList.remove('active');
     });
     event.target.classList.add('active');
-    
+
     let filtered = libraryData;
-    
+
     if (filter === 'bookmarks') {
         filtered = libraryData.filter(item => item.is_bookmarked);
     } else if (filter === 'recent') {
@@ -164,24 +180,24 @@ function filterLibrary(filter) {
     } else if (filter === 'favorites') {
         filtered = libraryData.filter(item => item.is_favorite);
     }
-    
+
     renderLibraryHistory(filtered);
 }
 
 function searchLibrary() {
     const query = document.getElementById('librarySearch').value.toLowerCase();
-    
+
     if (!query) {
         renderLibraryHistory(libraryData);
         return;
     }
-    
-    const filtered = libraryData.filter(item => 
+
+    const filtered = libraryData.filter(item =>
         item.title?.toLowerCase().includes(query) ||
         item.url?.toLowerCase().includes(query) ||
         item.topic?.toLowerCase().includes(query)
     );
-    
+
     renderLibraryHistory(filtered);
 }
 
@@ -189,7 +205,7 @@ async function bookmarkHistoryItem(historyId) {
     try {
         const item = libraryData.find(h => h.id === historyId);
         if (!item) return;
-        
+
         const response = await fetch(`${API_URL}/api/bookmarks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -200,7 +216,7 @@ async function bookmarkHistoryItem(historyId) {
                 notes: ''
             })
         });
-        
+
         const data = await response.json();
         if (data.status === 'success') {
             showNotification('Bookmarked successfully!', 'success');
@@ -213,12 +229,12 @@ async function bookmarkHistoryItem(historyId) {
 
 async function deleteBookmark(bookmarkId) {
     if (!confirm('Delete this bookmark?')) return;
-    
+
     try {
         const response = await fetch(`${API_URL}/api/bookmarks/${bookmarkId}`, {
             method: 'DELETE'
         });
-        
+
         const data = await response.json();
         if (data.status === 'success') {
             showNotification('Bookmark deleted', 'success');
@@ -264,7 +280,7 @@ function showAddBookmarkDialog() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(result.value)
                 });
-                
+
                 const data = await response.json();
                 if (data.status === 'success') {
                     showNotification('Bookmark added!', 'success');
@@ -289,7 +305,7 @@ function exportLibraryCSV() {
             item.timestamp || ''
         ])
     ].map(row => row.join(',')).join('\n');
-    
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -317,22 +333,29 @@ async function loadNotesData() {
     } catch (e) {
         console.error("Failed to load notes:", e);
     }
-}
-
+}// Try alternate container if notesGrid doesn't exist
 function renderNotes(notes) {
     const grid = document.getElementById('notesGrid');
-    
+
+    // Try alternate container if notesGrid doesn't exist
+    const container = grid || document.querySelector('#view-reviews .dashboard-grid');
+
+    if (!container) {
+        console.warn('Notes container not found');
+        return;
+    }
+
     if (!notes || notes.length === 0) {
-        grid.innerHTML = `
-            <div class="google-card" style="text-align: center; padding: 60px;">
-                <i class="ri-sticky-note-line" style="font-size: 48px; color: #dadce0;"></i>
-                <p style="margin-top: 10px; color: #5f6368;">No notes yet. Create your first learning note above!</p>
+        container.innerHTML = `
+            <div class="google-card" style="text-align: center; padding: 40px;">
+                <i class="ri-book-open-line" style="font-size: 48px; color: #dadce0;"></i>
+                <p style="margin-top: 10px; color: #5f6368;">No notes or reviews yet</p>
             </div>
         `;
         return;
     }
-    
-    grid.innerHTML = notes.map(note => {
+
+    container.innerHTML = notes.map(note => {
         const categoryColors = {
             reflection: '#1a73e8',
             tip: '#f9ab00',
@@ -340,10 +363,10 @@ function renderNotes(notes) {
             resource: '#d93025',
             idea: '#9334e6'
         };
-        
+
         const color = categoryColors[note.category] || '#5f6368';
-        const tags = note.tags ? note.tags.split(',').map(t => t.trim()) : [];
-        
+        const tags = note.tags ? (typeof note.tags === 'string' ? note.tags.split(',').map(t => t.trim()) : Array.isArray(note.tags) ? note.tags : []) : [];
+
         return `
             <div class="google-card">
                 <div class="card-header">
@@ -373,12 +396,12 @@ async function saveNote() {
     const category = document.getElementById('noteCategory').value;
     const content = document.getElementById('noteContent').value.trim();
     const tags = document.getElementById('noteTags').value.trim();
-    
+
     if (!content) {
         showNotification('Please enter note content', 'error');
         return;
     }
-    
+
     try {
         const response = await fetch(`${API_URL}/api/notes`, {
             method: 'POST',
@@ -390,7 +413,7 @@ async function saveNote() {
                 tags: tags
             })
         });
-        
+
         const data = await response.json();
         if (data.status === 'success') {
             showNotification('Note saved successfully!', 'success');
@@ -412,7 +435,7 @@ function clearNoteForm() {
 async function editNote(noteId) {
     const note = notesData.find(n => n.id === noteId);
     if (!note) return;
-    
+
     Swal.fire({
         title: 'Edit Note',
         html: `
@@ -446,7 +469,7 @@ async function editNote(noteId) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(result.value)
                 });
-                
+
                 const data = await response.json();
                 if (data.status === 'success') {
                     showNotification('Note updated!', 'success');
@@ -461,12 +484,12 @@ async function editNote(noteId) {
 
 async function deleteNote(noteId) {
     if (!confirm('Delete this note?')) return;
-    
+
     try {
         const response = await fetch(`${API_URL}/api/notes/${noteId}`, {
             method: 'DELETE'
         });
-        
+
         const data = await response.json();
         if (data.status === 'success') {
             showNotification('Note deleted', 'success');
@@ -479,29 +502,29 @@ async function deleteNote(noteId) {
 
 function searchNotes() {
     const query = document.getElementById('notesSearch').value.toLowerCase();
-    
+
     if (!query) {
         renderNotes(notesData);
         return;
     }
-    
-    const filtered = notesData.filter(note => 
+
+    const filtered = notesData.filter(note =>
         note.title?.toLowerCase().includes(query) ||
         note.content?.toLowerCase().includes(query) ||
         note.tags?.toLowerCase().includes(query)
     );
-    
+
     renderNotes(filtered);
 }
 
 function filterNotes() {
     const filter = document.getElementById('notesFilter').value;
-    
+
     if (filter === 'all') {
         renderNotes(notesData);
         return;
     }
-    
+
     const filtered = notesData.filter(note => note.category === filter);
     renderNotes(filtered);
 }
@@ -523,11 +546,11 @@ async function loadGoalsData() {
             goalsData.active = data.goals || [];
             renderActiveGoals(goalsData.active);
         }
-        
+
         // Load completed goals
         const completedResponse = await fetch(`${API_URL}/api/goals?active=false`);
         const completedData = await completedResponse.json();
-        
+
         if (completedData.status === 'success') {
             goalsData.completed = completedData.goals || [];
             renderCompletedGoals(goalsData.completed);
@@ -540,7 +563,7 @@ async function loadGoalsData() {
         if (achievementsData.status === 'success') {
             renderAchievements(achievementsData.achievements || []);
         }
-        
+
         // Load user stats
         loadGoalStats();
 
@@ -553,16 +576,16 @@ async function loadGoalStats() {
     try {
         const userResponse = await fetch(`${API_URL}/api/user`);
         const userData = await userResponse.json();
-        
+
         if (userData.status === 'success' && userData.user) {
             document.getElementById('streakDays').textContent = userData.user.streak_days || 0;
             document.getElementById('totalPoints').textContent = userData.user.total_points || 0;
         }
-        
+
         // Load this week stats
         const statsResponse = await fetch(`${API_URL}/api/stats/week`);
         const statsData = await statsResponse.json();
-        
+
         if (statsData.status === 'success') {
             document.getElementById('weekGoalsCompleted').textContent = statsData.goals_completed || 0;
             document.getElementById('weekLearningHours').textContent = (statsData.total_minutes / 60).toFixed(1) + 'h';
@@ -575,7 +598,7 @@ async function loadGoalStats() {
 
 function renderActiveGoals(goals) {
     const container = document.getElementById('activeGoalsList');
-    
+
     if (!goals || goals.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 40px; color: #5f6368;">
@@ -585,7 +608,7 @@ function renderActiveGoals(goals) {
         `;
         return;
     }
-    
+
     container.innerHTML = goals.map(goal => {
         const progress = Math.round((goal.current_value / goal.target_value) * 100);
         const iconMap = {
@@ -595,7 +618,7 @@ function renderActiveGoals(goals) {
             custom: 'ri-target-line'
         };
         const icon = iconMap[goal.frequency] || 'ri-target-line';
-        
+
         return `
             <div class="goal-item">
                 <div class="goal-info">
@@ -628,7 +651,7 @@ function renderActiveGoals(goals) {
 
 function renderCompletedGoals(goals) {
     const container = document.getElementById('completedGoalsList');
-    
+
     if (!goals || goals.length === 0) {
         container.innerHTML = `
             <div class="google-card" style="text-align: center; padding: 40px;">
@@ -637,7 +660,7 @@ function renderCompletedGoals(goals) {
         `;
         return;
     }
-    
+
     container.innerHTML = goals.map(goal => `
         <div class="google-card">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
@@ -658,7 +681,7 @@ function renderCompletedGoals(goals) {
 
 function renderAchievements(achievements) {
     const container = document.getElementById('achievementsList');
-    
+
     if (!achievements || achievements.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 20px; color: #5f6368;">
@@ -668,7 +691,7 @@ function renderAchievements(achievements) {
         `;
         return;
     }
-    
+
     container.innerHTML = achievements.map(achievement => `
         <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
             <i class="${achievement.badge_icon}" style="font-size: 24px; color: #f9ab00;"></i>
@@ -716,7 +739,7 @@ function showCreateGoalDialog() {
                         is_active: true
                     })
                 });
-                
+
                 const data = await response.json();
                 if (data.status === 'success') {
                     showNotification('Goal created!', 'success');
@@ -732,7 +755,7 @@ function showCreateGoalDialog() {
 async function updateGoalProgress(goalId) {
     const goal = goalsData.active.find(g => g.id === goalId);
     if (!goal) return;
-    
+
     Swal.fire({
         title: 'Update Progress',
         text: `Current: ${goal.current_value} / ${goal.target_value} ${goal.unit || ''}`,
@@ -752,12 +775,12 @@ async function updateGoalProgress(goalId) {
                         is_active: newValue < goal.target_value
                     })
                 });
-                
+
                 const data = await response.json();
                 if (data.status === 'success') {
                     showNotification('Progress updated!', 'success');
                     loadGoalsData();
-                    
+
                     // Check if goal completed
                     if (newValue >= goal.target_value) {
                         Swal.fire({
@@ -777,12 +800,12 @@ async function updateGoalProgress(goalId) {
 
 async function deleteGoal(goalId) {
     if (!confirm('Delete this goal?')) return;
-    
+
     try {
         const response = await fetch(`${API_URL}/api/goals/${goalId}`, {
             method: 'DELETE'
         });
-        
+
         const data = await response.json();
         if (data.status === 'success') {
             showNotification('Goal deleted', 'success');
@@ -803,19 +826,19 @@ async function loadCommunityData() {
         // Load leaderboard
         const leaderboardResponse = await fetch(`${API_URL}/api/community/leaderboard?limit=10`);
         const leaderboardData = await leaderboardResponse.json();
-        
+
         if (leaderboardData.status === 'success') {
             renderLeaderboard(leaderboardData.leaderboard || [], leaderboardData.user_rank || {});
         }
-        
+
         // Load community stats
         const statsResponse = await fetch(`${API_URL}/api/community/stats`);
         const statsData = await statsResponse.json();
-        
+
         if (statsData.status === 'success') {
             renderCommunityStats(statsData.stats || {});
         }
-        
+
     } catch (e) {
         console.error("Failed to load community data:", e);
     }
@@ -823,9 +846,9 @@ async function loadCommunityData() {
 
 function renderLeaderboard(leaderboard, userRank) {
     const container = document.getElementById('leaderboardList');
-    
+
     if (!container) return;
-    
+
     if (!leaderboard || leaderboard.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 40px; color: #5f6368;">
@@ -835,13 +858,13 @@ function renderLeaderboard(leaderboard, userRank) {
         `;
         return;
     }
-    
+
     container.innerHTML = leaderboard.map((user, index) => {
         const rankColors = ['#f9ab00', '#c0c0c0', '#cd7f32'];
         const rankColor = rankColors[index] || '#5f6368';
         const medals = ['🥇', '🥈', '🥉'];
         const medal = medals[index] || '';
-        
+
         return `
             <div class="leaderboard-item" style="display: flex; align-items: center; padding: 15px; background: ${index < 3 ? '#f8f9fa' : 'white'}; border-radius: 8px; margin-bottom: 10px;">
                 <div style="font-size: 1.5em; font-weight: 700; color: ${rankColor}; width: 50px; text-align: center;">
@@ -866,7 +889,7 @@ function renderLeaderboard(leaderboard, userRank) {
             </div>
         `;
     }).join('');
-    
+
     // Show user rank if not in top 10
     if (userRank && userRank.rank > 10) {
         container.innerHTML += `
@@ -896,7 +919,7 @@ function renderCommunityStats(stats) {
         'communityAchievements': stats.total_achievements || 0,
         'communityActiveToday': stats.active_today || 0
     };
-    
+
     Object.entries(elements).forEach(([id, value]) => {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
@@ -910,10 +933,10 @@ function renderCommunityStats(stats) {
 
 function formatDuration(seconds) {
     if (!seconds) return '0m';
-    
+
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    
+
     if (hours > 0) {
         return `${hours}h ${minutes}m`;
     }
@@ -922,16 +945,16 @@ function formatDuration(seconds) {
 
 function formatDate(timestamp) {
     if (!timestamp) return '';
-    
+
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now - date;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) return 'Today';
     if (days === 1) return 'Yesterday';
     if (days < 7) return `${days} days ago`;
-    
+
     return date.toLocaleDateString();
 }
 
@@ -945,7 +968,7 @@ function calculateEngagement(item) {
     const duration = item.duration || 0;
     const scrollDepth = item.scroll_depth || 0;
     const interactions = item.interactions || 0;
-    
+
     return Math.min(Math.round((duration / 60 + scrollDepth * 50 + interactions * 10) / 3), 100);
 }
 
@@ -970,7 +993,7 @@ function showNotification(message, type = 'info') {
         info: '#1a73e8',
         warning: '#f9ab00'
     };
-    
+
     Swal.fire({
         toast: true,
         position: 'top-end',

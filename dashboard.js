@@ -573,7 +573,8 @@ function renderNotes(notes) {
     container.innerHTML = notes.map(note => {
         const date = new Date(note.created_at);
         const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-        const tags = note.tags || [];
+        // Ensure tags is always an array
+        const tags = note.tags ? (typeof note.tags === 'string' ? note.tags.split(',').map(t => t.trim()) : Array.isArray(note.tags) ? note.tags : []) : [];
 
         return `
             <div class="google-card" data-note-id="${note.id}">
@@ -1093,6 +1094,9 @@ function setupEventListeners() {
         // Navigate to reviews/notes
         document.querySelector('[data-target="reviews"]')?.click();
     });
+
+    // Header dropdown functionality
+    setupHeaderDropdowns();
 }
 
 async function clearAllHistory() {
@@ -1460,6 +1464,11 @@ function addMessageToChat(role, text) {
 
     // Save to history
     chatHistory.push({ role, text, timestamp: new Date() });
+}
+
+// Alias for compatibility
+function appendChatMessage(text, role) {
+    addMessageToChat(role, text);
 }
 
 function showTypingIndicator() {
@@ -1877,6 +1886,105 @@ async function syncBrowsingHistory() {
             console.error('History sync failed:', e);
         }
     }
+}
+
+// ==========================================
+// HEADER DROPDOWN FUNCTIONALITY
+// ==========================================
+
+function setupHeaderDropdowns() {
+    // Handle dropdown item clicks for navigation
+    document.querySelectorAll('.dropdown-item[data-target]').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const target = this.getAttribute('data-target');
+            
+            // Find and click the corresponding nav item
+            const navItem = document.querySelector(`.nav-item[data-target="${target}"]`);
+            if (navItem) {
+                navItem.click();
+            }
+            
+            // Close the dropdown
+            this.closest('.header-dropdown-wrapper')?.classList.remove('active');
+        });
+    });
+
+    // Handle apps menu item clicks
+    document.querySelectorAll('.app-item[data-target]').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const target = this.getAttribute('data-target');
+            
+            // Find and click the corresponding nav item
+            const navItem = document.querySelector(`.nav-item[data-target="${target}"]`);
+            if (navItem) {
+                navItem.click();
+            }
+            
+            // Close the dropdown
+            this.closest('.header-dropdown-wrapper')?.classList.remove('active');
+        });
+    });
+
+    // Toggle dropdowns on click (for mobile/touch devices)
+    const userBtn = document.querySelector('.usericon-btn');
+    const notificationBtn = document.querySelector('.notification-btn');
+    const appsBtn = document.querySelector('.apps-menu-btn');
+
+    if (userBtn) {
+        userBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const wrapper = this.closest('.header-dropdown-wrapper');
+            wrapper?.classList.toggle('active');
+            
+            // Close other dropdowns
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(w => {
+                if (w !== wrapper) {
+                    w.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    if (notificationBtn) {
+        notificationBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const wrapper = this.closest('.header-dropdown-wrapper');
+            wrapper?.classList.toggle('active');
+            
+            // Close other dropdowns
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(w => {
+                if (w !== wrapper) {
+                    w.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    if (appsBtn) {
+        appsBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const wrapper = this.closest('.header-dropdown-wrapper');
+            wrapper?.classList.toggle('active');
+            
+            // Close other dropdowns
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(w => {
+                if (w !== wrapper) {
+                    w.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.header-dropdown-wrapper')) {
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(wrapper => {
+                wrapper.classList.remove('active');
+            });
+        }
+    });
 }
 
 
