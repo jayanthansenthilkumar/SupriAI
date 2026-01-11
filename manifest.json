@@ -1,52 +1,52 @@
 {
-  "manifest_version": 3,
-  "name": "SupriAI - Learning Recommendation System",
-  "version": "1.0.0",
-  "description": "AI-Powered Learning Recommendation and Analytics System - Your intelligent browser-integrated learning companion",
-  "permissions": [
-    "tabs",
-    "history",
-    "webNavigation",
-    "alarms",
-    "storage",
-    "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
-  "background": {
-    "service_worker": "js/background.js",
-    "type": "module"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["js/content.js"],
-      "run_at": "document_idle"
-    }
-  ],
-  "action": {
-    "default_popup": "popup/popup.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+    "manifest_version": 3,
+    "name": "SupriAI",
+    "version": "1.0",
+    "description": "SupriAI: Your Intelligent Learning Companion",
+    "permissions": [
+        "tabs",
+        "storage",
+        "webNavigation",
+        "alarms",
+        "activeTab",
+        "scripting",
+        "identity",
+        "history",
+        "notifications",
+        "contextMenus"
+    ],
+    "host_permissions": [
+        "http://localhost:5000/*",
+        "<all_urls>"
+    ],
+    "action": {
+        "default_popup": "popup.html"
     },
-    "default_title": "SupriAI Learning Assistant"
-  },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": ["dashboard/dashboard.html"],
-      "matches": ["<all_urls>"]
-    }
-  ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  }
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "run_at": "document_idle"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "dashboard.html",
+                "styles.css",
+                "libs/*",
+                "cursor.css"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
 }

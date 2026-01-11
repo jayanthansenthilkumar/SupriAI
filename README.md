@@ -1,18 +1,20 @@
-# SupriAI - AI-Powered Learning Recommendation System
+# AI-Powered Learning Recommendation & Analytics System
 
-A Chrome browser extension that tracks your learning activities, analyzes your patterns, and provides AI-powered recommendations to enhance your learning journey.
+## Abstract
+This project turns web browsing into a personalized learning journey. It passively tracks learning-related activity, stores it locally (SQLite), and uses an AI engine (Python) to provide insights and study recommendations via a beautiful Chrome Extension Dashboard.
 
-## 🚀 Features
+## Architecture
+- **Frontend**: Chrome Extension (Manifest V3), HTML5, CSS3 (Glassmorphism), Chart.js, SweetAlert2.
+- **Backend**: Python (Flask), SQLite, NLP (Keyword/Heuristic for demo).
 
-- **Smart Learning Tracking**: Automatically detects and categorizes educational content
-- **Engagement Analysis**: Monitors your focus, scroll depth, and interaction patterns
-- **AI-Powered Insights**: Generates personalized learning insights using machine learning
-- **Recommendations Engine**: Suggests resources based on your learning patterns
-- **Beautiful Dashboard**: Visualize your learning progress with charts and analytics
-- **Skill Progression**: Track your skill development across different topics
+## Prerequisites
+- Python 3.8+
+- Google Chrome browser
 
-## 📁 Project Structure
+## Setup Instructions
 
+### 1. Backend Setup
+The "Brain" of the system needs to be running locally.
 ```
 SupriAI/
 ├── manifest.json           # Chrome extension manifest
@@ -71,101 +73,26 @@ The backend provides enhanced AI analysis and recommendations.
 double-click start-backend.bat
 ```
 
-**Option B: Manual startup**
 ```bash
 cd backend
-
-# Install dependencies
-npm install
-pip install -r requirements.txt
-
-# Start server
-node server.js
+pip install flask flask-cors
+python app.py
 ```
+*The server will start on http://localhost:5000*
 
-The server runs on `http://localhost:5000`
+### 2. Extension Setup
+1. Open Chrome and navigate to `chrome://extensions/`
+2. Enable "Developer mode" (top right toggle).
+3. Click "Load unpacked".
+4. Select the `SupriAI/extension` folder from this project.
+5. The "AI Learning Companion" is now active!
 
-### 3. Optional: Enhanced ML Features
+## Features
+- **Passive Tracking**: Logs time, scroll depth, and active URL.
+- **Privacy First**: Data stays local (on your machine).
+- **AI Analysis**: Classifies content into topics (Programming, History, Science, etc.).
+- **Analytics Dashboard**: View your engagement trends and topic distribution.
+- **Recommendations**: Get suggested next steps based on your history.
 
-For advanced machine learning features, install additional Python packages:
-```bash
-pip install numpy scikit-learn
-```
-
-## 🎯 Usage
-
-1. **Click the extension icon** to see quick stats and current page analysis
-2. **Open the Dashboard** for detailed analytics, topics, and recommendations
-3. **Browse educational content** - the extension automatically tracks and categorizes it
-4. **Sync with backend** to get AI-powered insights and recommendations
-
-## 🔧 Configuration
-
-### Extension Settings (in Dashboard > Settings)
-- **Backend URL**: Default is `http://localhost:5000`
-- **Auto-sync**: Enable automatic syncing with backend
-- **Tracking**: Toggle tracking on/off
-
-### Backend Configuration (backend/config.py)
-- Server port: 5000
-- Database location
-- AI feature toggles
-- Logging settings
-
-## 🔌 API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/health` | GET | Health check |
-| `/api/sync` | POST | Sync learning data |
-| `/api/analytics` | GET | Get analytics data |
-| `/api/recommendations` | GET | Get recommendations |
-| `/api/patterns` | GET | Get learning patterns |
-| `/api/profile` | GET/POST | User profile |
-| `/api/status` | GET | Detailed status |
-
-## 🎨 Themes
-
-The extension supports light and dark themes. Click the moon/sun icon to toggle.
-
-## 📊 Categories Tracked
-
-- Programming
-- Data Science
-- Web Development
-- Mathematics
-- Science
-- Language
-- Business
-- Design
-- DevOps
-- Security
-
-## 🔒 Privacy
-
-- All data is stored locally in your browser (IndexedDB)
-- Backend sync is optional and runs on localhost
-- No data is sent to external servers
-
-## 🐛 Troubleshooting
-
-**Extension not tracking?**
-- Refresh the page after installing the extension
-- Check if tracking is enabled (green dot in popup)
-
-**Backend not connecting?**
-- Ensure the backend server is running
-- Check if port 5000 is available
-- Look at server logs in the terminal
-
-**Charts not displaying?**
-- Wait for data to accumulate
-- Try syncing with the backend
-
-## 📝 License
-
-MIT License - See LICENSE file for details.
-
-## 🤝 Contributing
-
-Contributions welcome! Please read the contribution guidelines first.
+## Aesthetics
+The dashboard uses a modern "Dark Mode" aesthetic with glassmorphism effects for a premium feel.

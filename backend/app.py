@@ -1,762 +1,1551 @@
-from flask import Flask, request, jsonify
+"""
+SupriAI - Flask Backend API
+Complete REST API for Learning Analytics System
+Clean, well-structured API endpoints
+"""
+
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import sqlite3
-import json
 from datetime import datetime, timedelta
-import os
-import logging
-from logging.handlers import RotatingFileHandler
+import database
+import ml_engine
 
-from ai_engine import AIAnalysisEngine
-from recommendation_engine import MLRecommendationEngine
-from config import get_config, ensure_directories
-
-ensure_directories()
+# ==========================================
+# APP INITIALIZATION
+# ==========================================
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins for extension
 
-cors_config = get_config('cors')
-CORS(app, origins=cors_config['origins'], 
-     methods=cors_config['methods'],
-     allow_headers=cors_config['allow_headers'])
+# Initialize Database
+database.init_db()
 
-log_config = get_config('logging')
-log_dir = os.path.dirname(str(log_config['log_file']))
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-handler = RotatingFileHandler(
-    str(log_config['log_file']),
-    maxBytes=log_config['max_bytes'],
-    backupCount=log_config['backup_count']
-)
-handler.setFormatter(logging.Formatter(log_config['format']))
-app.logger.addHandler(handler)
-app.logger.setLevel(getattr(logging, log_config['level']))
-
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter(log_config['format']))
-app.logger.addHandler(console_handler)
-
-db_config = get_config('database')
-DB_PATH = str(db_config['path'])
-
-ai_engine = AIAnalysisEngine()
-recommendation_engine = MLRecommendationEngine()
+print("""
+╔═══════════════════════════════════════════════════════╗
+║           SupriAI Backend Server Started              ║
+║              http://localhost:5000                    ║
+╚═══════════════════════════════════════════════════════╝
+""")
 
 
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+
+# ==========================================
+# INDEX ROUTE
+# ==========================================
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
-def init_db():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT,
-            domain TEXT,
-            title TEXT,
-            category TEXT,
-            topics TEXT,
-            duration INTEGER,
-            engagement_score REAL,
-            scroll_depth REAL,
-            date TEXT,
-            timestamp INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS topics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            category TEXT,
-            total_time INTEGER DEFAULT 0,
-            session_count INTEGER DEFAULT 0,
-            avg_engagement REAL DEFAULT 0,
-            embeddings TEXT,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS user_profile (
-            id INTEGER PRIMARY KEY,
-            interest_clusters TEXT,
-            learning_style TEXT,
-            skill_level TEXT,
-            preferred_categories TEXT,
-            weekly_goal INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS ai_insights (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            insight_type TEXT,
-            content TEXT,
-            confidence REAL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS recommendations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            description TEXT,
-            url TEXT,
-            rec_type TEXT,
-            priority TEXT,
-            topic TEXT,
-            category TEXT,
-            score REAL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS skills (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            category TEXT,
-            experience INTEGER DEFAULT 0,
-            level INTEGER DEFAULT 0,
-            last_practiced DATETIME,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+@app.route('/routes')
+def route_directory():
+    """Render API Route Directory"""
+    return render_template('api_directory.html')
 
 
-init_db()
+# ==========================================
+# HEALTH & STATUS ENDPOINTS
+# ==========================================
 
 
-@app.route('/api/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint with AI model status"""
-    ai_status = ai_engine.get_status()
-    rec_status = recommendation_engine.get_status()
-    
+    """Health check endpoint"""
     return jsonify({
-        'status': 'healthy',
-        'service': 'SupriAI Backend',
-        'version': '2.0.0',
-        'ai_engine': ai_status,
-        'recommendation_engine': rec_status,
-        'timestamp': datetime.now().isoformat()
+        "status": "running",
+        "service": "SupriAI Backend",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat()
     })
 
 
-@app.route('/api/sync', methods=['POST'])
-def sync_data():
-    """Store learning sessions in database"""
+@app.route('/api/status', methods=['GET'])
+def api_status():
+    """Get API status and database stats"""
     try:
-        data = request.json or {}
-        sessions = data.get('sessions', [])
-        topics = data.get('topics', [])
-        profile = data.get('profile', {})
-        skills = data.get('skills', [])
+        stats = database.get_total_stats()
+        return jsonify({
+            "status": "online",
+            "database": "connected",
+            "total_sessions": stats.get('total_sessions', 0),
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# ACTIVITY LOGGING ENDPOINTS
+# ==========================================
+
+@app.route('/log_activity', methods=['POST'])
+def log_activity():
+    """Log a learning activity from the extension"""
+    try:
+        data = request.json
         
-        conn = get_db()
-        cursor = conn.cursor()
+        if not data:
+            return jsonify({"status": "error", "message": "No data provided"}), 400
         
-        # Store sessions
-        sessions_stored = 0
-        for session in sessions:
-            try:
-                cursor.execute('''
-                    INSERT INTO sessions (url, domain, title, category, topics, duration,
-                        engagement_score, scroll_depth, date, timestamp)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    session.get('url', ''),
-                    session.get('domain', ''),
-                    session.get('title', 'Unknown'),
-                    session.get('category', 'General'),
-                    json.dumps(session.get('topics', [])),
-                    session.get('duration', 0),
-                    session.get('engagementScore', 0),
-                    session.get('scrollDepth', 0),
-                    session.get('date', datetime.now().strftime('%Y-%m-%d')),
-                    session.get('timestamp', int(datetime.now().timestamp() * 1000))
-                ))
-                sessions_stored += 1
-            except Exception as e:
-                app.logger.warning(f"Failed to store session: {e}")
+        # Extract content for classification
+        content = data.get('content', '')
+        title = data.get('title', '')
         
-        # Store topics
-        for topic in topics:
-            try:
-                cursor.execute('''
-                    INSERT OR REPLACE INTO topics (name, category, total_time, session_count, avg_engagement, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (
-                    topic.get('name', 'Unknown'),
-                    topic.get('category', 'General'),
-                    topic.get('totalTime', 0),
-                    topic.get('sessionCount', 0),
-                    topic.get('averageEngagement', 0),
-                    datetime.now().isoformat()
-                ))
-            except Exception as e:
-                app.logger.warning(f"Failed to store topic: {e}")
+        # Classify content using ML engine
+        topic, confidence = ml_engine.classify_content(content, title)
         
-        # Update profile
-        if profile:
-            try:
-                cursor.execute('''
-                    INSERT OR REPLACE INTO user_profile 
-                    (id, interest_clusters, learning_style, skill_level, preferred_categories, weekly_goal, updated_at)
-                    VALUES (1, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    json.dumps(profile.get('interestClusters', [])),
-                    profile.get('learningStyle', 'balanced'),
-                    profile.get('skillLevel', 'beginner'),
-                    json.dumps(profile.get('preferredCategories', [])),
-                    profile.get('weeklyGoal', 0),
-                    datetime.now().isoformat()
-                ))
-            except Exception as e:
-                app.logger.warning(f"Failed to update profile: {e}")
+        # Calculate engagement score
+        engagement = data.get('engagement', {})
+        engagement_score = ml_engine.calculate_engagement(
+            data.get('duration', 0),
+            engagement.get('maxScroll', 0),
+            engagement.get('clicks', 0),
+            engagement.get('mouseDistance', 0)
+        )
         
-        # Store skills
-        for skill in skills:
-            try:
-                cursor.execute('''
-                    INSERT OR REPLACE INTO skills (name, category, experience, level, last_practiced, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (
-                    skill.get('name', 'Unknown'),
-                    skill.get('category', 'General'),
-                    skill.get('experience', 0),
-                    skill.get('level', 0),
-                    skill.get('lastPracticed'),
-                    datetime.now().isoformat()
-                ))
-            except Exception as e:
-                app.logger.warning(f"Failed to store skill: {e}")
+        # Prepare log entry
+        log_entry = {
+            "url": data.get('url', ''),
+            "title": title,
+            "topic": topic,
+            "confidence": confidence,
+            "duration": data.get('duration', 0),
+            "max_scroll": engagement.get('maxScroll', 0),
+            "clicks": engagement.get('clicks', 0),
+            "mouse_distance": engagement.get('mouseDistance', 0),
+            "engagement_score": engagement_score,
+            "content_preview": content[:500] if content else '',
+            "timestamp": data.get('timestamp', datetime.now().isoformat())
+        }
         
-        conn.commit()
-        conn.close()
+        # Insert into database
+        log_id = database.insert_log(log_entry)
         
-        # Generate AI insights
-        insights = ai_engine.analyze(sessions, topics)
+        # Update streak
+        database.update_streak()
         
-        # Generate recommendations
-        recommendations = recommendation_engine.generate(sessions, topics, profile, skills)
-        
-        # Store insights
-        conn = get_db()
-        cursor = conn.cursor()
-        for insight in insights:
-            try:
-                cursor.execute('''
-                    INSERT INTO ai_insights (insight_type, content, confidence)
-                    VALUES (?, ?, ?)
-                ''', (
-                    insight.get('type', 'general'),
-                    json.dumps(insight),
-                    insight.get('confidence', 0.5)
-                ))
-            except Exception as e:
-                app.logger.warning(f"Failed to store insight: {e}")
-        
-        # Store recommendations
-        cursor.execute('DELETE FROM recommendations')
-        for rec in recommendations:
-            try:
-                cursor.execute('''
-                    INSERT INTO recommendations (title, description, url, rec_type, priority, topic, category, score)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    rec.get('title', ''),
-                    rec.get('description', ''),
-                    rec.get('url'),
-                    rec.get('type', 'suggestion'),
-                    rec.get('priority', 'medium'),
-                    rec.get('topic'),
-                    rec.get('category'),
-                    rec.get('score', 0.5)
-                ))
-            except Exception as e:
-                app.logger.warning(f"Failed to store recommendation: {e}")
-        
-        conn.commit()
-        conn.close()
+        # Get real-time recommendation
+        recommendation = ml_engine.get_next_recommendation(log_entry)
         
         return jsonify({
-            'success': True,
-            'code': 'SYNC_COMPLETE',
-            'data': {
-                'sessions_stored': sessions_stored,
-                'topics_processed': len(topics),
-                'skills_updated': len(skills),
-                'insights_generated': len(insights),
-                'recommendations_generated': len(recommendations)
-            },
-            'insights': insights,
-            'recommendations': recommendations,
-            'timestamp': datetime.now().isoformat()
+            "status": "success",
+            "log_id": log_id,
+            "topic": topic,
+            "confidence": confidence,
+            "engagement_score": engagement_score,
+            "recommendation": recommendation
         })
         
     except Exception as e:
-        app.logger.error(f"Sync error: {e}")
+        print(f"❌ Error logging activity: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/bulk_log', methods=['POST'])
+def bulk_log_activity():
+    """Bulk log activities (for offline sync)"""
+    try:
+        logs = request.json
+        
+        if not logs or not isinstance(logs, list):
+            return jsonify({"status": "error", "message": "Invalid data format"}), 400
+        
+        # Process each log
+        processed_logs = []
+        for data in logs:
+            content = data.get('content', '')
+            title = data.get('title', '')
+            
+            topic, confidence = ml_engine.classify_content(content, title)
+            engagement = data.get('engagement', {})
+            engagement_score = ml_engine.calculate_engagement(
+                data.get('duration', 0),
+                engagement.get('maxScroll', 0),
+                engagement.get('clicks', 0),
+                engagement.get('mouseDistance', 0)
+            )
+            
+            processed_logs.append({
+                "url": data.get('url', ''),
+                "title": title,
+                "topic": topic,
+                "confidence": confidence,
+                "duration": data.get('duration', 0),
+                "max_scroll": engagement.get('maxScroll', 0),
+                "clicks": engagement.get('clicks', 0),
+                "mouse_distance": engagement.get('mouseDistance', 0),
+                "engagement_score": engagement_score,
+                "content_preview": content[:500] if content else '',
+                "timestamp": data.get('timestamp', datetime.now().isoformat())
+            })
+        
+        # Bulk insert
+        count = database.bulk_insert_logs(processed_logs)
+        
         return jsonify({
-            'success': False,
-            'error': str(e),
-            'code': 'SYNC_ERROR'
-        }), 500
+            "status": "success",
+            "synced_count": count
+        })
+        
+    except Exception as e:
+        print(f"❌ Error bulk logging: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route('/api/analytics', methods=['GET'])
+# ==========================================
+# ANALYTICS ENDPOINTS
+# ==========================================
+
+@app.route('/get_analytics', methods=['GET'])
 def get_analytics():
-    """Get analytics data with computed statistics"""
+    """Get comprehensive analytics for dashboard"""
     try:
-        time_range = request.args.get('range', 'week')
-        days_ago = {'day': 1, 'week': 7, 'month': 30, 'year': 365}.get(time_range, 7)
+        days = request.args.get('days', 7, type=int)
+        logs = database.get_recent_logs(days=days)
         
-        start_date = datetime.now() - timedelta(days=days_ago)
-        start_str = start_date.strftime('%Y-%m-%d')
+        # Process analytics
+        analytics = ml_engine.aggregate_analytics(logs)
         
-        conn = get_db()
-        cursor = conn.cursor()
+        # Get recommendations
+        recommendations = ml_engine.generate_weekly_plan(logs)
+        analytics['recommendations'] = recommendations
         
-        # Get sessions
-        cursor.execute('''
-            SELECT * FROM sessions WHERE date >= ? ORDER BY timestamp DESC
-        ''', (start_str,))
-        sessions = [dict(row) for row in cursor.fetchall()]
+        # Get user info
+        user = database.get_user()
+        if user:
+            analytics['streak_days'] = user.get('streak_days', 0)
+            analytics['total_points'] = user.get('total_points', 0)
+            analytics['user_name'] = user.get('display_name', 'User')
         
-        # Get topics
-        cursor.execute('SELECT * FROM topics ORDER BY total_time DESC')
-        topics = [dict(row) for row in cursor.fetchall()]
+        return jsonify(analytics)
         
-        # Get insights
-        cursor.execute('SELECT * FROM ai_insights ORDER BY created_at DESC LIMIT 20')
-        insights_raw = cursor.fetchall()
-        insights = []
-        for row in insights_raw:
-            row_dict = dict(row)
-            try:
-                row_dict['content'] = json.loads(row_dict.get('content', '{}'))
-            except:
-                pass
-            insights.append(row_dict)
+    except Exception as e:
+        print(f"❌ Error getting analytics: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/analytics/topics', methods=['GET'])
+def get_topic_analytics():
+    """Get detailed topic breakdown"""
+    try:
+        days = request.args.get('days', 30, type=int)
+        logs = database.get_recent_logs(days=days)
         
-        conn.close()
-        
-        # Calculate statistics
-        total_time = sum(s.get('duration', 0) for s in sessions)
-        avg_engagement = round(sum(s.get('engagement_score', 0) for s in sessions) / max(len(sessions), 1))
-        unique_topics = len(set(t.get('name') for t in topics))
-        unique_days = len(set(s.get('date') for s in sessions))
-        
-        # Category breakdown
-        category_stats = {}
-        for s in sessions:
-            cat = s.get('category', 'Other')
-            if cat not in category_stats:
-                category_stats[cat] = {'count': 0, 'time': 0}
-            category_stats[cat]['count'] += 1
-            category_stats[cat]['time'] += s.get('duration', 0)
+        topic_breakdown = ml_engine.get_topic_breakdown(logs)
         
         return jsonify({
-            'success': True,
-            'data': {
-                'sessions': sessions,
-                'topics': topics,
-                'insights': insights
-            },
-            'summary': {
-                'totalTime': total_time,
-                'totalSessions': len(sessions),
-                'avgEngagement': avg_engagement,
-                'uniqueTopics': unique_topics,
-                'uniqueDays': unique_days,
-                'categoryBreakdown': category_stats
-            },
-            'timeRange': time_range,
-            'timestamp': datetime.now().isoformat()
+            "status": "success",
+            "topics": topic_breakdown
         })
         
     except Exception as e:
-        app.logger.error(f"Analytics error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
+
+@app.route('/api/analytics/trends', methods=['GET'])
+def get_trends():
+    """Get learning trends over time"""
+    try:
+        days = request.args.get('days', 7, type=int)
+        logs = database.get_recent_logs(days=days)
+        
+        weekly_trends = ml_engine.calculate_weekly_trends(logs)
+        
+        return jsonify({
+            "status": "success",
+            "trends": weekly_trends,
+            "labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# HISTORY ENDPOINTS
+# ==========================================
+
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    """Get learning history"""
+    try:
+        days = request.args.get('days', 30, type=int)
+        limit = request.args.get('limit', 100, type=int)
+        topic = request.args.get('topic', None)
+        
+        if topic:
+            logs = database.get_logs_by_topic(topic, limit=limit)
+        else:
+            logs = database.get_recent_logs(days=days, limit=limit)
+        
+        return jsonify({
+            "status": "success",
+            "count": len(logs),
+            "history": logs
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/history/search', methods=['GET'])
+def search_history():
+    """Search learning history"""
+    try:
+        query = request.args.get('q', '')
+        limit = request.args.get('limit', 50, type=int)
+        
+        if not query:
+            return jsonify({"status": "error", "message": "Query required"}), 400
+        
+        logs = database.search_logs(query, limit=limit)
+        
+        return jsonify({
+            "status": "success",
+            "query": query,
+            "count": len(logs),
+            "results": logs
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/history/clear', methods=['DELETE'])
+def clear_history():
+    """Clear all learning history"""
+    try:
+        database.delete_all_logs()
+        return jsonify({"status": "success", "message": "History cleared"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# GOALS ENDPOINTS
+# ==========================================
+
+@app.route('/api/goals', methods=['GET'])
+def get_goals():
+    """Get all goals"""
+    try:
+        active_only = request.args.get('active', 'true').lower() == 'true'
+        goals = database.get_goals(active_only=active_only)
+        
+        return jsonify({
+            "status": "success",
+            "goals": goals
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/goals', methods=['POST'])
+def create_goal():
+    """Create a new goal"""
+    try:
+        data = request.json
+        
+        if not data or not data.get('title'):
+            return jsonify({"status": "error", "message": "Title required"}), 400
+        
+        goal_id = database.create_goal(data)
+        
+        return jsonify({
+            "status": "success",
+            "goal_id": goal_id
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/goals/<int:goal_id>', methods=['PUT'])
+def update_goal(goal_id):
+    """Update goal progress"""
+    try:
+        data = request.json
+        progress = data.get('progress', 0)
+        
+        database.update_goal_progress(goal_id, progress)
+        
+        return jsonify({"status": "success"})
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/goals/<int:goal_id>', methods=['DELETE'])
+def delete_goal(goal_id):
+    """Delete a goal"""
+    try:
+        database.delete_goal(goal_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# BOOKMARKS ENDPOINTS
+# ==========================================
+
+@app.route('/api/bookmarks', methods=['GET'])
+def get_bookmarks():
+    """Get all bookmarks"""
+    try:
+        topic = request.args.get('topic', None)
+        bookmarks = database.get_bookmarks(topic=topic)
+        
+        return jsonify({
+            "status": "success",
+            "bookmarks": bookmarks
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/bookmarks', methods=['POST'])
+def add_bookmark():
+    """Add a bookmark"""
+    try:
+        data = request.json
+        
+        if not data or not data.get('url'):
+            return jsonify({"status": "error", "message": "URL required"}), 400
+        
+        # Auto-classify if content provided
+        if data.get('content') or data.get('title'):
+            topic, _ = ml_engine.classify_content(
+                data.get('content', ''), 
+                data.get('title', '')
+            )
+            data['topic'] = topic
+        
+        bookmark_id = database.add_bookmark(data)
+        
+        return jsonify({
+            "status": "success",
+            "bookmark_id": bookmark_id
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/bookmarks/<int:bookmark_id>', methods=['DELETE'])
+def delete_bookmark(bookmark_id):
+    """Delete a bookmark"""
+    try:
+        database.delete_bookmark(bookmark_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# NOTES ENDPOINTS
+# ==========================================
+
+@app.route('/api/notes', methods=['GET'])
+def get_notes():
+    """Get all notes/reflections"""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        notes = database.get_notes(limit=limit)
+        
+        return jsonify({
+            "status": "success",
+            "notes": notes
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/notes', methods=['POST'])
+def create_note():
+    """Create a new note"""
+    try:
+        data = request.json
+        
+        if not data or not data.get('content'):
+            return jsonify({"status": "error", "message": "Content required"}), 400
+        
+        note_id = database.create_note(data)
+        
+        return jsonify({
+            "status": "success",
+            "note_id": note_id
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/notes/<int:note_id>', methods=['PUT'])
+def update_note(note_id):
+    """Update a note"""
+    try:
+        data = request.json
+        database.update_note(note_id, data)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/notes/<int:note_id>', methods=['DELETE'])
+def delete_note(note_id):
+    """Delete a note"""
+    try:
+        database.delete_note(note_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# SCHEDULE ENDPOINTS
+# ==========================================
+
+@app.route('/api/schedule', methods=['GET'])
+def get_schedule():
+    """Get schedule events"""
+    try:
+        start_date = request.args.get('start', None)
+        end_date = request.args.get('end', None)
+        
+        events = database.get_events(start_date=start_date, end_date=end_date)
+        
+        return jsonify({
+            "status": "success",
+            "events": events
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/schedule', methods=['POST'])
+def create_event():
+    """Create a schedule event"""
+    try:
+        data = request.json
+        
+        if not data or not data.get('title') or not data.get('start_time'):
+            return jsonify({"status": "error", "message": "Title and start_time required"}), 400
+        
+        event_id = database.create_event(data)
+        
+        return jsonify({
+            "status": "success",
+            "event_id": event_id
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/schedule/<int:event_id>', methods=['DELETE'])
+def delete_event(event_id):
+    """Delete a schedule event"""
+    try:
+        database.delete_event(event_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# USER & SETTINGS ENDPOINTS
+# ==========================================
+
+@app.route('/api/user', methods=['GET'])
+def get_user():
+    """Get user profile"""
+    try:
+        user = database.get_user()
+        if user:
+            return jsonify({"status": "success", "user": user})
+        return jsonify({"status": "error", "message": "User not found"}), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/user', methods=['PUT'])
+def update_user():
+    """Update user profile"""
+    try:
+        data = request.json
+        database.update_user(1, data)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    """Get user settings"""
+    try:
+        settings = database.get_settings()
+        return jsonify({"status": "success", "settings": settings})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/settings', methods=['PUT'])
+def update_settings():
+    """Update user settings"""
+    try:
+        data = request.json
+        database.update_settings(1, data)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# ACHIEVEMENTS ENDPOINTS
+# ==========================================
+
+@app.route('/api/achievements', methods=['GET'])
+def get_achievements():
+    """Get all achievements"""
+    try:
+        achievements = database.get_achievements()
+        return jsonify({
+            "status": "success",
+            "achievements": achievements
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/achievements/check', methods=['POST'])
+def check_achievements():
+    """Check for new achievements"""
+    try:
+        logs = database.get_recent_logs(days=30)
+        user = database.get_user()
+        
+        new_achievements = ml_engine.check_achievements(logs, user or {})
+        
+        # Unlock new achievements
+        unlocked = []
+        for achievement in new_achievements:
+            achievement_id = database.unlock_achievement(
+                1,
+                achievement['badge_name'],
+                achievement['badge_icon'],
+                achievement['description']
+            )
+            if achievement_id:
+                unlocked.append(achievement)
+        
+        return jsonify({
+            "status": "success",
+            "new_achievements": unlocked
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# COMMUNITY & LEADERBOARD ENDPOINTS
+# ==========================================
+
+@app.route('/api/community/leaderboard', methods=['GET'])
+def get_leaderboard():
+    """Get community leaderboard"""
+    try:
+        timeframe = request.args.get('timeframe', 'all')  # all, week, month
+        limit = request.args.get('limit', 10, type=int)
+        
+        # Get top users by points
+        leaderboard = database.get_leaderboard(timeframe=timeframe, limit=limit)
+        
+        # Get current user ranking
+        user_rank = database.get_user_rank(1)
+        
+        return jsonify({
+            "status": "success",
+            "leaderboard": leaderboard,
+            "user_rank": user_rank
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/community/stats', methods=['GET'])
+def get_community_stats():
+    """Get community statistics"""
+    try:
+        stats = {
+            "total_users": database.get_total_users(),
+            "total_learning_hours": database.get_total_learning_hours(),
+            "total_achievements": database.get_total_achievements_unlocked(),
+            "active_today": database.get_active_users_today()
+        }
+        
+        return jsonify({
+            "status": "success",
+            "stats": stats
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# STATS ENDPOINTS
+# ==========================================
+
+@app.route('/api/stats/week', methods=['GET'])
+def get_week_stats():
+    """Get this week's statistics"""
+    try:
+        # Get goals completed this week
+        goals = database.get_goals(active_only=False)
+        week_ago = datetime.now() - timedelta(days=7)
+        
+        goals_completed = sum(1 for g in goals 
+                            if g.get('completed_at') and 
+                            datetime.fromisoformat(g['completed_at']) > week_ago)
+        
+        # Get learning sessions this week
+        logs = database.get_recent_logs(days=7)
+        sessions = len(logs)
+        total_minutes = sum(log.get('duration', 0) for log in logs) // 60
+        
+        return jsonify({
+            "status": "success",
+            "goals_completed": goals_completed,
+            "sessions": sessions,
+            "total_minutes": total_minutes
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# RECOMMENDATIONS ENDPOINT
+# ==========================================
 
 @app.route('/api/recommendations', methods=['GET'])
 def get_recommendations():
-    """Get current recommendations with metadata"""
+    """Get personalized recommendations"""
     try:
-        limit = int(request.args.get('limit', 10))
-        category = request.args.get('category')
+        days = request.args.get('days', 7, type=int)
+        logs = database.get_recent_logs(days=days)
         
-        conn = get_db()
-        cursor = conn.cursor()
+        recommendations = ml_engine.generate_weekly_plan(logs)
         
-        if category:
-            cursor.execute('''
-                SELECT * FROM recommendations WHERE category = ? ORDER BY score DESC LIMIT ?
-            ''', (category, limit))
+        return jsonify({
+            "status": "success",
+            "recommendations": recommendations
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# TASKS / TODOS ENDPOINTS
+# ==========================================
+
+@app.route('/api/tasks', methods=['GET'])
+def get_tasks():
+    """Get all tasks"""
+    try:
+        status = request.args.get('status', None)
+        include_completed = request.args.get('include_completed', 'false').lower() == 'true'
+        
+        tasks = database.get_tasks(status=status, include_completed=include_completed)
+        
+        return jsonify({
+            "status": "success",
+            "tasks": tasks
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks', methods=['POST'])
+def create_task():
+    """Create a new task"""
+    try:
+        data = request.json
+        
+        if not data or not data.get('title'):
+            return jsonify({"status": "error", "message": "Title required"}), 400
+        
+        task_id = database.create_task(data)
+        
+        return jsonify({
+            "status": "success",
+            "task_id": task_id
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['GET'])
+def get_task(task_id):
+    """Get a single task"""
+    try:
+        task = database.get_task(task_id)
+        if task:
+            return jsonify({"status": "success", "task": task})
+        return jsonify({"status": "error", "message": "Task not found"}), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+    """Update a task"""
+    try:
+        data = request.json
+        database.update_task(task_id, data)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    """Delete a task"""
+    try:
+        database.delete_task(task_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/<int:task_id>/complete', methods=['POST'])
+def complete_task(task_id):
+    """Mark a task as completed"""
+    try:
+        database.complete_task(task_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/tasks/today', methods=['GET'])
+def get_tasks_due_today():
+    """Get tasks due today"""
+    try:
+        tasks = database.get_tasks_due_today()
+        return jsonify({
+            "status": "success",
+            "tasks": tasks
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# POMODORO / FOCUS TIMER ENDPOINTS
+# ==========================================
+
+@app.route('/api/pomodoro/start', methods=['POST'])
+def start_pomodoro():
+    """Start a new pomodoro session"""
+    try:
+        data = request.json or {}
+        
+        session_id = database.create_pomodoro_session({
+            'task_id': data.get('task_id'),
+            'session_type': data.get('session_type', 'focus'),
+            'duration_minutes': data.get('duration_minutes', 25),
+            'topic': data.get('topic'),
+            'notes': data.get('notes')
+        })
+        
+        return jsonify({
+            "status": "success",
+            "session_id": session_id,
+            "message": "Pomodoro session started"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/pomodoro/<int:session_id>/complete', methods=['POST'])
+def complete_pomodoro(session_id):
+    """Complete a pomodoro session"""
+    try:
+        data = request.json or {}
+        actual_duration = data.get('actual_duration', 25)
+        
+        database.complete_pomodoro_session(session_id, actual_duration)
+        
+        # Update task if linked
+        if data.get('task_id'):
+            task = database.get_task(data.get('task_id'))
+            if task:
+                new_actual = (task.get('actual_minutes', 0) or 0) + actual_duration
+                database.update_task(data.get('task_id'), {'actual_minutes': new_actual})
+        
+        return jsonify({
+            "status": "success",
+            "message": "Pomodoro session completed"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/pomodoro/<int:session_id>/cancel', methods=['POST'])
+def cancel_pomodoro(session_id):
+    """Cancel/interrupt a pomodoro session"""
+    try:
+        data = request.json or {}
+        actual_duration = data.get('actual_duration', 0)
+        
+        database.cancel_pomodoro_session(session_id, actual_duration)
+        
+        return jsonify({
+            "status": "success",
+            "message": "Pomodoro session cancelled"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/pomodoro/sessions', methods=['GET'])
+def get_pomodoro_sessions():
+    """Get pomodoro session history"""
+    try:
+        days = request.args.get('days', 7, type=int)
+        sessions = database.get_pomodoro_sessions(days=days)
+        
+        return jsonify({
+            "status": "success",
+            "sessions": sessions
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/pomodoro/stats', methods=['GET'])
+def get_pomodoro_stats():
+    """Get pomodoro statistics"""
+    try:
+        days = request.args.get('days', 7, type=int)
+        stats = database.get_pomodoro_stats(days=days)
+        
+        return jsonify({
+            "status": "success",
+            "stats": stats
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# FOCUS SETTINGS ENDPOINTS
+# ==========================================
+
+@app.route('/api/focus/settings', methods=['GET'])
+def get_focus_settings():
+    """Get focus/pomodoro settings"""
+    try:
+        settings = database.get_focus_settings()
+        return jsonify({
+            "status": "success",
+            "settings": settings
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/focus/settings', methods=['PUT'])
+def update_focus_settings():
+    """Update focus/pomodoro settings"""
+    try:
+        data = request.json
+        database.update_focus_settings(1, data)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/focus/stats', methods=['GET'])
+def get_focus_stats():
+    """Get daily focus stats"""
+    try:
+        days = request.args.get('days', 7, type=int)
+        stats = database.get_focus_stats(days=days)
+        
+        return jsonify({
+            "status": "success",
+            "stats": stats
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# REMINDERS ENDPOINTS
+# ==========================================
+
+@app.route('/api/reminders', methods=['GET'])
+def get_reminders():
+    """Get all reminders"""
+    try:
+        active_only = request.args.get('active_only', 'true').lower() == 'true'
+        reminders = database.get_reminders(active_only=active_only)
+        
+        return jsonify({
+            "status": "success",
+            "reminders": reminders
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders', methods=['POST'])
+def create_reminder():
+    """Create a new reminder"""
+    try:
+        data = request.json
+        
+        if not data or not data.get('title') or not data.get('reminder_time'):
+            return jsonify({"status": "error", "message": "Title and reminder_time required"}), 400
+        
+        reminder_id = database.create_reminder(data)
+        
+        return jsonify({
+            "status": "success",
+            "reminder_id": reminder_id
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders/upcoming', methods=['GET'])
+def get_upcoming_reminders():
+    """Get upcoming reminders"""
+    try:
+        hours = request.args.get('hours', 24, type=int)
+        reminders = database.get_upcoming_reminders(hours=hours)
+        
+        return jsonify({
+            "status": "success",
+            "reminders": reminders
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders/<int:reminder_id>', methods=['PUT'])
+def update_reminder(reminder_id):
+    """Update a reminder"""
+    try:
+        data = request.json
+        database.update_reminder(reminder_id, data)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders/<int:reminder_id>', methods=['DELETE'])
+def delete_reminder(reminder_id):
+    """Delete a reminder"""
+    try:
+        database.delete_reminder(reminder_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/reminders/<int:reminder_id>/dismiss', methods=['POST'])
+def dismiss_reminder(reminder_id):
+    """Dismiss/deactivate a reminder"""
+    try:
+        database.deactivate_reminder(reminder_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# PRODUCTIVITY DASHBOARD ENDPOINT
+# ==========================================
+
+@app.route('/api/productivity', methods=['GET'])
+def get_productivity_dashboard():
+    """Get productivity summary for dashboard"""
+    try:
+        summary = database.get_productivity_summary()
+        
+        return jsonify({
+            "status": "success",
+            "productivity": summary
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# CHROME HISTORY ANALYSIS ENDPOINTS
+# ==========================================
+
+@app.route('/api/history/analyze', methods=['POST'])
+def analyze_history():
+    """Analyze Chrome browsing history using ML/NLP"""
+    try:
+        data = request.json
+        history = data.get('history', [])
+        
+        if not history:
+            return jsonify({
+                "status": "success",
+                "message": "No history to analyze",
+                "analysis": {},
+                "recommendations": []
+            })
+        
+        # Use Deep Learning Engine for pattern analysis
+        deep_analysis = ml_engine.DeepLearningEngine.analyze_learning_patterns(history)
+        
+        # Extract entities using NLP
+        all_titles = ' '.join([item.get('title', '') for item in history])
+        entities = ml_engine.NLPProcessor.extract_entities(all_titles)
+        
+        # Sentiment analysis of learning content
+        sentiment = ml_engine.NLPProcessor.sentiment_analysis(all_titles)
+        
+        # Generate personalized recommendations
+        recommendations = generate_smart_recommendations(deep_analysis, entities)
+        
+        # Store analysis in database
+        analysis_result = {
+            'pattern_type': deep_analysis.get('pattern_type', 'explorer'),
+            'confidence': deep_analysis.get('confidence', 0),
+            'features': deep_analysis.get('features', {}),
+            'insights': deep_analysis.get('insights', []),
+            'entities': entities,
+            'sentiment': sentiment,
+            'total_visits': len(history),
+            'primary_topic': deep_analysis.get('features', {}).get('primary_topic', 'General'),
+            'topic_distribution': deep_analysis.get('features', {}).get('topic_distribution', {})
+        }
+        
+        # Save to user profile
+        database.save_history_analysis(analysis_result)
+        
+        return jsonify({
+            "status": "success",
+            "analysis": analysis_result,
+            "recommendations": recommendations,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error analyzing history: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def generate_smart_recommendations(analysis: dict, entities: dict) -> list:
+    """Generate smart recommendations based on ML analysis"""
+    recommendations = []
+    
+    pattern = analysis.get('pattern_type', 'explorer')
+    features = analysis.get('features', {})
+    primary_topic = features.get('primary_topic', 'General')
+    
+    # Topic-specific recommendations
+    topic_recommendations = {
+        'Programming': [
+            {
+                'type': 'course',
+                'title': 'Advanced Algorithm Design',
+                'description': 'Master algorithms for technical interviews',
+                'url': 'https://leetcode.com',
+                'icon': 'ri-code-box-line',
+                'priority': 'high'
+            },
+            {
+                'type': 'practice',
+                'title': 'Build a Real Project',
+                'description': 'Apply your skills with a hands-on project',
+                'url': 'https://github.com/practical-tutorials/project-based-learning',
+                'icon': 'ri-hammer-line',
+                'priority': 'high'
+            }
+        ],
+        'Data Science': [
+            {
+                'type': 'course',
+                'title': 'Machine Learning Specialization',
+                'description': 'Deep dive into ML algorithms and applications',
+                'url': 'https://www.coursera.org/specializations/machine-learning-introduction',
+                'icon': 'ri-robot-line',
+                'priority': 'high'
+            },
+            {
+                'type': 'practice',
+                'title': 'Kaggle Competition',
+                'description': 'Test your skills on real datasets',
+                'url': 'https://www.kaggle.com/competitions',
+                'icon': 'ri-database-2-line',
+                'priority': 'medium'
+            }
+        ],
+        'Web Development': [
+            {
+                'type': 'tutorial',
+                'title': 'Full-Stack Development',
+                'description': 'Learn complete web application development',
+                'url': 'https://fullstackopen.com',
+                'icon': 'ri-stack-line',
+                'priority': 'high'
+            }
+        ]
+    }
+    
+    # Add topic-specific recommendations
+    if primary_topic in topic_recommendations:
+        recommendations.extend(topic_recommendations[primary_topic])
+    
+    # Pattern-based recommendations
+    pattern_recommendations = {
+        'deep_learner': {
+            'type': 'challenge',
+            'title': 'Take on a Complex Project',
+            'description': 'Your deep focus is perfect for tackling advanced challenges',
+            'icon': 'ri-rocket-line',
+            'priority': 'high'
+        },
+        'explorer': {
+            'type': 'focus',
+            'title': 'Pick a Specialization',
+            'description': 'Consider focusing deeply on one area to build expertise',
+            'icon': 'ri-focus-3-line',
+            'priority': 'medium'
+        },
+        'consistent': {
+            'type': 'goal',
+            'title': 'Set Weekly Milestones',
+            'description': 'Your consistency is great! Add measurable goals',
+            'icon': 'ri-flag-line',
+            'priority': 'medium'
+        },
+        'binge_learner': {
+            'type': 'schedule',
+            'title': 'Create a Learning Schedule',
+            'description': 'Spread your learning for better retention',
+            'icon': 'ri-calendar-schedule-line',
+            'priority': 'high'
+        }
+    }
+    
+    if pattern in pattern_recommendations:
+        recommendations.append(pattern_recommendations[pattern])
+    
+    # Add entity-based recommendations
+    tech_entities = entities.get('technologies', []) + entities.get('frameworks', [])
+    if tech_entities:
+        recommendations.append({
+            'type': 'deep_dive',
+            'title': f'Master {tech_entities[0]}',
+            'description': f'You\'ve been exploring {tech_entities[0]}. Take it to the next level!',
+            'icon': 'ri-book-open-line',
+            'priority': 'high'
+        })
+    
+    return recommendations[:5]  # Return top 5 recommendations
+
+
+# ==========================================
+# AI CHAT ASSISTANT ENDPOINTS
+# ==========================================
+
+@app.route('/api/chat', methods=['POST'])
+def chat_with_ai():
+    """Handle AI chat messages"""
+    try:
+        data = request.json
+        message = data.get('message', '')
+        context = data.get('context', {})
+        
+        if not message:
+            return jsonify({
+                "status": "error",
+                "message": "No message provided"
+            }), 400
+        
+        # Process message with Chat Assistant
+        result = ml_engine.ChatAssistant.process_message(message, context)
+        
+        # Save chat to history
+        database.save_chat_message({
+            'user_message': message,
+            'ai_response': result.get('response', ''),
+            'intent': result.get('intent', 'general'),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        return jsonify({
+            "status": "success",
+            "response": result.get('response', ''),
+            "intent": result.get('intent', 'general'),
+            "suggestions": result.get('suggestions', []),
+            "timestamp": result.get('timestamp', datetime.now().isoformat())
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in chat: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "response": "I'm sorry, I encountered an error. Please try again."
+        }), 500
+
+
+@app.route('/api/chat/history', methods=['GET'])
+def get_chat_history():
+    """Get chat history"""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        history = database.get_chat_history(limit=limit)
+        
+        return jsonify({
+            "status": "success",
+            "history": history
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/chat/clear', methods=['POST'])
+def clear_chat_history():
+    """Clear chat history"""
+    try:
+        database.clear_chat_history()
+        return jsonify({"status": "success", "message": "Chat history cleared"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# AI RECOMMENDATIONS ENDPOINTS
+# ==========================================
+
+@app.route('/api/recommendations', methods=['GET'])
+def get_ai_recommendations():
+    """Get AI-powered learning recommendations"""
+    try:
+        # Get recent learning logs
+        logs = database.get_recent_logs(days=30)
+        
+        # Get analytics
+        analytics = ml_engine.aggregate_analytics(logs)
+        
+        # Get stored history analysis
+        history_analysis = database.get_latest_history_analysis()
+        
+        # Generate recommendations from weekly plan
+        base_recommendations = ml_engine.generate_weekly_plan(logs)
+        
+        # Add ML-enhanced recommendations if history analysis exists
+        if history_analysis:
+            entities = history_analysis.get('entities', {})
+            pattern = history_analysis.get('pattern_type', 'explorer')
+            
+            # Add personalized recommendations
+            personalized = generate_smart_recommendations(history_analysis, entities)
+            base_recommendations.extend(personalized)
+        
+        # Remove duplicates and limit
+        seen_titles = set()
+        unique_recommendations = []
+        for rec in base_recommendations:
+            title = rec.get('title', '')
+            if title not in seen_titles:
+                seen_titles.add(title)
+                unique_recommendations.append(rec)
+        
+        return jsonify({
+            "status": "success",
+            "recommendations": unique_recommendations[:6],
+            "analytics_summary": {
+                "total_sessions": analytics.get('total_sessions', 0),
+                "top_topic": analytics.get('top_topic', 'General'),
+                "engagement_score": analytics.get('engagement_score', 0)
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting recommendations: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# RESUME BUILDER ENDPOINTS
+# ==========================================
+
+@app.route('/api/resume/generate', methods=['POST'])
+def generate_resume():
+    """Generate resume from learning analytics"""
+    try:
+        data = request.json or {}
+        user_info = data.get('user_info', {})
+        
+        # Get comprehensive analytics
+        logs = database.get_recent_logs(days=90)
+        analytics = ml_engine.aggregate_analytics(logs)
+        
+        # Generate resume using Resume Builder
+        result = ml_engine.ResumeBuilder.generate_resume(analytics, user_info)
+        
+        # Save resume to database
+        if result.get('status') == 'success':
+            database.save_generated_resume(result.get('resume', {}))
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"❌ Error generating resume: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/resume/latest', methods=['GET'])
+def get_latest_resume():
+    """Get the most recently generated resume"""
+    try:
+        resume = database.get_latest_resume()
+        
+        if resume:
+            return jsonify({
+                "status": "success",
+                "resume": resume
+            })
         else:
-            cursor.execute('''
-                SELECT * FROM recommendations ORDER BY score DESC LIMIT ?
-            ''', (limit,))
-        
-        recommendations = [dict(row) for row in cursor.fetchall()]
-        
-        cursor.execute('SELECT COUNT(*) as total FROM recommendations')
-        total = cursor.fetchone()['total']
-        
-        conn.close()
-        
-        return jsonify({
-            'success': True,
-            'recommendations': recommendations,
-            'metadata': {
-                'total': total,
-                'returned': len(recommendations),
-                'limit': limit,
-                'category': category
-            },
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Recommendations error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/patterns', methods=['GET'])
-def get_patterns():
-    """Get detected learning patterns"""
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT * FROM sessions ORDER BY timestamp DESC LIMIT 100')
-        sessions = [dict(row) for row in cursor.fetchall()]
-        
-        cursor.execute('SELECT * FROM topics ORDER BY total_time DESC')
-        topics = [dict(row) for row in cursor.fetchall()]
-        
-        conn.close()
-        
-        patterns = ai_engine.detect_learning_patterns(sessions)
-        
-        return jsonify({
-            'success': True,
-            'patterns': patterns,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Patterns error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/profile', methods=['GET', 'POST'])
-def handle_profile():
-    """Get or update user profile"""
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        if request.method == 'GET':
-            cursor.execute('SELECT * FROM user_profile WHERE id = 1')
-            row = cursor.fetchone()
-            conn.close()
-            
-            if row:
-                profile = dict(row)
-                try:
-                    profile['interest_clusters'] = json.loads(profile.get('interest_clusters', '[]'))
-                    profile['preferred_categories'] = json.loads(profile.get('preferred_categories', '[]'))
-                except:
-                    pass
-                return jsonify({'success': True, 'profile': profile})
-            else:
-                return jsonify({'success': True, 'profile': {}})
-        
-        elif request.method == 'POST':
-            data = request.json or {}
-            cursor.execute('''
-                INSERT OR REPLACE INTO user_profile 
-                (id, interest_clusters, learning_style, skill_level, preferred_categories, weekly_goal, updated_at)
-                VALUES (1, ?, ?, ?, ?, ?, ?)
-            ''', (
-                json.dumps(data.get('interestClusters', [])),
-                data.get('learningStyle', 'balanced'),
-                data.get('skillLevel', 'beginner'),
-                json.dumps(data.get('preferredCategories', [])),
-                data.get('weeklyGoal', 0),
-                datetime.now().isoformat()
-            ))
-            conn.commit()
-            conn.close()
-            
-            return jsonify({'success': True, 'message': 'Profile updated'})
-            
-    except Exception as e:
-        app.logger.error(f"Profile error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/analyze', methods=['POST'])
-def analyze_content():
-    """Analyze specific content using AI"""
-    try:
-        data = request.json or {}
-        url = data.get('url', '')
-        title = data.get('title', '')
-        content = data.get('content', '')
-        
-        analysis = ai_engine.analyze_content(url, title, content)
-        
-        return jsonify({
-            'success': True,
-            'analysis': analysis,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Analysis error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/topic-modeling', methods=['POST'])
-def topic_modeling():
-    """Run topic modeling on provided text"""
-    try:
-        data = request.json or {}
-        texts = data.get('texts', [])
-        
-        if not texts:
             return jsonify({
-                'success': False,
-                'error': 'No texts provided'
-            }), 400
+                "status": "not_found",
+                "message": "No resume generated yet"
+            }), 404
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/resume/update', methods=['PUT'])
+def update_resume():
+    """Update user info for resume"""
+    try:
+        data = request.json
         
-        topics = ai_engine.extract_topics(texts)
+        # Get current resume and regenerate with new user info
+        logs = database.get_recent_logs(days=90)
+        analytics = ml_engine.aggregate_analytics(logs)
         
-        return jsonify({
-            'success': True,
-            'topics': topics,
-            'timestamp': datetime.now().isoformat()
-        })
+        result = ml_engine.ResumeBuilder.generate_resume(analytics, data.get('user_info', {}))
+        
+        if result.get('status') == 'success':
+            database.save_generated_resume(result.get('resume', {}))
+        
+        return jsonify(result)
         
     except Exception as e:
-        app.logger.error(f"Topic modeling error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route('/api/learning-path', methods=['POST'])
-def get_learning_path():
-    """Generate personalized learning path using ML"""
+@app.route('/api/resume/export/<format_type>', methods=['GET'])
+def export_resume(format_type):
+    """Export resume in specified format"""
     try:
-        data = request.json or {}
-        sessions = data.get('sessions', [])
-        topics = data.get('topics', [])
-        skills = data.get('skills', [])
+        resume = database.get_latest_resume()
         
-        # Generate learning path
-        learning_path = recommendation_engine.generate_personalized_path(sessions, topics, skills)
+        if not resume:
+            return jsonify({"status": "error", "message": "No resume to export"}), 404
         
-        # Predict next topic
-        next_topic = recommendation_engine.predict_next_topic(sessions, topics)
-        
-        return jsonify({
-            'success': True,
-            'learning_path': learning_path,
-            'next_topic_prediction': next_topic,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Learning path error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/knowledge-gaps', methods=['POST'])
-def get_knowledge_gaps():
-    """Identify knowledge gaps using ML analysis"""
-    try:
-        data = request.json or {}
-        topics = data.get('topics', [])
-        skills = data.get('skills', [])
-        
-        # Calculate knowledge gaps
-        gaps = recommendation_engine.calculate_knowledge_gaps(topics, skills)
-        
-        return jsonify({
-            'success': True,
-            'knowledge_gaps': gaps,
-            'total_gaps': len(gaps),
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Knowledge gaps error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/predict-engagement', methods=['POST'])
-def predict_engagement():
-    """Predict engagement score for content using ML"""
-    try:
-        data = request.json or {}
-        url = data.get('url', '')
-        title = data.get('title', '')
-        content = data.get('content', '')
-        
-        if not url and not title:
+        if format_type == 'json':
+            return jsonify(resume)
+        elif format_type == 'html':
+            # Generate HTML version
+            html = generate_resume_html(resume)
+            return html, 200, {'Content-Type': 'text/html'}
+        else:
             return jsonify({
-                'success': False,
-                'error': 'URL or title required'
-            }), 400
-        
-        # Analyze content
-        analysis = ai_engine.analyze_content(url, title, content)
-        
-        # Calculate predicted engagement based on past similar content
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT AVG(engagement_score) as avg_engagement, COUNT(*) as count
-            FROM sessions 
-            WHERE category = ?
-        ''', (analysis.get('category', 'general'),))
-        
-        result = cursor.fetchone()
-        conn.close()
-        
-        predicted_engagement = result['avg_engagement'] if result['avg_engagement'] else 50
-        sample_size = result['count'] if result['count'] else 0
-        
-        return jsonify({
-            'success': True,
-            'analysis': analysis,
-            'predicted_engagement': round(predicted_engagement, 1),
-            'confidence': min(0.5 + (sample_size / 100), 0.95),
-            'sample_size': sample_size,
-            'timestamp': datetime.now().isoformat()
-        })
-        
+                "status": "success",
+                "resume": resume,
+                "format": format_type,
+                "message": f"Export as {format_type} - client-side rendering required"
+            })
+            
     except Exception as e:
-        app.logger.error(f"Engagement prediction error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route('/api/status', methods=['GET'])
-def get_status():
-    """Comprehensive status endpoint with AI model information"""
-    try:
-        ai_status = ai_engine.get_status()
-        rec_status = recommendation_engine.get_status()
+def generate_resume_html(resume: dict) -> str:
+    """Generate HTML version of resume"""
+    header = resume.get('header', {})
+    skills = resume.get('skills', {})
+    achievements = resume.get('learning_achievements', [])
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Resume - {header.get('name', 'Learning Professional')}</title>
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
+            h1 {{ color: #1a73e8; margin-bottom: 5px; }}
+            h2 {{ color: #333; border-bottom: 2px solid #1a73e8; padding-bottom: 5px; }}
+            .subtitle {{ color: #666; font-size: 1.1em; }}
+            .summary {{ background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+            .skills {{ display: flex; flex-wrap: wrap; gap: 10px; }}
+            .skill-tag {{ background: #e3f2fd; padding: 5px 12px; border-radius: 20px; font-size: 0.9em; }}
+            .achievement {{ background: #f0f9ff; padding: 10px; border-left: 3px solid #1a73e8; margin: 10px 0; }}
+        </style>
+    </head>
+    <body>
+        <h1>{header.get('name', 'Learning Professional')}</h1>
+        <p class="subtitle">{header.get('title', 'Technology Professional')}</p>
         
-        conn = get_db()
-        cursor = conn.cursor()
+        <h2>Professional Summary</h2>
+        <div class="summary">{resume.get('summary', '')}</div>
         
-        cursor.execute('SELECT COUNT(*) as count FROM sessions')
-        sessions_count = cursor.fetchone()['count']
+        <h2>Technical Skills</h2>
+        <div class="skills">
+            {''.join(f'<span class="skill-tag">{s}</span>' for s in skills.get('technical', []))}
+        </div>
         
-        cursor.execute('SELECT COUNT(*) as count FROM topics')
-        topics_count = cursor.fetchone()['count']
+        <h2>Tools & Technologies</h2>
+        <div class="skills">
+            {''.join(f'<span class="skill-tag">{s}</span>' for s in skills.get('tools', []))}
+        </div>
         
-        cursor.execute('SELECT COUNT(*) as count FROM recommendations')
-        recs_count = cursor.fetchone()['count']
+        <h2>Learning Achievements</h2>
+        {''.join(f'<div class="achievement"><strong>{a.get("title", "")}</strong><br>{a.get("description", "")}</div>' for a in achievements)}
         
-        cursor.execute('SELECT COUNT(*) as count FROM ai_insights')
-        insights_count = cursor.fetchone()['count']
+        <h2>Soft Skills</h2>
+        <div class="skills">
+            {''.join(f'<span class="skill-tag">{s}</span>' for s in skills.get('soft_skills', []))}
+        </div>
         
-        cursor.execute('SELECT COUNT(*) as count FROM skills')
-        skills_count = cursor.fetchone()['count']
-        
-        cursor.execute('SELECT MAX(created_at) as last FROM sessions')
-        last_activity = cursor.fetchone()['last']
-        
-        conn.close()
-        
-        return jsonify({
-            'service': 'SupriAI Backend',
-            'version': '2.0.0',
-            'status': 'operational',
-            'database': {
-                'status': 'connected',
-                'data': {
-                    'sessions': sessions_count,
-                    'topics': topics_count,
-                    'recommendations': recs_count,
-                    'insights': insights_count,
-                    'skills': skills_count
-                },
-                'last_activity': last_activity
-            },
-            'ai_models': {
-                'ai_engine': ai_status,
-                'recommendation_engine': rec_status
-            },
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Status error: {e}")
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
+        <footer style="margin-top: 30px; text-align: center; color: #999; font-size: 0.8em;">
+            Generated by SupriAI Learning Analytics
+        </footer>
+    </body>
+    </html>
+    """
+    return html
 
+
+# ==========================================
+# RUN SERVER
+# ==========================================
 
 if __name__ == '__main__':
-    server_config = get_config('server')
-    print('=' * 60)
-    print('SupriAI Backend Server (Flask + AI Engine)')
-    print(f"Server URL: http://localhost:{server_config['port']}")
-    print(f"Health Check: http://localhost:{server_config['port']}/api/health")
-    print('=' * 60)
-    
-    app.run(
-        host=server_config['host'],
-        port=server_config['port'],
-        debug=server_config['debug']
-    )
+    app.run(host='0.0.0.0', port=5000, debug=True)

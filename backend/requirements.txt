@@ -1,15 +1,18 @@
-# SupriAI Backend Requirements
+# SupriAI Backend Dependencies
 # Install with: pip install -r requirements.txt
 
-# Core Framework (Required)
-flask>=2.3.0
-flask-cors>=4.0.0
+# Web Framework
+Flask==3.0.0
+Flask-Cors==4.0.0
 
-# Optional: Data Processing & ML (for advanced features)
-# Uncomment these if you want enhanced AI analysis:
-# numpy>=1.24.0
-# scikit-learn>=1.3.0
+# Database (SQLite is built-in, no extra package needed)
 
-# Note: The backend works without numpy/scikit-learn
-# It will use basic implementations instead of ML algorithms
-# flake8>=6.1.0
+# Production Server (optional, for deployment)
+gunicorn==21.2.0
+
+# Utilities
+python-dateutil==2.8.2
+
+# Development (optional)
+pytest==7.4.3
+black==23.12.1

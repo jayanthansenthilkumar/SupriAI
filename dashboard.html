@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AI Learning Companion</title>
+    <!-- Fonts: Google Sans (Local) -->
+    <style>
+        @font-face {
+            font-family: 'Google Sans';
+            font-style: normal;
+            font-weight: 400;
+            src: url('libs/fonts/GoogleSans-Regular.woff2') format('woff2');
+        }
+
+        @font-face {
+            font-family: 'Google Sans';
+            font-style: normal;
+            font-weight: 500;
+            src: url('libs/fonts/GoogleSans-Medium.woff2') format('woff2');
+        }
+
+        @font-face {
+            font-family: 'Google Sans';
+            font-style: normal;
+            font-weight: 700;
+            src: url('libs/fonts/GoogleSans-Bold.woff2') format('woff2');
+        }
+    </style>
+    <!-- Icons: Remix Icon (CDN for reliability) -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="cursor.css">
+    <script src="libs/chart.js"></script>
+    <script src="libs/sweetalert2.all.min.js"></script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <i class="ri-brain-line logo-icon"></i>
+                <span class="logo-text">SupriAI</span>
+            </div>
+
+            <div class="sidebar-scroll">
+                <ul class="nav-menu">
+                    <div class="nav-label">Overview</div>
+                    <li class="nav-item active" data-target="dashboard">
+                        <i class="ri-dashboard-line"></i> <span>Dashboard</span>
+                    </li>
+                    <li class="nav-item" data-target="analytics">
+                        <i class="ri-bar-chart-grouped-fill"></i> <span>Analytics</span>
+                    </li>
+                    <li class="nav-item" data-target="calendar">
+                        <i class="ri-calendar-event-line"></i> <span>Schedule</span>
+                    </li>
+
+                    <div class="nav-label">Learning</div>
+                    <li class="nav-item" data-target="academy">
+                        <i class="ri-graduation-cap-line"></i> <span>Academy</span>
+                    </li>
+                    <li class="nav-item" data-target="library">
+                        <i class="ri-book-open-line"></i> <span>My Library</span>
+                    </li>
+                    <li class="nav-item" data-target="reviews">
+                        <i class="ri-feedback-line"></i> <span>Reviews</span>
+                    </li>
+
+                    <div class="nav-label">Social</div>
+                    <li class="nav-item" data-target="goals">
+                        <i class="ri-focus-3-line"></i> <span>Goals</span>
+                    </li>
+                    <li class="nav-item" data-target="community">
+                        <i class="ri-group-line"></i> <span>Community</span>
+                    </li>
+
+                    <div class="nav-label">AI Features</div>
+                    <li class="nav-item" data-target="chat-assistant">
+                        <i class="ri-robot-line"></i> <span>AI Assistant</span>
+                    </li>
+                    <li class="nav-item" data-target="resume-builder">
+                        <i class="ri-file-user-line"></i> <span>Resume Builder</span>
+                    </li>
+
+                    <div class="nav-label">System</div>
+                    <li class="nav-item" data-target="settings">
+                        <i class="ri-settings-4-line"></i> <span>Settings</span>
+                    </li>
+                    <li class="nav-item" onclick="window.location.href='api_docs.html'">
+                        <i class="ri-server-line"></i> <span>API Docs</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">S</div>
+                    <div class="user-info">
+                        <div class="name">Supriya</div>
+                        <div class="status">Premium Plan</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Google-like Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h2 id="pageTitle">Dashboard</h2>
+                </div>
+
+                <div class="header-center">
+                    <div class="search-bar">
+                        <i class="ri-search-line"></i>
+                        <input type="text" placeholder="Search analytics, topics, or history...">
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button class="icon-btn" title="Help" data-tooltip="Help Center"><i
+                            class="ri-question-line"></i></button>
+                    <button class="icon-btn" title="Notifications" data-tooltip="Notifications"><i
+                            class="ri-notification-3-line"></i></button>
+                    <button class="icon-btn" title="Google Menu" data-tooltip="Apps"><i
+                            class="ri-grid-fill"></i></button>
+                    <div class="avatar-sm">S</div>
+                </div>
+            </header>
+
+            <!-- Scrollable Page Views -->
+            <div class="dashboard-scroll-area">
+
+                <!-- VIEW: DASHBOARD -->
+                <div id="view-dashboard" class="page-view active">
+                    <div class="dashboard-grid">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Productive Time</span>
+                                <i class="ri-more-2-fill card-menu"></i>
+                            </div>
+                            <div class="stat-value" id="totalTime"><span class="skeleton" style="width: 100px;"></span>
+                            </div>
+                            <div class="stat-trend positive">
+                                <i class="ri-arrow-up-line"></i> 12% vs last week
+                            </div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Top Topic</span>
+                            </div>
+                            <div class="stat-value" id="topTopic" style="font-size: 1.6rem;"><span class="skeleton"
+                                    style="width: 120px;"></span></div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Current Streak</span>
+                            </div>
+                            <div class="streak-container">
+                                <i class="ri-fire-fill fire-icon"></i>
+                                <div>
+                                    <div class="stat-value" id="streakDays">3</div>
+                                    <span class="stat-label">Days</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Engagement</span>
+                            </div>
+                            <div class="stat-value" id="engagementScore"><span class="skeleton"
+                                    style="width: 60px;"></span></div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Learning Trends</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Topic Split</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="topicChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">Recommended for you</div>
+                    <div class="dashboard-grid" id="recommendationsGrid">
+                        <div class="skeleton" style="height: 150px; width: 100%;"></div>
+                        <div class="skeleton" style="height: 150px; width: 100%;"></div>
+                        <div class="skeleton" style="height: 150px; width: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- VIEW: ANALYTICS -->
+                <div id="view-analytics" class="page-view" style="display: none;">
+                    <!-- Analytics Stats Row -->
+                    <div class="dashboard-grid" style="grid-template-columns: repeat(4, 1fr);">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Total Sessions</span>
+                                <i class="ri-stack-line" style="color: #1a73e8;"></i>
+                            </div>
+                            <div class="stat-value" id="analyticsTotalSessions">0</div>
+                            <div class="stat-trend positive"><i class="ri-arrow-up-line"></i> This month</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Total Time</span>
+                                <i class="ri-time-line" style="color: #188038;"></i>
+                            </div>
+                            <div class="stat-value" id="analyticsTotalTime">0h</div>
+                            <div class="stat-trend positive"><i class="ri-arrow-up-line"></i> Learning hours</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Avg. Engagement</span>
+                                <i class="ri-focus-3-line" style="color: #f9ab00;"></i>
+                            </div>
+                            <div class="stat-value" id="analyticsAvgEngagement">0%</div>
+                            <div class="stat-trend">Focus score</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Topics Explored</span>
+                                <i class="ri-compass-3-line" style="color: #a142f4;"></i>
+                            </div>
+                            <div class="stat-value" id="analyticsTopicsCount">0</div>
+                            <div class="stat-trend">Categories</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Daily Activity (Last 30 Days)</span>
+                                <div class="actions">
+                                    <button class="chip active" data-range="30">30 Days</button>
+                                    <button class="chip" data-range="7">7 Days</button>
+                                </div>
+                            </div>
+                            <div class="chart-container" style="height: 280px;">
+                                <canvas id="analyticsLineChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Topic Distribution</span>
+                            </div>
+                            <div class="chart-container" style="height: 280px;">
+                                <canvas id="analyticsDonutChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Stats -->
+                    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Productivity Heatmap</span>
+                            </div>
+                            <div id="heatmapContainer" class="heatmap-container">
+                                <div class="heatmap-header">
+                                    <span class="heatmap-time-label"></span>
+                                    <span class="heatmap-day-label">Mon</span>
+                                    <span class="heatmap-day-label">Tue</span>
+                                    <span class="heatmap-day-label">Wed</span>
+                                    <span class="heatmap-day-label">Thu</span>
+                                    <span class="heatmap-day-label">Fri</span>
+                                    <span class="heatmap-day-label">Sat</span>
+                                    <span class="heatmap-day-label">Sun</span>
+                                </div>
+                                <div id="heatmapGrid" class="heatmap-grid"></div>
+                                <div class="heatmap-legend">
+                                    <span class="heatmap-legend-label">Less</span>
+                                    <div class="heatmap-legend-item level-0"></div>
+                                    <div class="heatmap-legend-item level-1"></div>
+                                    <div class="heatmap-legend-item level-2"></div>
+                                    <div class="heatmap-legend-item level-3"></div>
+                                    <div class="heatmap-legend-item level-4"></div>
+                                    <span class="heatmap-legend-label">More</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Top Topics Breakdown</span>
+                            </div>
+                            <div id="topicBreakdownList" style="margin-top: 15px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Sessions Table -->
+                    <div class="google-card full-width">
+                        <div class="card-header">
+                            <span class="card-title">Recent Learning Sessions</span>
+                            <button class="text-btn" id="exportAnalyticsBtn"><i class="ri-download-line"></i>
+                                Export</button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Topic</th>
+                                        <th>Title</th>
+                                        <th>Duration</th>
+                                        <th>Engagement</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analyticsSessionsTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: SCHEDULE / CALENDAR (NEW) -->
+                <div id="view-calendar" class="page-view" style="display: none;">
+                    <div class="google-card full-width">
+                        <div class="card-header">
+                            <span class="card-title">Study Schedule</span>
+                            <div class="actions">
+                                <button class="text-btn active"
+                                    style="background: #e8f0fe; color: #1a73e8;">Week</button>
+                                <button class="text-btn">Month</button>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 80px 1fr; gap: 10px; margin-top: 20px;">
+                            <!-- Time Column -->
+                            <div
+                                style="display: flex; flex-direction: column; gap: 30px; color: #5f6368; font-size: 0.85rem; padding-top: 10px;">
+                                <span>09:00 AM</span>
+                                <span>10:00 AM</span>
+                                <span>11:00 AM</span>
+                                <span>12:00 PM</span>
+                            </div>
+                            <!-- Events -->
+                            <div
+                                style="position: relative; height: 200px; background: repeating-linear-gradient(#f1f3f4 0 1px, transparent 1px 100%); background-size: 100% 45px;">
+                                <div
+                                    style="position: absolute; top: 10px; left: 10px; right: 80px; height: 80px; background: #CEEAD6; border-left: 4px solid #188038; padding: 10px; border-radius: 4px;">
+                                    <div style="font-weight: 500; color: #0d652d;">Python Fundamentals</div>
+                                    <div style="font-size: 0.8rem; color: #0d652d;">09:00 - 11:00 AM</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: ACADEMY (NEW) -->
+                <div id="view-academy" class="page-view" style="display: none;">
+                    <div class="section-title">Recommended Courses</div>
+                    <div class="dashboard-grid">
+                        <div class="google-card" style="padding: 0; overflow: hidden;">
+                            <div
+                                style="height: 120px; background: linear-gradient(135deg, #1a73e8 0%, #8ab4f8 100%); position: relative;">
+                                <span
+                                    style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.3); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Free</span>
+                            </div>
+                            <div style="padding: 16px;">
+                                <h3>Machine Learning 101</h3>
+                                <p class="text-secondary">Google AI • 4 Weeks</p>
+                                <div class="progress-bar" style="margin-top: 10px;">
+                                    <div class="fill" style="width: 20%"></div>
+                                </div>
+                                <button class="text-btn"
+                                    style="width: 100%; margin-top: 10px; justify-content: center;">Continue</button>
+                            </div>
+                        </div>
+                        <div class="google-card" style="padding: 0; overflow: hidden;">
+                            <div style="height: 120px; background: linear-gradient(135deg, #f9ab00 0%, #fdd663 100%);">
+                            </div>
+                            <div style="padding: 16px;">
+                                <h3>Web Accessibility</h3>
+                                <p class="text-secondary">Udacity • 2 Weeks</p>
+                                <button class="primary-btn"
+                                    style="width: 100%; margin-top: 15px; justify-content: center;">Start
+                                    Course</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: LIBRARY -->
+                <div id="view-library" class="page-view" style="display: none;">
+                    <div class="tabs-container" style="margin-bottom: 20px;">
+                        <button class="chip active">All</button>
+                        <button class="chip">Articles</button>
+                        <button class="chip">Videos</button>
+                        <button class="chip">Tutorials</button>
+                    </div>
+
+                    <div class="google-card full-width">
+                        <div class="card-header">
+                            <span class="card-title">Recent History</span>
+                            <div class="actions">
+                                <div class="search-bar" style="width: 250px; background: #f1f3f4;">
+                                    <i class="ri-search-line"></i>
+                                    <input type="text" placeholder="Search history..." style="background: transparent;">
+                                </div>
+                                <button class="text-btn"><i class="ri-download-line"></i> Export CSV</button>
+                            </div>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Topic</th>
+                                    <th>Page Title</th>
+                                    <th>Focus Score</th>
+                                    <th>Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentActivityTable">
+                                <tr>
+                                    <td colspan="5"><span class="skeleton" style="width:100%;height:20px;"></span></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5"><span class="skeleton" style="width:100%;height:20px;"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="section-title">Saved Resources</div>
+                    <div class="dashboard-grid">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <i class="ri-bookmark-fill" style="color: #f9ab00;"></i>
+                                <button class="icon-btn"><i class="ri-more-2-fill"></i></button>
+                            </div>
+                            <h3>Intro to Neural Networks</h3>
+                            <p class="text-secondary">Medium Article • 15 min read</p>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <i class="ri-bookmark-fill" style="color: #f9ab00;"></i>
+                                <button class="icon-btn"><i class="ri-more-2-fill"></i></button>
+                            </div>
+                            <h3>Advanced CSS Grid</h3>
+                            <p class="text-secondary">MDN Docs • Reference</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: REVIEWS (NEW) -->
+                <div id="view-reviews" class="page-view" style="display: none;">
+                    <div class="google-card full-width">
+                        <div class="card-header">
+                            <span class="card-title">Weekly Reflection</span>
+                            <button class="text-btn primary-text"><i class="ri-add-line"></i> New Entry</button>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <textarea placeholder="What did you learn this week? What challenges did you face?"
+                                style="width: 100%; height: 100px; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; font-family: 'Roboto', sans-serif; resize: none; margin-bottom: 10px;"></textarea>
+                            <div style="display: flex; justify-content: flex-end;">
+                                <button class="primary-btn">Save Reflection</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">Past Logs</div>
+                    <div class="dashboard-grid">
+                        <div class="google-card">
+                            <div style="font-size: 0.8rem; color: #5f6368; margin-bottom: 5px;">Nov 12, 2025</div>
+                            <h3 style="font-size: 1.1rem; margin: 0 0 10px 0;">Struggled with Recursion</h3>
+                            <p style="color: #5f6368; line-height: 1.5;">Need to revisit the base cases. The tower of
+                                hanoi problem was particularly tricky.</p>
+                            <div style="margin-top: 10px; display: flex; gap: 5px;">
+                                <span class="chip" style="padding: 4px 8px; font-size: 0.75rem;">Algo</span>
+                                <span class="chip" style="padding: 4px 8px; font-size: 0.75rem;">Hard</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: GOALS -->
+                <div id="view-goals" class="page-view" style="display: none;">
+                    <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Active Goals</span>
+                                <button class="text-btn primary-text"><i class="ri-add-line"></i> New Goal</button>
+                            </div>
+
+                            <div style="margin-top:20px; display: flex; flex-direction: column; gap: 20px;">
+                                <div class="goal-item">
+                                    <div class="goal-info">
+                                        <div style="display: flex; gap: 10px; align-items: center;">
+                                            <div class="goal-icon"
+                                                style="background:#e8f0fe; color:#1a73e8; padding:8px; border-radius:50%;">
+                                                <i class="ri-article-line"></i>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 500;">Read 5 Data Science Articles</div>
+                                                <div class="text-secondary" style="font-size: 0.85rem;">Weekly Target
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span style="font-weight: 600; color: #1a73e8;">3/5</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="fill" style="width: 60%"></div>
+                                    </div>
+                                </div>
+                                <div class="goal-item">
+                                    <div class="goal-info">
+                                        <div style="display: flex; gap: 10px; align-items: center;">
+                                            <div class="goal-icon"
+                                                style="background:#e6f4ea; color:#188038; padding:8px; border-radius:50%;">
+                                                <i class="ri-code-s-slash-line"></i>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 500;">Please 30 mins of Coding</div>
+                                                <div class="text-secondary" style="font-size: 0.85rem;">Daily Target
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span style="font-weight: 600; color: #188038;">15m</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="fill" style="width: 50%; background: #188038;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Achievements</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: center;">
+                                <div style="padding: 10px; border: 1px solid #f1f3f4; border-radius: 8px;">
+                                    <i class="ri-medal-fill" style="font-size: 2rem; color: #f9ab00;"></i>
+                                    <div style="font-size: 0.85rem; margin-top: 5px; font-weight: 500;">Week Warrior
+                                    </div>
+                                </div>
+                                <div
+                                    style="padding: 10px; border: 1px solid #f1f3f4; border-radius: 8px; opacity: 0.5;">
+                                    <i class="ri-trophy-fill" style="font-size: 2rem; color: #5f6368;"></i>
+                                    <div style="font-size: 0.85rem; margin-top: 5px; font-weight: 500;">Month Master
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: COMMUNITY (NEW) -->
+                <div id="view-community" class="page-view" style="display: none;">
+                    <!-- Community Stats -->
+                    <div class="dashboard-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Total Learners</span>
+                                <i class="ri-group-line" style="color: #1a73e8;"></i>
+                            </div>
+                            <div class="stat-value" id="communityTotalUsers">0</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Learning Hours</span>
+                                <i class="ri-time-line" style="color: #188038;"></i>
+                            </div>
+                            <div class="stat-value" id="communityLearningHours">0</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Achievements</span>
+                                <i class="ri-trophy-line" style="color: #f9ab00;"></i>
+                            </div>
+                            <div class="stat-value" id="communityAchievements">0</div>
+                        </div>
+                        <div class="google-card">
+                            <div class="card-header">
+                                <span class="card-title">Active Today</span>
+                                <i class="ri-user-star-line" style="color: #d93025;"></i>
+                            </div>
+                            <div class="stat-value" id="communityActiveToday">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Leaderboard -->
+                    <div class="google-card full-width">
+                        <div class="card-header">
+                            <span class="card-title"><i class="ri-trophy-fill" style="color: #f9ab00;"></i> Community
+                                Leaderboard</span>
+                            <div class="actions">
+                                <select class="form-input" style="width: 120px;"
+                                    onchange="changeLeaderboardTimeframe(this.value)">
+                                    <option value="all">All Time</option>
+                                    <option value="month">This Month</option>
+                                    <option value="week">This Week</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="leaderboardList" style="margin-top: 15px;">
+                            <div style="text-align: center; padding: 40px;">
+                                <i class="ri-loader-4-line spinning" style="font-size: 32px; color: #1a73e8;"></i>
+                                <p style="margin-top: 10px; color: #5f6368;">Loading leaderboard...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: AI CHAT ASSISTANT -->
+                <div id="view-chat-assistant" class="page-view" style="display: none; height: 100%;">
+                    <div class="gemini-wrapper">
+                        <!-- Scrollable Content -->
+                        <div class="gemini-scroll-area" id="chatMessages">
+                            <!-- Welcome State (Shown initially) -->
+                            <div id="geminiWelcome" class="gemini-welcome">
+                                <h1 class="gemini-greeting">
+                                    <span class="gradient-text">Hello, Supriya</span><br>
+                                    <span style="color: #c4c7c5;">How can I help you today?</span>
+                                </h1>
+
+                                <div class="suggestion-grid">
+                                    <button class="suggestion-card"
+                                        onclick="sendSuggestion('Help me plan my study schedule for Python')">
+                                        <span>Plan a study schedule for Python</span>
+                                        <div class="suggestion-icon-circle"><i class="ri-calendar-check-line"></i></div>
+                                    </button>
+                                    <button class="suggestion-card"
+                                        onclick="sendSuggestion('Explain Neural Networks simply')">
+                                        <span>Explain Neural Networks simply</span>
+                                        <div class="suggestion-icon-circle"><i class="ri-brain-line"></i></div>
+                                    </button>
+                                    <button class="suggestion-card"
+                                        onclick="sendSuggestion('Give me a quiz on Data Structures')">
+                                        <span>Quiz me on Data Structures</span>
+                                        <div class="suggestion-icon-circle"><i class="ri-question-mark"></i></div>
+                                    </button>
+                                    <button class="suggestion-card"
+                                        onclick="sendSuggestion('Analyze my recent learning progress')">
+                                        <span>Analyze my learning progress</span>
+                                        <div class="suggestion-icon-circle"><i class="ri-bar-chart-box-line"></i></div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Messages will be appended here via JS -->
+                        </div>
+
+                        <!-- Fixed Input Area -->
+                        <div class="gemini-input-container">
+                            <div class="gemini-input-box">
+                                <input type="text" id="chatInput" class="gemini-input" placeholder="Enter a prompt here"
+                                    oninput="toggleSendButton(this)"
+                                    onkeypress="if(event.key === 'Enter') sendChatMessage()">
+
+                                <button class="send-btn-gemini" id="sendBtn" onclick="sendChatMessage()">
+                                    <i class="ri-send-plane-2-fill"></i>
+                                </button>
+                            </div>
+                            <div style="text-align: center; margin-top: 10px; font-size: 0.75rem; color: #444746;">
+                                SupriAI can make mistakes. Consider checking important information.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: RESUME BUILDER -->
+                <div id="view-resume-builder" class="page-view" style="display: none;">
+                    <div style="max-width: 1000px; margin: 0 auto;">
+                        <!-- Resume Header -->
+                        <div class="google-card" style="margin-bottom: 20px; padding: 20px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div
+                                        style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #188038, #34a853); display: flex; align-items: center; justify-content: center;">
+                                        <i class="ri-file-user-line" style="font-size: 24px; color: white;"></i>
+                                    </div>
+                                    <div>
+                                        <h3 style="margin: 0; font-size: 1.2em;">AI Resume Builder</h3>
+                                        <p style="margin: 0; color: #5f6368; font-size: 0.9em;">Generate your resume
+                                            from learning analytics</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="secondary-btn" onclick="generateResume()">
+                                        <i class="ri-refresh-line"></i> Regenerate
+                                    </button>
+                                    <button class="primary-btn" onclick="exportResume('html')">
+                                        <i class="ri-download-line"></i> Export
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Info Form -->
+                        <div class="google-card" style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 15px;">Personal Information</h4>
+                            <div
+                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                                <div class="form-group">
+                                    <label>Full Name</label>
+                                    <input type="text" id="resumeName" placeholder="Your name" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Email</label>
+                                    <input type="email" id="resumeEmail" placeholder="your@email.com"
+                                        class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Location</label>
+                                    <input type="text" id="resumeLocation" placeholder="City, Country"
+                                        class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>GitHub</label>
+                                    <input type="text" id="resumeGithub" placeholder="github.com/username"
+                                        class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>LinkedIn</label>
+                                    <input type="text" id="resumeLinkedin" placeholder="linkedin.com/in/username"
+                                        class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Portfolio</label>
+                                    <input type="text" id="resumePortfolio" placeholder="yourportfolio.com"
+                                        class="form-input">
+                                </div>
+                            </div>
+                            <button class="primary-btn" onclick="generateResume()" style="margin-top: 15px;">
+                                <i class="ri-magic-line"></i> Generate Resume
+                            </button>
+                        </div>
+
+                        <!-- Resume Preview -->
+                        <div class="google-card" id="resumePreview" style="display: none;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h4 style="margin: 0;">Resume Preview</h4>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="text-btn" onclick="exportResume('json')"><i class="ri-code-line"></i>
+                                        JSON</button>
+                                    <button class="text-btn" onclick="exportResume('html')"><i
+                                            class="ri-file-code-line"></i> HTML</button>
+                                </div>
+                            </div>
+
+                            <!-- Resume Content -->
+                            <div id="resumeContent"
+                                style="background: white; border: 1px solid #e8eaed; border-radius: 8px; padding: 30px;">
+                                <!-- Header -->
+                                <div
+                                    style="text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #1a73e8;">
+                                    <h2 id="previewName" style="margin: 0; color: #1a73e8; font-size: 1.8em;">Your Name
+                                    </h2>
+                                    <p id="previewTitle" style="margin: 5px 0; color: #5f6368; font-size: 1.1em;">
+                                        Professional Title</p>
+                                    <div id="previewContact"
+                                        style="margin-top: 10px; font-size: 0.9em; color: #5f6368;"></div>
+                                </div>
+
+                                <!-- Summary -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3
+                                        style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-user-line"></i> Professional Summary
+                                    </h3>
+                                    <p id="previewSummary" style="color: #333; line-height: 1.6;"></p>
+                                </div>
+
+                                <!-- Technical Skills -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3
+                                        style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-code-s-slash-line"></i> Technical Skills
+                                    </h3>
+                                    <div id="previewTechnicalSkills"
+                                        style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;"></div>
+                                </div>
+
+                                <!-- Tools -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3
+                                        style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-tools-line"></i> Tools & Technologies
+                                    </h3>
+                                    <div id="previewTools"
+                                        style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;"></div>
+                                </div>
+
+                                <!-- Proficiency Chart -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3
+                                        style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-bar-chart-box-line"></i> Skill Proficiency
+                                    </h3>
+                                    <div id="previewProficiency" style="margin-top: 15px;"></div>
+                                </div>
+
+                                <!-- Achievements -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3
+                                        style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-award-line"></i> Learning Achievements
+                                    </h3>
+                                    <div id="previewAchievements" style="margin-top: 10px;"></div>
+                                </div>
+
+                                <!-- Certifications -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3
+                                        style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-medal-line"></i> Suggested Certifications
+                                    </h3>
+                                    <div id="previewCertifications" style="margin-top: 10px;"></div>
+                                </div>
+
+                                <!-- Projects -->
+                                <div>
+                                    <h3
+                                        style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-folder-line"></i> Suggested Projects
+                                    </h3>
+                                    <div id="previewProjects" style="margin-top: 10px;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Learning Stats -->
+                            <div
+                                style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-around; text-align: center;">
+                                <div>
+                                    <div id="statHours" style="font-size: 1.5em; font-weight: 700; color: #1a73e8;">0
+                                    </div>
+                                    <div style="color: #5f6368; font-size: 0.85em;">Learning Hours</div>
+                                </div>
+                                <div>
+                                    <div id="statTopics" style="font-size: 1.5em; font-weight: 700; color: #188038;">0
+                                    </div>
+                                    <div style="color: #5f6368; font-size: 0.85em;">Topics Explored</div>
+                                </div>
+                                <div>
+                                    <div id="statSessions" style="font-size: 1.5em; font-weight: 700; color: #f9ab00;">0
+                                    </div>
+                                    <div style="color: #5f6368; font-size: 0.85em;">Sessions Completed</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Resume Message -->
+                        <div class="google-card" id="noResumeMessage" style="text-align: center; padding: 60px;">
+                            <i class="ri-file-user-line" style="font-size: 64px; color: #dadce0;"></i>
+                            <h3 style="margin: 20px 0 10px;">No Resume Generated Yet</h3>
+                            <p style="color: #5f6368; margin-bottom: 20px;">Fill in your personal information and click
+                                "Generate Resume" to create your AI-powered resume based on your learning analytics.</p>
+                            <button class="primary-btn" onclick="generateResume()">
+                                <i class="ri-magic-line"></i> Generate My Resume
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: SETTINGS -->
+                <div id="view-settings" class="page-view" style="display: none;">
+                    <div style="max-width: 800px; margin: 0 auto;">
+                        <h3 class="section-title">General</h3>
+                        <div class="google-card">
+                            <div class="setting-row">
+                                <div>
+                                    <div class="setting-title">Profile Sync</div>
+                                    <div class="setting-desc">Sync learning data across devices.</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <div>
+                                    <div class="setting-title">Dark Mode</div>
+                                    <div class="setting-desc">Toggle dark theme interface.</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox"> <!-- Logic not impl yet -->
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <h3 class="section-title">Tracking & Privacy</h3>
+                        <div class="google-card">
+                            <div class="setting-row">
+                                <div>
+                                    <div class="setting-title">Tracking Enabled</div>
+                                    <div class="setting-desc">Pause tracking globally.</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" checked id="trackingToggle">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <div>
+                                    <div class="setting-title">Blocked Sites</div>
+                                    <div class="setting-desc">Manage domains to ignore.</div>
+                                </div>
+                                <button class="text-btn">Manage</button>
+                            </div>
+                            <div class="setting-row"
+                                style="border-top: 1px solid #f1f3f4; margin-top: 10px; padding-top: 10px;">
+                                <div>
+                                    <div class="setting-title" style="color: #d93025;">Danger Zone</div>
+                                    <div class="setting-desc">Clear locally stored history.</div>
+                                </div>
+                                <button class="danger-btn">Clear Data</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="height: 50px;"></div>
+            </div>
+
+            <!-- Toast Container -->
+            <div id="toastContainer" class="toast-container"></div>
+
+            <!-- Floating Action Button -->
+            <div class="fab" title="Quick Note" data-tooltip="New Note">
+                <i class="ri-add-line"></i>
+            </div>
+        </main>
+    </div>
+
+    <script src="dashboard.js"></script>
+    <script src="pages-functionality.js"></script>
+</body>
+
+</html>
