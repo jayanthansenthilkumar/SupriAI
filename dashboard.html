@@ -8,10 +8,6 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap"
         rel="stylesheet">
-    <!-- Fonts: Inter & Roboto -->
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap"
-        rel="stylesheet">
     <!-- Icons: Remix Icon (CDN for reliability) -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
@@ -71,9 +67,12 @@
                 </div>
 
                 <div class="header-actions">
-                    <button class="icon-btn" title="Help"><i class="ri-question-line"></i></button>
-                    <button class="icon-btn" title="Notifications"><i class="ri-notification-3-line"></i></button>
-                    <button class="icon-btn" title="Google Menu"><i class="ri-grid-fill"></i></button>
+                    <button class="icon-btn" title="Help" data-tooltip="Help Center"><i
+                            class="ri-question-line"></i></button>
+                    <button class="icon-btn" title="Notifications" data-tooltip="Notifications"><i
+                            class="ri-notification-3-line"></i></button>
+                    <button class="icon-btn" title="Google Menu" data-tooltip="Apps"><i
+                            class="ri-grid-fill"></i></button>
                     <div class="avatar-sm">U</div>
                 </div>
             </header>
@@ -89,7 +88,8 @@
                                 <span class="card-title">Productive Time</span>
                                 <i class="ri-more-2-fill card-menu"></i>
                             </div>
-                            <div class="stat-value" id="totalTime">0h 0m</div>
+                            <div class="stat-value" id="totalTime"><span class="skeleton" style="width: 100px;"></span>
+                            </div>
                             <div class="stat-trend positive">
                                 <i class="ri-arrow-up-line"></i> 12% vs last week
                             </div>
@@ -98,7 +98,8 @@
                             <div class="card-header">
                                 <span class="card-title">Top Topic</span>
                             </div>
-                            <div class="stat-value" id="topTopic" style="font-size: 1.6rem;">-</div>
+                            <div class="stat-value" id="topTopic" style="font-size: 1.6rem;"><span class="skeleton"
+                                    style="width: 120px;"></span></div>
                         </div>
                         <div class="google-card">
                             <div class="card-header">
@@ -116,7 +117,8 @@
                             <div class="card-header">
                                 <span class="card-title">Engagement</span>
                             </div>
-                            <div class="stat-value" id="engagementScore">0</div>
+                            <div class="stat-value" id="engagementScore"><span class="skeleton"
+                                    style="width: 60px;"></span></div>
                         </div>
                     </div>
 
@@ -141,7 +143,9 @@
 
                     <div class="section-title">Recommended for you</div>
                     <div class="dashboard-grid" id="recommendationsGrid">
-                        <!-- Recs injected here -->
+                        <div class="skeleton" style="height: 150px; width: 100%;"></div>
+                        <div class="skeleton" style="height: 150px; width: 100%;"></div>
+                        <div class="skeleton" style="height: 150px; width: 100%;"></div>
                     </div>
                 </div>
 
@@ -166,7 +170,12 @@
                                 </tr>
                             </thead>
                             <tbody id="recentActivityTable">
-                                <!-- Data -->
+                                <tr>
+                                    <td colspan="5"><span class="skeleton" style="width:100%;height:20px;"></span></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5"><span class="skeleton" style="width:100%;height:20px;"></span></td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -226,6 +235,14 @@
                 </div>
 
                 <div style="height: 50px;"></div>
+            </div>
+
+            <!-- Toast Container -->
+            <div id="toastContainer" class="toast-container"></div>
+
+            <!-- Floating Action Button -->
+            <div class="fab" title="Quick Note" data-tooltip="New Note">
+                <i class="ri-add-line"></i>
             </div>
         </main>
     </div>

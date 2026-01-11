@@ -15,6 +15,14 @@
         "http://localhost:5000/*",
         "<all_urls>"
     ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "libs/icon16.png",
+            "48": "libs/icon48.png",
+            "128": "libs/icon128.png"
+        }
+    },
     "background": {
         "service_worker": "background.js"
     },
@@ -25,18 +33,17 @@
             ],
             "js": [
                 "content.js"
-            ]
+            ],
+            "run_at": "document_idle"
         }
     ],
-    "action": {
-        "default_popup": "popup.html"
-    },
     "web_accessible_resources": [
         {
             "resources": [
                 "dashboard.html",
-                "chart.js",
-                "sweetalert2.all.min.js"
+                "styles.css",
+                "libs/*",
+                "cursor.css"
             ],
             "matches": [
                 "<all_urls>"
