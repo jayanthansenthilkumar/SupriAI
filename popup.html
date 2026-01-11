@@ -4,7 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <title>AI Companion</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Fonts: Google Sans (Local) -->
+    <style>
+        @font-face {
+            font-family: 'Google Sans';
+            font-style: normal;
+            font-weight: 400;
+            src: url('libs/fonts/GoogleSans-Regular.woff2') format('woff2');
+        }
+
+        @font-face {
+            font-family: 'Google Sans';
+            font-style: normal;
+            font-weight: 500;
+            src: url('libs/fonts/GoogleSans-Medium.woff2') format('woff2');
+        }
+    </style>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
         /* Light Material Popup Theme */
@@ -15,15 +30,16 @@
             --text-sub: #5f6368;
             --divider: #e8eaed;
             --hover: #f1f3f4;
+            --font-family: 'Google Sans', sans-serif;
         }
 
         body {
             width: 340px;
+            font-family: var(--font-family);
             margin: 0;
             padding: 16px;
             background: var(--bg);
             color: var(--text-main);
-            font-family: 'Roboto', sans-serif;
         }
 
         .header {
