@@ -1,6 +1,6 @@
 /**
  * SupriAI Background Service Worker
- * Handles backend communication and data synchronization
+ * Handles backend communication, data synchronization, and Chrome history collection
  */
 
 // ==========================================
@@ -10,6 +10,8 @@
 const SERVER_URL = "http://localhost:5000";
 const SYNC_INTERVAL = 5; // minutes
 const MAX_OFFLINE_LOGS = 100;
+const HISTORY_SYNC_INTERVAL = 30; // minutes
+const HISTORY_DAYS_TO_FETCH = 7; // days
 
 
 // ==========================================
@@ -27,12 +29,18 @@ chrome.runtime.onInstalled.addListener(() => {
         trackingPaused: false,
         offlineLogs: [],
         todayTotalTime: 0,
-        lastSyncTime: Date.now()
+        lastSyncTime: Date.now(),
+        lastHistorySync: 0,
+        historyCollectionEnabled: true
     });
     
     // Create sync alarm
     chrome.alarms.create("retrySync", { periodInMinutes: SYNC_INTERVAL });
     chrome.alarms.create("dailyReset", { periodInMinutes: 60 }); // Check hourly for day change
+    chrome.alarms.create("historySync", { periodInMinutes: HISTORY_SYNC_INTERVAL }); // Sync history periodically
+    
+    // Initial history collection
+    setTimeout(() => collectAndSendBrowsingHistory(), 5000);
 });
 
 
@@ -58,6 +66,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     if (message.type === "FORCE_SYNC") {
         syncOfflineLogs()
+            .then(result => sendResponse(result))
+            .catch(error => sendResponse({ status: 'error', message: error.message }));
+        return true;
+    }
+    
+    // Chrome History Collection
+    if (message.type === "COLLECT_HISTORY") {
+        collectAndSendBrowsingHistory()
+            .then(result => sendResponse(result))
+            .catch(error => sendResponse({ status: 'error', message: error.message }));
+        return true;
+    }
+    
+    // AI Chat Message
+    if (message.type === "CHAT_MESSAGE") {
+        sendChatMessage(message.data)
+            .then(result => sendResponse(result))
+            .catch(error => sendResponse({ status: 'error', message: error.message }));
+        return true;
+    }
+    
+    // Get AI Recommendations
+    if (message.type === "GET_RECOMMENDATIONS") {
+        getAIRecommendations()
+            .then(result => sendResponse(result))
+            .catch(error => sendResponse({ status: 'error', message: error.message }));
+        return true;
+    }
+    
+    // Generate Resume
+    if (message.type === "GENERATE_RESUME") {
+        generateResume()
             .then(result => sendResponse(result))
             .catch(error => sendResponse({ status: 'error', message: error.message }));
         return true;
@@ -267,7 +307,242 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
             });
         }
     }
+    
+    if (alarm.name === "historySync") {
+        console.log("⏰ History sync alarm triggered");
+        await collectAndSendBrowsingHistory();
+    }
 });
+
+
+// ==========================================
+// CHROME HISTORY COLLECTION
+// ==========================================
+
+async function collectAndSendBrowsingHistory() {
+    const storage = await chrome.storage.local.get(['historyCollectionEnabled', 'lastHistorySync']);
+    
+    if (!storage.historyCollectionEnabled) {
+        console.log("History collection disabled");
+        return { status: 'disabled' };
+    }
+    
+    console.log("🔍 Collecting Chrome browsing history...");
+    
+    const endTime = Date.now();
+    const startTime = storage.lastHistorySync || (endTime - (HISTORY_DAYS_TO_FETCH * 24 * 60 * 60 * 1000));
+    
+    try {
+        // Search Chrome history
+        const historyItems = await chrome.history.search({
+            text: '',
+            startTime: startTime,
+            endTime: endTime,
+            maxResults: 500
+        });
+        
+        if (historyItems.length === 0) {
+            console.log("No new history items found");
+            return { status: 'success', count: 0 };
+        }
+        
+        console.log(`📚 Found ${historyItems.length} history items`);
+        
+        // Process and categorize history items
+        const processedHistory = historyItems.map(item => ({
+            url: item.url,
+            title: item.title || 'Untitled',
+            visitCount: item.visitCount || 1,
+            lastVisitTime: item.lastVisitTime,
+            domain: extractDomain(item.url)
+        })).filter(item => {
+            // Filter out extension pages, chrome internal pages
+            return !item.url.startsWith('chrome://') && 
+                   !item.url.startsWith('chrome-extension://') &&
+                   !item.url.startsWith('about:');
+        });
+        
+        // Send to backend for ML processing
+        const response = await fetch(`${SERVER_URL}/api/history/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                history: processedHistory,
+                startTime: startTime,
+                endTime: endTime
+            }),
+            signal: AbortSignal.timeout(30000)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log("✅ History analyzed successfully:", result);
+            
+            // Update last sync time
+            await chrome.storage.local.set({ 
+                lastHistorySync: endTime,
+                historyAnalysis: result 
+            });
+            
+            // Store recommendations
+            if (result.recommendations) {
+                await chrome.storage.local.set({ 
+                    aiRecommendations: result.recommendations,
+                    recommendationsUpdatedAt: Date.now()
+                });
+            }
+            
+            return { status: 'success', count: processedHistory.length, analysis: result };
+        } else {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
+    } catch (error) {
+        console.error("History collection failed:", error);
+        return { status: 'error', message: error.message };
+    }
+}
+
+function extractDomain(url) {
+    try {
+        const urlObj = new URL(url);
+        return urlObj.hostname;
+    } catch (e) {
+        return 'unknown';
+    }
+}
+
+
+// ==========================================
+// AI CHAT ASSISTANT
+// ==========================================
+
+async function sendChatMessage(data) {
+    console.log("💬 Sending chat message to AI...");
+    
+    try {
+        // Get user context for personalized responses
+        const storage = await chrome.storage.local.get([
+            'historyAnalysis', 
+            'aiRecommendations',
+            'todayTotalTime'
+        ]);
+        
+        const response = await fetch(`${SERVER_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: data.message,
+                context: {
+                    historyAnalysis: storage.historyAnalysis || null,
+                    recommendations: storage.aiRecommendations || null,
+                    todayLearningTime: storage.todayTotalTime || 0,
+                    conversationHistory: data.history || []
+                }
+            }),
+            signal: AbortSignal.timeout(30000)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log("✅ AI response received");
+            return result;
+        } else {
+            throw new Error(`Chat API error: ${response.status}`);
+        }
+        
+    } catch (error) {
+        console.error("Chat failed:", error);
+        return { 
+            status: 'error', 
+            message: error.message,
+            response: "I'm sorry, I couldn't process your message. Please check your connection and try again."
+        };
+    }
+}
+
+
+// ==========================================
+// AI RECOMMENDATIONS
+// ==========================================
+
+async function getAIRecommendations() {
+    console.log("🎯 Fetching AI recommendations...");
+    
+    try {
+        const response = await fetch(`${SERVER_URL}/api/recommendations`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(15000)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            
+            // Cache recommendations locally
+            await chrome.storage.local.set({
+                aiRecommendations: result.recommendations,
+                recommendationsUpdatedAt: Date.now()
+            });
+            
+            console.log("✅ Recommendations received:", result);
+            return result;
+        } else {
+            throw new Error(`Recommendations API error: ${response.status}`);
+        }
+        
+    } catch (error) {
+        console.error("Failed to get recommendations:", error);
+        
+        // Return cached recommendations if available
+        const storage = await chrome.storage.local.get(['aiRecommendations']);
+        if (storage.aiRecommendations) {
+            return { 
+                status: 'cached', 
+                recommendations: storage.aiRecommendations,
+                message: 'Using cached recommendations'
+            };
+        }
+        
+        return { status: 'error', message: error.message };
+    }
+}
+
+
+// ==========================================
+// RESUME BUILDER
+// ==========================================
+
+async function generateResume() {
+    console.log("📄 Generating resume from learning analytics...");
+    
+    try {
+        const response = await fetch(`${SERVER_URL}/api/resume/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+            signal: AbortSignal.timeout(30000)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log("✅ Resume generated successfully");
+            
+            // Cache the resume
+            await chrome.storage.local.set({
+                generatedResume: result.resume,
+                resumeGeneratedAt: Date.now()
+            });
+            
+            return result;
+        } else {
+            throw new Error(`Resume API error: ${response.status}`);
+        }
+        
+    } catch (error) {
+        console.error("Resume generation failed:", error);
+        return { status: 'error', message: error.message };
+    }
+}
 
 
 // ==========================================

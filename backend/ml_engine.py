@@ -1,14 +1,17 @@
 """
-SupriAI - ML Engine Module
-Content Classification & Analytics Processing
-Clean, well-structured ML operations
+SupriAI - Advanced ML Engine Module
+Content Classification, NLP Analysis, Deep Learning Patterns & AI Assistant
+Clean, well-structured ML operations with simulated AI capabilities
 """
 
 import re
 import time
+import math
+import json
+import hashlib
 from collections import Counter
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 
 # ==========================================
 # TOPIC CLASSIFICATION KEYWORDS
@@ -98,6 +101,790 @@ TOPIC_COLORS = {
     "Personal Development": "#9334e6",
     "General Interest": "#5f6368"
 }
+
+
+# ==========================================
+# ADVANCED NLP ENGINE
+# ==========================================
+
+class NLPProcessor:
+    """Advanced NLP processing for text analysis"""
+    
+    # TF-IDF inspired weighting
+    @staticmethod
+    def calculate_tfidf_score(word: str, document: str, corpus_frequency: Dict[str, int]) -> float:
+        """Calculate TF-IDF score for a word"""
+        # Term Frequency
+        doc_words = document.lower().split()
+        tf = doc_words.count(word.lower()) / max(len(doc_words), 1)
+        
+        # Inverse Document Frequency (simulated with keyword importance)
+        total_docs = max(sum(corpus_frequency.values()), 1)
+        doc_count = corpus_frequency.get(word.lower(), 1)
+        idf = math.log(total_docs / doc_count + 1)
+        
+        return tf * idf
+    
+    @staticmethod
+    def extract_ngrams(text: str, n: int = 2) -> List[str]:
+        """Extract n-grams from text for phrase detection"""
+        words = re.findall(r'\b[a-z]+\b', text.lower())
+        ngrams = []
+        for i in range(len(words) - n + 1):
+            ngrams.append(' '.join(words[i:i+n]))
+        return ngrams
+    
+    @staticmethod
+    def calculate_semantic_similarity(text1: str, text2: str) -> float:
+        """Calculate cosine similarity between two texts (bag of words approach)"""
+        words1 = set(re.findall(r'\b[a-z]+\b', text1.lower()))
+        words2 = set(re.findall(r'\b[a-z]+\b', text2.lower()))
+        
+        if not words1 or not words2:
+            return 0.0
+        
+        intersection = words1 & words2
+        union = words1 | words2
+        
+        return len(intersection) / len(union)
+    
+    @staticmethod
+    def sentiment_analysis(text: str) -> Dict[str, Any]:
+        """Simple sentiment analysis based on keyword detection"""
+        positive_words = {
+            'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic',
+            'love', 'best', 'awesome', 'helpful', 'useful', 'interesting',
+            'success', 'achieved', 'completed', 'improved', 'learned', 'mastered'
+        }
+        negative_words = {
+            'bad', 'poor', 'terrible', 'awful', 'hate', 'worst', 'boring',
+            'difficult', 'hard', 'confusing', 'failed', 'stuck', 'frustrated',
+            'lost', 'confused', 'struggling', 'problem', 'error', 'bug'
+        }
+        
+        words = set(re.findall(r'\b[a-z]+\b', text.lower()))
+        
+        pos_count = len(words & positive_words)
+        neg_count = len(words & negative_words)
+        total = pos_count + neg_count
+        
+        if total == 0:
+            return {'sentiment': 'neutral', 'score': 0.5, 'confidence': 0.3}
+        
+        pos_ratio = pos_count / total
+        
+        if pos_ratio > 0.6:
+            return {'sentiment': 'positive', 'score': pos_ratio, 'confidence': min(0.9, total/10)}
+        elif pos_ratio < 0.4:
+            return {'sentiment': 'negative', 'score': pos_ratio, 'confidence': min(0.9, total/10)}
+        return {'sentiment': 'neutral', 'score': 0.5, 'confidence': min(0.7, total/10)}
+    
+    @staticmethod
+    def extract_entities(text: str) -> Dict[str, List[str]]:
+        """Extract named entities from text"""
+        entities = {
+            'technologies': [],
+            'languages': [],
+            'frameworks': [],
+            'concepts': [],
+            'tools': []
+        }
+        
+        tech_patterns = {
+            'technologies': ['python', 'javascript', 'java', 'sql', 'html', 'css', 'typescript', 
+                           'rust', 'golang', 'c\\+\\+', 'ruby', 'php', 'swift', 'kotlin'],
+            'frameworks': ['react', 'angular', 'vue', 'django', 'flask', 'express', 'spring',
+                          'tensorflow', 'pytorch', 'pandas', 'numpy', 'scikit-learn', 'bootstrap',
+                          'tailwind', 'next\\.?js', 'node\\.?js'],
+            'concepts': ['machine learning', 'deep learning', 'neural network', 'api', 'database',
+                        'algorithm', 'data structure', 'design pattern', 'rest', 'graphql',
+                        'microservice', 'cloud computing', 'devops', 'agile', 'scrum'],
+            'tools': ['git', 'docker', 'kubernetes', 'aws', 'azure', 'gcp', 'jenkins', 
+                     'jira', 'figma', 'vscode', 'jupyter', 'postman']
+        }
+        
+        text_lower = text.lower()
+        
+        for category, patterns in tech_patterns.items():
+            for pattern in patterns:
+                if re.search(r'\b' + pattern + r'\b', text_lower):
+                    clean_name = pattern.replace('\\', '').replace('.?', '.').title()
+                    if clean_name not in entities[category]:
+                        entities[category].append(clean_name)
+        
+        return entities
+
+
+# ==========================================
+# DEEP LEARNING PATTERN RECOGNITION (Simulated)
+# ==========================================
+
+class DeepLearningEngine:
+    """Simulated deep learning patterns for learning behavior analysis"""
+    
+    @staticmethod
+    def analyze_learning_patterns(history: List[Dict]) -> Dict[str, Any]:
+        """Analyze browsing history to identify learning patterns using simulated neural network approach"""
+        
+        if not history:
+            return {
+                'pattern_type': 'new_learner',
+                'confidence': 0.0,
+                'insights': ['Start exploring to build your learning profile']
+            }
+        
+        # Extract features from history
+        features = DeepLearningEngine._extract_features(history)
+        
+        # Simulated pattern classification (mimics neural network output)
+        patterns = DeepLearningEngine._classify_patterns(features)
+        
+        # Generate insights based on patterns
+        insights = DeepLearningEngine._generate_insights(patterns, features)
+        
+        return {
+            'pattern_type': patterns['dominant_pattern'],
+            'confidence': patterns['confidence'],
+            'patterns': patterns,
+            'features': features,
+            'insights': insights
+        }
+    
+    @staticmethod
+    def _extract_features(history: List[Dict]) -> Dict[str, Any]:
+        """Extract numerical features from browsing history"""
+        domains = Counter(item.get('domain', 'unknown') for item in history)
+        titles = [item.get('title', '') for item in history]
+        visit_counts = [item.get('visitCount', 1) for item in history]
+        
+        # Time-based features
+        timestamps = [item.get('lastVisitTime', 0) for item in history]
+        
+        # Topic classification for all items
+        topics = []
+        for item in history:
+            topic, conf = classify_content(item.get('title', ''), item.get('url', ''))
+            topics.append(topic)
+        
+        topic_dist = Counter(topics)
+        
+        # Calculate features
+        features = {
+            'total_visits': len(history),
+            'unique_domains': len(domains),
+            'avg_visits_per_domain': sum(visit_counts) / max(len(domains), 1),
+            'top_domains': domains.most_common(5),
+            'topic_distribution': dict(topic_dist),
+            'primary_topic': topic_dist.most_common(1)[0][0] if topic_dist else 'General Interest',
+            'topic_diversity': len(topic_dist),
+            'focus_score': DeepLearningEngine._calculate_focus_score(topic_dist),
+            'consistency_score': DeepLearningEngine._calculate_consistency_score(timestamps)
+        }
+        
+        return features
+    
+    @staticmethod
+    def _calculate_focus_score(topic_dist: Counter) -> float:
+        """Calculate how focused the learning is (0-1)"""
+        if not topic_dist:
+            return 0.0
+        
+        total = sum(topic_dist.values())
+        if total == 0:
+            return 0.0
+        
+        # Higher score if concentrated in fewer topics
+        top_topic_ratio = topic_dist.most_common(1)[0][1] / total if topic_dist else 0
+        return round(top_topic_ratio, 2)
+    
+    @staticmethod
+    def _calculate_consistency_score(timestamps: List[float]) -> float:
+        """Calculate learning consistency based on visit patterns"""
+        if len(timestamps) < 2:
+            return 0.5
+        
+        # Sort timestamps
+        sorted_ts = sorted([t for t in timestamps if t > 0])
+        if len(sorted_ts) < 2:
+            return 0.5
+        
+        # Calculate time gaps between visits
+        gaps = []
+        for i in range(1, len(sorted_ts)):
+            gap = sorted_ts[i] - sorted_ts[i-1]
+            gaps.append(gap)
+        
+        if not gaps:
+            return 0.5
+        
+        # Lower variance = higher consistency
+        avg_gap = sum(gaps) / len(gaps)
+        variance = sum((g - avg_gap) ** 2 for g in gaps) / len(gaps)
+        
+        # Normalize to 0-1 (lower variance = higher score)
+        consistency = 1 / (1 + math.log1p(variance / (1000 * 60 * 60)))  # Normalize by hours
+        return round(min(consistency, 1.0), 2)
+    
+    @staticmethod
+    def _classify_patterns(features: Dict) -> Dict[str, Any]:
+        """Classify learning patterns using simulated neural network"""
+        
+        patterns = {
+            'deep_learner': 0.0,    # Focuses deeply on few topics
+            'explorer': 0.0,         # Explores many diverse topics
+            'consistent': 0.0,       # Regular learning schedule
+            'binge_learner': 0.0,    # Intense but irregular
+            'skill_builder': 0.0     # Focused on practical skills
+        }
+        
+        focus = features.get('focus_score', 0)
+        diversity = features.get('topic_diversity', 0)
+        consistency = features.get('consistency_score', 0)
+        total_visits = features.get('total_visits', 0)
+        
+        # Simulated neural network activation (sigmoid-like scoring)
+        patterns['deep_learner'] = focus * 0.7 + (1 - min(diversity/10, 1)) * 0.3
+        patterns['explorer'] = (1 - focus) * 0.5 + min(diversity/10, 1) * 0.5
+        patterns['consistent'] = consistency * 0.8 + min(total_visits/100, 1) * 0.2
+        patterns['binge_learner'] = (1 - consistency) * 0.5 + min(total_visits/50, 1) * 0.5
+        patterns['skill_builder'] = focus * 0.4 + consistency * 0.6
+        
+        # Apply softmax-like normalization
+        total = sum(patterns.values())
+        if total > 0:
+            patterns = {k: round(v/total, 3) for k, v in patterns.items()}
+        
+        # Find dominant pattern
+        dominant = max(patterns, key=patterns.get)
+        
+        return {
+            'scores': patterns,
+            'dominant_pattern': dominant,
+            'confidence': round(patterns[dominant], 2)
+        }
+    
+    @staticmethod
+    def _generate_insights(patterns: Dict, features: Dict) -> List[str]:
+        """Generate personalized insights based on patterns"""
+        insights = []
+        dominant = patterns.get('dominant_pattern', 'explorer')
+        primary_topic = features.get('primary_topic', 'General')
+        
+        insight_templates = {
+            'deep_learner': [
+                f"You're deeply focused on {primary_topic}. This specialization approach builds expertise!",
+                "Consider creating projects to apply your deep knowledge.",
+                "Your focused learning style is excellent for mastering complex topics."
+            ],
+            'explorer': [
+                "You have a curious mind exploring many topics!",
+                "Consider connecting concepts across different domains for innovative thinking.",
+                "Your diverse interests can lead to unique interdisciplinary insights."
+            ],
+            'consistent': [
+                "Your consistent learning habits are building strong foundations!",
+                "Regular practice leads to long-term retention. Keep it up!",
+                "Your disciplined approach will pay off in skill mastery."
+            ],
+            'binge_learner': [
+                "You have intense learning sessions! Try spacing them for better retention.",
+                "Consider setting regular learning schedules to maintain momentum.",
+                "Your enthusiasm is great - adding consistency will amplify results."
+            ],
+            'skill_builder': [
+                f"You're effectively building practical {primary_topic} skills!",
+                "Consider working on real-world projects to solidify your skills.",
+                "Your practical approach is ideal for career advancement."
+            ]
+        }
+        
+        insights = insight_templates.get(dominant, ["Keep exploring and learning!"])
+        
+        # Add topic-specific insight
+        if features.get('topic_diversity', 0) > 3:
+            insights.append(f"You've explored {features['topic_diversity']} different topics!")
+        
+        return insights[:3]  # Return top 3 insights
+
+
+# ==========================================
+# AI CHAT ASSISTANT ENGINE
+# ==========================================
+
+class ChatAssistant:
+    """AI-powered chat assistant for learning guidance"""
+    
+    # Knowledge base for common queries
+    KNOWLEDGE_BASE = {
+        'greeting': [
+            "Hello! I'm SupriAI, your learning assistant. How can I help you today?",
+            "Hi there! Ready to enhance your learning journey. What would you like to know?",
+            "Welcome back! I'm here to help with your learning goals. Ask me anything!"
+        ],
+        'help': [
+            "I can help you with:\n• Learning recommendations based on your history\n• Study tips and techniques\n• Goal setting and tracking\n• Productivity advice\n• Career guidance in tech\nJust ask!",
+        ],
+        'motivation': [
+            "Remember, every expert was once a beginner. Keep pushing forward!",
+            "Small consistent steps lead to big achievements. You're doing great!",
+            "Your learning journey is unique. Embrace the challenges - they're making you stronger!"
+        ],
+        'study_tips': [
+            "Here are effective study techniques:\n1. **Pomodoro Technique**: 25 min focus, 5 min break\n2. **Active Recall**: Test yourself frequently\n3. **Spaced Repetition**: Review at increasing intervals\n4. **Teach Others**: Explaining reinforces understanding",
+        ]
+    }
+    
+    # Topic-specific responses
+    TOPIC_RESPONSES = {
+        'programming': {
+            'beginner': "For programming beginners, I recommend:\n• Start with Python - it's beginner-friendly\n• Practice on Codecademy or freeCodeCamp\n• Build small projects like a calculator or to-do app\n• Don't just read - code every day!",
+            'intermediate': "To advance your programming skills:\n• Learn data structures and algorithms\n• Contribute to open source projects\n• Build full-stack applications\n• Study system design concepts",
+            'advanced': "For advanced developers:\n• Explore distributed systems\n• Learn about microservices architecture\n• Contribute to major open source projects\n• Consider specializing in ML/AI or security"
+        },
+        'data science': {
+            'beginner': "Starting data science? Here's your path:\n• Master Python and SQL basics\n• Learn pandas, numpy, matplotlib\n• Take a statistics course\n• Practice with Kaggle datasets",
+            'intermediate': "Level up your data science:\n• Deep dive into machine learning algorithms\n• Learn TensorFlow or PyTorch\n• Work on end-to-end ML projects\n• Study feature engineering techniques",
+        },
+        'web development': {
+            'beginner': "Web development starter pack:\n• HTML, CSS, JavaScript fundamentals\n• Build responsive layouts\n• Learn a framework like React\n• Create a portfolio website",
+            'intermediate': "Advancing in web dev:\n• Master state management\n• Learn backend with Node.js or Python\n• Study databases (SQL & NoSQL)\n• Implement authentication & security"
+        }
+    }
+    
+    @staticmethod
+    def process_message(message: str, context: Dict = None) -> Dict[str, Any]:
+        """Process user message and generate intelligent response"""
+        
+        message_lower = message.lower().strip()
+        context = context or {}
+        
+        # Intent classification
+        intent = ChatAssistant._classify_intent(message_lower)
+        
+        # Generate response based on intent
+        response = ChatAssistant._generate_response(intent, message_lower, context)
+        
+        # Add suggested follow-ups
+        suggestions = ChatAssistant._get_suggestions(intent, context)
+        
+        return {
+            'response': response,
+            'intent': intent,
+            'suggestions': suggestions,
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    @staticmethod
+    def _classify_intent(message: str) -> str:
+        """Classify user message intent"""
+        
+        # Greeting patterns
+        if any(word in message for word in ['hello', 'hi', 'hey', 'greetings', 'good morning', 'good evening']):
+            return 'greeting'
+        
+        # Help request
+        if any(word in message for word in ['help', 'what can you do', 'features', 'how to use']):
+            return 'help'
+        
+        # Motivation request
+        if any(word in message for word in ['motivat', 'stuck', 'tired', 'hard', 'difficult', 'frustrated', 'inspire']):
+            return 'motivation'
+        
+        # Study tips
+        if any(word in message for word in ['study', 'learn', 'tips', 'technique', 'effective', 'better']):
+            return 'study_tips'
+        
+        # Programming related
+        if any(word in message for word in ['program', 'code', 'coding', 'develop', 'software', 'python', 'javascript']):
+            return 'programming'
+        
+        # Data science related
+        if any(word in message for word in ['data science', 'machine learning', 'ml', 'ai', 'deep learning', 'analytics']):
+            return 'data_science'
+        
+        # Web development related
+        if any(word in message for word in ['web', 'frontend', 'backend', 'react', 'html', 'css', 'website']):
+            return 'web_development'
+        
+        # Career advice
+        if any(word in message for word in ['career', 'job', 'interview', 'salary', 'resume', 'portfolio']):
+            return 'career'
+        
+        # Progress query
+        if any(word in message for word in ['progress', 'stats', 'analytics', 'how am i doing', 'performance']):
+            return 'progress'
+        
+        # Recommendation request
+        if any(word in message for word in ['recommend', 'suggest', 'what should', 'next step', 'learn next']):
+            return 'recommendation'
+        
+        # Goal related
+        if any(word in message for word in ['goal', 'target', 'plan', 'roadmap', 'schedule']):
+            return 'goal'
+        
+        return 'general'
+    
+    @staticmethod
+    def _generate_response(intent: str, message: str, context: Dict) -> str:
+        """Generate response based on intent"""
+        import random
+        
+        # Check knowledge base first
+        if intent in ChatAssistant.KNOWLEDGE_BASE:
+            responses = ChatAssistant.KNOWLEDGE_BASE[intent]
+            return random.choice(responses)
+        
+        # Topic-specific responses
+        if intent in ['programming', 'data_science', 'web_development']:
+            topic_key = intent.replace('_', ' ')
+            level = 'beginner'  # Default level
+            
+            if any(word in message for word in ['advanced', 'expert', 'senior']):
+                level = 'advanced'
+            elif any(word in message for word in ['intermediate', 'mid', 'improve']):
+                level = 'intermediate'
+            
+            responses = ChatAssistant.TOPIC_RESPONSES.get(topic_key, {})
+            if level in responses:
+                return responses[level]
+            return responses.get('beginner', f"I'd be happy to help with {topic_key}! What specific aspect are you interested in?")
+        
+        # Career advice
+        if intent == 'career':
+            return """Career advice for tech:
+• **Build a portfolio**: Showcase your best projects on GitHub
+• **Network**: Join tech communities, attend meetups
+• **Continuous learning**: Stay updated with industry trends
+• **Soft skills**: Communication and teamwork are crucial
+• **Prepare for interviews**: Practice coding challenges on LeetCode
+
+Would you like specific advice for a particular role?"""
+        
+        # Progress query - use context
+        if intent == 'progress':
+            history = context.get('historyAnalysis', {})
+            if history:
+                return f"""Based on your learning data:
+• Total sessions tracked: {history.get('total_visits', 'N/A')}
+• Primary focus: {history.get('primary_topic', 'Various topics')}
+• Learning pattern: {history.get('pattern_type', 'Explorer')}
+
+Keep up the great work! Would you like specific improvement tips?"""
+            return "I don't have enough data about your learning yet. Keep exploring and I'll provide detailed insights!"
+        
+        # Recommendation
+        if intent == 'recommendation':
+            recommendations = context.get('recommendations', [])
+            if recommendations:
+                rec_text = "Based on your learning patterns, I recommend:\n"
+                for i, rec in enumerate(recommendations[:3], 1):
+                    rec_text += f"{i}. **{rec.get('title', 'Resource')}**: {rec.get('description', '')}\n"
+                return rec_text
+            return "To give better recommendations, I need to analyze your browsing history. Keep learning and I'll personalize suggestions for you!"
+        
+        # Goal setting
+        if intent == 'goal':
+            return """Smart goal setting tips:
+• **Be specific**: "Learn React" → "Build 3 React projects in 2 months"
+• **Track progress**: Use this dashboard to monitor your learning
+• **Break it down**: Large goals into weekly milestones
+• **Stay accountable**: Share your goals, set reminders
+
+Would you like help creating a learning roadmap?"""
+        
+        # General fallback
+        return """I understand you're looking for guidance! Here's what I can help with:
+• Learning recommendations tailored to your interests
+• Study techniques and productivity tips
+• Career guidance in tech
+• Goal setting and progress tracking
+
+Feel free to ask about any specific topic or skill you want to develop!"""
+    
+    @staticmethod
+    def _get_suggestions(intent: str, context: Dict) -> List[str]:
+        """Get contextual follow-up suggestions"""
+        
+        suggestion_map = {
+            'greeting': ["What can you help me with?", "Show my progress", "Give me learning tips"],
+            'help': ["Study tips", "Career advice", "What should I learn next?"],
+            'motivation': ["Study techniques", "Set a goal", "Show my achievements"],
+            'programming': ["Best resources?", "Project ideas?", "Career path?"],
+            'data_science': ["Learning roadmap", "Project suggestions", "Required math?"],
+            'web_development': ["Frontend vs Backend?", "Best frameworks?", "Portfolio tips"],
+            'career': ["Resume tips", "Interview prep", "Networking advice"],
+            'progress': ["Areas to improve?", "Set new goals", "Study recommendations"],
+            'recommendation': ["Explain more", "Other options?", "Create a plan"],
+            'goal': ["Create a roadmap", "Track progress", "Motivation tips"],
+            'general': ["Learning tips", "Career guidance", "What topics to explore?"]
+        }
+        
+        return suggestion_map.get(intent, suggestion_map['general'])
+
+
+# ==========================================
+# RESUME BUILDER ENGINE
+# ==========================================
+
+class ResumeBuilder:
+    """Generate professional resume from learning analytics"""
+    
+    @staticmethod
+    def generate_resume(analytics_data: Dict, user_info: Dict = None) -> Dict[str, Any]:
+        """Generate a resume based on learning history and analytics"""
+        
+        user_info = user_info or {}
+        
+        # Extract skills from learning data
+        skills = ResumeBuilder._extract_skills(analytics_data)
+        
+        # Generate skill proficiency levels
+        proficiencies = ResumeBuilder._calculate_proficiency(analytics_data)
+        
+        # Generate learning achievements
+        achievements = ResumeBuilder._generate_achievements(analytics_data)
+        
+        # Generate summary
+        summary = ResumeBuilder._generate_summary(analytics_data, skills)
+        
+        # Build resume structure
+        resume = {
+            'header': {
+                'name': user_info.get('name', 'Learning Professional'),
+                'title': ResumeBuilder._suggest_title(analytics_data),
+                'email': user_info.get('email', ''),
+                'location': user_info.get('location', ''),
+                'portfolio': user_info.get('portfolio', ''),
+                'linkedin': user_info.get('linkedin', ''),
+                'github': user_info.get('github', '')
+            },
+            'summary': summary,
+            'skills': {
+                'technical': skills.get('technical', []),
+                'tools': skills.get('tools', []),
+                'soft_skills': skills.get('soft_skills', [])
+            },
+            'proficiency_chart': proficiencies,
+            'learning_achievements': achievements,
+            'certifications': ResumeBuilder._suggest_certifications(skills),
+            'projects': ResumeBuilder._suggest_projects(analytics_data),
+            'generated_at': datetime.now().isoformat(),
+            'learning_stats': {
+                'total_hours': analytics_data.get('total_minutes', 0) // 60,
+                'topics_explored': analytics_data.get('topics_count', 0),
+                'sessions_completed': analytics_data.get('total_sessions', 0)
+            }
+        }
+        
+        return {
+            'status': 'success',
+            'resume': resume,
+            'format_options': ['pdf', 'docx', 'html', 'json']
+        }
+    
+    @staticmethod
+    def _extract_skills(analytics: Dict) -> Dict[str, List[str]]:
+        """Extract skills from learning analytics"""
+        
+        topic_dist = analytics.get('topic_distribution', {})
+        
+        skill_mapping = {
+            'Programming': {
+                'technical': ['Python', 'JavaScript', 'Problem Solving', 'Algorithm Design'],
+                'tools': ['Git', 'VS Code', 'Command Line']
+            },
+            'Data Science': {
+                'technical': ['Data Analysis', 'Machine Learning', 'Statistics', 'Python'],
+                'tools': ['Jupyter', 'Pandas', 'NumPy', 'Matplotlib']
+            },
+            'Web Development': {
+                'technical': ['HTML/CSS', 'JavaScript', 'Responsive Design', 'REST APIs'],
+                'tools': ['React/Vue', 'Node.js', 'Chrome DevTools']
+            },
+            'Business': {
+                'technical': ['Business Analysis', 'Market Research', 'Financial Analysis'],
+                'tools': ['Excel', 'PowerPoint', 'Data Visualization']
+            },
+            'Design': {
+                'technical': ['UI Design', 'UX Research', 'Visual Design', 'Prototyping'],
+                'tools': ['Figma', 'Adobe Creative Suite']
+            }
+        }
+        
+        technical_skills = set()
+        tools = set()
+        
+        for topic in topic_dist.keys():
+            mapping = skill_mapping.get(topic, {})
+            technical_skills.update(mapping.get('technical', []))
+            tools.update(mapping.get('tools', []))
+        
+        # Add soft skills based on learning patterns
+        soft_skills = ['Self-directed Learning', 'Continuous Improvement', 'Research Skills']
+        if analytics.get('topics_count', 0) > 3:
+            soft_skills.append('Adaptability')
+        if analytics.get('total_sessions', 0) > 20:
+            soft_skills.append('Dedication')
+        
+        return {
+            'technical': list(technical_skills),
+            'tools': list(tools),
+            'soft_skills': soft_skills
+        }
+    
+    @staticmethod
+    def _calculate_proficiency(analytics: Dict) -> List[Dict]:
+        """Calculate proficiency levels for each topic"""
+        
+        topic_dist = analytics.get('topic_distribution', {})
+        total_sessions = max(analytics.get('total_sessions', 1), 1)
+        
+        proficiencies = []
+        for topic, count in topic_dist.items():
+            # Calculate proficiency based on session percentage and engagement
+            percentage = (count / total_sessions) * 100
+            
+            if percentage > 30:
+                level = 'Advanced'
+                score = 85
+            elif percentage > 15:
+                level = 'Intermediate'
+                score = 65
+            else:
+                level = 'Beginner'
+                score = 40
+            
+            proficiencies.append({
+                'skill': topic,
+                'level': level,
+                'score': score,
+                'sessions': count
+            })
+        
+        # Sort by score descending
+        proficiencies.sort(key=lambda x: x['score'], reverse=True)
+        return proficiencies[:6]  # Top 6 skills
+    
+    @staticmethod
+    def _generate_achievements(analytics: Dict) -> List[Dict]:
+        """Generate achievements based on learning data"""
+        
+        achievements = []
+        
+        total_mins = analytics.get('total_minutes', 0)
+        total_sessions = analytics.get('total_sessions', 0)
+        topics = analytics.get('topics_count', 0)
+        
+        if total_mins > 60:
+            achievements.append({
+                'title': 'Dedicated Learner',
+                'description': f'Completed {total_mins // 60}+ hours of focused learning',
+                'icon': 'ri-time-line'
+            })
+        
+        if total_sessions > 10:
+            achievements.append({
+                'title': 'Consistent Practice',
+                'description': f'Logged {total_sessions} learning sessions',
+                'icon': 'ri-check-double-line'
+            })
+        
+        if topics > 3:
+            achievements.append({
+                'title': 'Versatile Learner',
+                'description': f'Explored {topics} different knowledge areas',
+                'icon': 'ri-star-line'
+            })
+        
+        return achievements
+    
+    @staticmethod
+    def _generate_summary(analytics: Dict, skills: Dict) -> str:
+        """Generate professional summary"""
+        
+        top_topic = analytics.get('top_topic', 'technology')
+        hours = analytics.get('total_minutes', 0) // 60
+        
+        tech_skills = ', '.join(skills.get('technical', ['various technologies'])[:3])
+        
+        return f"""Self-motivated learner with demonstrated commitment to continuous professional development. 
+Invested {hours}+ hours in structured learning with primary focus on {top_topic}. 
+Developed competencies in {tech_skills} through hands-on practice and dedicated study. 
+Passionate about applying technical knowledge to solve real-world problems."""
+    
+    @staticmethod
+    def _suggest_title(analytics: Dict) -> str:
+        """Suggest a professional title based on learning focus"""
+        
+        top_topic = analytics.get('top_topic', 'General')
+        
+        title_map = {
+            'Programming': 'Software Developer',
+            'Data Science': 'Data Science Enthusiast',
+            'Web Development': 'Web Developer',
+            'Business': 'Business Analyst',
+            'Design': 'UI/UX Designer',
+            'Mathematics': 'Quantitative Analyst',
+            'Science': 'Research Enthusiast'
+        }
+        
+        return title_map.get(top_topic, 'Technology Professional')
+    
+    @staticmethod
+    def _suggest_certifications(skills: Dict) -> List[Dict]:
+        """Suggest relevant certifications"""
+        
+        tech_skills = skills.get('technical', [])
+        
+        cert_suggestions = []
+        
+        if any('Python' in s for s in tech_skills):
+            cert_suggestions.append({
+                'name': 'Python Professional Certificate',
+                'provider': 'Google/Coursera',
+                'relevance': 'High'
+            })
+        
+        if any('Data' in s or 'Machine Learning' in s for s in tech_skills):
+            cert_suggestions.append({
+                'name': 'Data Science Professional Certificate',
+                'provider': 'IBM/Coursera',
+                'relevance': 'High'
+            })
+        
+        if any('Web' in s or 'JavaScript' in s for s in tech_skills):
+            cert_suggestions.append({
+                'name': 'Meta Front-End Developer Certificate',
+                'provider': 'Meta/Coursera',
+                'relevance': 'High'
+            })
+        
+        return cert_suggestions[:3]
+    
+    @staticmethod
+    def _suggest_projects(analytics: Dict) -> List[Dict]:
+        """Suggest portfolio projects based on learning"""
+        
+        top_topic = analytics.get('top_topic', 'General')
+        
+        project_suggestions = {
+            'Programming': [
+                {'name': 'CLI Task Manager', 'description': 'Build a command-line productivity tool'},
+                {'name': 'API Integration Project', 'description': 'Create an app that integrates multiple APIs'}
+            ],
+            'Data Science': [
+                {'name': 'Data Analysis Dashboard', 'description': 'Analyze and visualize a real dataset'},
+                {'name': 'ML Prediction Model', 'description': 'Build and deploy a machine learning model'}
+            ],
+            'Web Development': [
+                {'name': 'Personal Portfolio', 'description': 'Responsive portfolio website'},
+                {'name': 'Full-Stack Web App', 'description': 'Build a complete web application with database'}
+            ]
+        }
+        
+        return project_suggestions.get(top_topic, [
+            {'name': 'Personal Project', 'description': 'Apply your learning to a real-world problem'}
+        ])
 
 
 # ==========================================

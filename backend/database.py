@@ -1623,6 +1623,269 @@ def get_productivity_summary(user_id: int = 1) -> Dict:
     }
 
 
+# ==========================================
+# AI CHAT HISTORY OPERATIONS
+# ==========================================
+
+def save_chat_message(message_data: Dict, user_id: int = 1):
+    """Save a chat message to history"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Create chat_history table if not exists
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            user_message TEXT,
+            ai_response TEXT,
+            intent TEXT,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        INSERT INTO chat_history (user_id, user_message, ai_response, intent, timestamp)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (
+        user_id,
+        message_data.get('user_message', ''),
+        message_data.get('ai_response', ''),
+        message_data.get('intent', 'general'),
+        message_data.get('timestamp', datetime.now().isoformat())
+    ))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_chat_history(user_id: int = 1, limit: int = 50) -> List[Dict]:
+    """Get chat history for a user"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Ensure table exists
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            user_message TEXT,
+            ai_response TEXT,
+            intent TEXT,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        SELECT * FROM chat_history 
+        WHERE user_id = ?
+        ORDER BY timestamp DESC
+        LIMIT ?
+    ''', (user_id, limit))
+    
+    history = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return history
+
+
+def clear_chat_history(user_id: int = 1):
+    """Clear chat history for a user"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('DELETE FROM chat_history WHERE user_id = ?', (user_id,))
+    
+    conn.commit()
+    conn.close()
+
+
+# ==========================================
+# HISTORY ANALYSIS OPERATIONS
+# ==========================================
+
+def save_history_analysis(analysis: Dict, user_id: int = 1):
+    """Save browsing history analysis"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Create history_analysis table if not exists
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS history_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            pattern_type TEXT,
+            confidence REAL,
+            features TEXT,
+            insights TEXT,
+            entities TEXT,
+            sentiment TEXT,
+            total_visits INTEGER,
+            primary_topic TEXT,
+            topic_distribution TEXT,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        INSERT INTO history_analysis 
+        (user_id, pattern_type, confidence, features, insights, entities, sentiment, 
+         total_visits, primary_topic, topic_distribution, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        user_id,
+        analysis.get('pattern_type', 'explorer'),
+        analysis.get('confidence', 0),
+        json.dumps(analysis.get('features', {})),
+        json.dumps(analysis.get('insights', [])),
+        json.dumps(analysis.get('entities', {})),
+        json.dumps(analysis.get('sentiment', {})),
+        analysis.get('total_visits', 0),
+        analysis.get('primary_topic', 'General'),
+        json.dumps(analysis.get('topic_distribution', {})),
+        datetime.now().isoformat()
+    ))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_latest_history_analysis(user_id: int = 1) -> Optional[Dict]:
+    """Get the most recent history analysis"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Ensure table exists
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS history_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            pattern_type TEXT,
+            confidence REAL,
+            features TEXT,
+            insights TEXT,
+            entities TEXT,
+            sentiment TEXT,
+            total_visits INTEGER,
+            primary_topic TEXT,
+            topic_distribution TEXT,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        SELECT * FROM history_analysis 
+        WHERE user_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 1
+    ''', (user_id,))
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        analysis = dict(row)
+        # Parse JSON fields
+        analysis['features'] = json.loads(analysis.get('features', '{}'))
+        analysis['insights'] = json.loads(analysis.get('insights', '[]'))
+        analysis['entities'] = json.loads(analysis.get('entities', '{}'))
+        analysis['sentiment'] = json.loads(analysis.get('sentiment', '{}'))
+        analysis['topic_distribution'] = json.loads(analysis.get('topic_distribution', '{}'))
+        return analysis
+    
+    return None
+
+
+# ==========================================
+# RESUME OPERATIONS
+# ==========================================
+
+def save_generated_resume(resume: Dict, user_id: int = 1):
+    """Save generated resume to database"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Create resumes table if not exists
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS generated_resumes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            resume_data TEXT,
+            generated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        INSERT INTO generated_resumes (user_id, resume_data, generated_at)
+        VALUES (?, ?, ?)
+    ''', (user_id, json.dumps(resume), datetime.now().isoformat()))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_latest_resume(user_id: int = 1) -> Optional[Dict]:
+    """Get the most recently generated resume"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Ensure table exists
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS generated_resumes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            resume_data TEXT,
+            generated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        SELECT * FROM generated_resumes 
+        WHERE user_id = ?
+        ORDER BY generated_at DESC
+        LIMIT 1
+    ''', (user_id,))
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        return json.loads(row['resume_data'])
+    
+    return None
+
+
+def get_all_resumes(user_id: int = 1, limit: int = 10) -> List[Dict]:
+    """Get all generated resumes for a user"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Ensure table exists
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS generated_resumes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            resume_data TEXT,
+            generated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        SELECT * FROM generated_resumes 
+        WHERE user_id = ?
+        ORDER BY generated_at DESC
+        LIMIT ?
+    ''', (user_id, limit))
+    
+    resumes = []
+    for row in cursor.fetchall():
+        resume = dict(row)
+        resume['resume_data'] = json.loads(resume.get('resume_data', '{}'))
+        resumes.append(resume)
+    
+    conn.close()
+    return resumes
+
+
 # Initialize database when module is imported
 if __name__ == "__main__":
     init_db()

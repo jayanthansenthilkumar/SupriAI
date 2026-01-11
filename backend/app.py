@@ -38,6 +38,12 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/routes')
+def route_directory():
+    """Render API Route Directory"""
+    return render_template('api_directory.html')
+
+
 # ==========================================
 # HEALTH & STATUS ENDPOINTS
 # ==========================================
@@ -1006,6 +1012,456 @@ def get_productivity_dashboard():
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# CHROME HISTORY ANALYSIS ENDPOINTS
+# ==========================================
+
+@app.route('/api/history/analyze', methods=['POST'])
+def analyze_history():
+    """Analyze Chrome browsing history using ML/NLP"""
+    try:
+        data = request.json
+        history = data.get('history', [])
+        
+        if not history:
+            return jsonify({
+                "status": "success",
+                "message": "No history to analyze",
+                "analysis": {},
+                "recommendations": []
+            })
+        
+        # Use Deep Learning Engine for pattern analysis
+        deep_analysis = ml_engine.DeepLearningEngine.analyze_learning_patterns(history)
+        
+        # Extract entities using NLP
+        all_titles = ' '.join([item.get('title', '') for item in history])
+        entities = ml_engine.NLPProcessor.extract_entities(all_titles)
+        
+        # Sentiment analysis of learning content
+        sentiment = ml_engine.NLPProcessor.sentiment_analysis(all_titles)
+        
+        # Generate personalized recommendations
+        recommendations = generate_smart_recommendations(deep_analysis, entities)
+        
+        # Store analysis in database
+        analysis_result = {
+            'pattern_type': deep_analysis.get('pattern_type', 'explorer'),
+            'confidence': deep_analysis.get('confidence', 0),
+            'features': deep_analysis.get('features', {}),
+            'insights': deep_analysis.get('insights', []),
+            'entities': entities,
+            'sentiment': sentiment,
+            'total_visits': len(history),
+            'primary_topic': deep_analysis.get('features', {}).get('primary_topic', 'General'),
+            'topic_distribution': deep_analysis.get('features', {}).get('topic_distribution', {})
+        }
+        
+        # Save to user profile
+        database.save_history_analysis(analysis_result)
+        
+        return jsonify({
+            "status": "success",
+            "analysis": analysis_result,
+            "recommendations": recommendations,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error analyzing history: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def generate_smart_recommendations(analysis: dict, entities: dict) -> list:
+    """Generate smart recommendations based on ML analysis"""
+    recommendations = []
+    
+    pattern = analysis.get('pattern_type', 'explorer')
+    features = analysis.get('features', {})
+    primary_topic = features.get('primary_topic', 'General')
+    
+    # Topic-specific recommendations
+    topic_recommendations = {
+        'Programming': [
+            {
+                'type': 'course',
+                'title': 'Advanced Algorithm Design',
+                'description': 'Master algorithms for technical interviews',
+                'url': 'https://leetcode.com',
+                'icon': 'ri-code-box-line',
+                'priority': 'high'
+            },
+            {
+                'type': 'practice',
+                'title': 'Build a Real Project',
+                'description': 'Apply your skills with a hands-on project',
+                'url': 'https://github.com/practical-tutorials/project-based-learning',
+                'icon': 'ri-hammer-line',
+                'priority': 'high'
+            }
+        ],
+        'Data Science': [
+            {
+                'type': 'course',
+                'title': 'Machine Learning Specialization',
+                'description': 'Deep dive into ML algorithms and applications',
+                'url': 'https://www.coursera.org/specializations/machine-learning-introduction',
+                'icon': 'ri-robot-line',
+                'priority': 'high'
+            },
+            {
+                'type': 'practice',
+                'title': 'Kaggle Competition',
+                'description': 'Test your skills on real datasets',
+                'url': 'https://www.kaggle.com/competitions',
+                'icon': 'ri-database-2-line',
+                'priority': 'medium'
+            }
+        ],
+        'Web Development': [
+            {
+                'type': 'tutorial',
+                'title': 'Full-Stack Development',
+                'description': 'Learn complete web application development',
+                'url': 'https://fullstackopen.com',
+                'icon': 'ri-stack-line',
+                'priority': 'high'
+            }
+        ]
+    }
+    
+    # Add topic-specific recommendations
+    if primary_topic in topic_recommendations:
+        recommendations.extend(topic_recommendations[primary_topic])
+    
+    # Pattern-based recommendations
+    pattern_recommendations = {
+        'deep_learner': {
+            'type': 'challenge',
+            'title': 'Take on a Complex Project',
+            'description': 'Your deep focus is perfect for tackling advanced challenges',
+            'icon': 'ri-rocket-line',
+            'priority': 'high'
+        },
+        'explorer': {
+            'type': 'focus',
+            'title': 'Pick a Specialization',
+            'description': 'Consider focusing deeply on one area to build expertise',
+            'icon': 'ri-focus-3-line',
+            'priority': 'medium'
+        },
+        'consistent': {
+            'type': 'goal',
+            'title': 'Set Weekly Milestones',
+            'description': 'Your consistency is great! Add measurable goals',
+            'icon': 'ri-flag-line',
+            'priority': 'medium'
+        },
+        'binge_learner': {
+            'type': 'schedule',
+            'title': 'Create a Learning Schedule',
+            'description': 'Spread your learning for better retention',
+            'icon': 'ri-calendar-schedule-line',
+            'priority': 'high'
+        }
+    }
+    
+    if pattern in pattern_recommendations:
+        recommendations.append(pattern_recommendations[pattern])
+    
+    # Add entity-based recommendations
+    tech_entities = entities.get('technologies', []) + entities.get('frameworks', [])
+    if tech_entities:
+        recommendations.append({
+            'type': 'deep_dive',
+            'title': f'Master {tech_entities[0]}',
+            'description': f'You\'ve been exploring {tech_entities[0]}. Take it to the next level!',
+            'icon': 'ri-book-open-line',
+            'priority': 'high'
+        })
+    
+    return recommendations[:5]  # Return top 5 recommendations
+
+
+# ==========================================
+# AI CHAT ASSISTANT ENDPOINTS
+# ==========================================
+
+@app.route('/api/chat', methods=['POST'])
+def chat_with_ai():
+    """Handle AI chat messages"""
+    try:
+        data = request.json
+        message = data.get('message', '')
+        context = data.get('context', {})
+        
+        if not message:
+            return jsonify({
+                "status": "error",
+                "message": "No message provided"
+            }), 400
+        
+        # Process message with Chat Assistant
+        result = ml_engine.ChatAssistant.process_message(message, context)
+        
+        # Save chat to history
+        database.save_chat_message({
+            'user_message': message,
+            'ai_response': result.get('response', ''),
+            'intent': result.get('intent', 'general'),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        return jsonify({
+            "status": "success",
+            "response": result.get('response', ''),
+            "intent": result.get('intent', 'general'),
+            "suggestions": result.get('suggestions', []),
+            "timestamp": result.get('timestamp', datetime.now().isoformat())
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in chat: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "response": "I'm sorry, I encountered an error. Please try again."
+        }), 500
+
+
+@app.route('/api/chat/history', methods=['GET'])
+def get_chat_history():
+    """Get chat history"""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        history = database.get_chat_history(limit=limit)
+        
+        return jsonify({
+            "status": "success",
+            "history": history
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/chat/clear', methods=['POST'])
+def clear_chat_history():
+    """Clear chat history"""
+    try:
+        database.clear_chat_history()
+        return jsonify({"status": "success", "message": "Chat history cleared"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# AI RECOMMENDATIONS ENDPOINTS
+# ==========================================
+
+@app.route('/api/recommendations', methods=['GET'])
+def get_ai_recommendations():
+    """Get AI-powered learning recommendations"""
+    try:
+        # Get recent learning logs
+        logs = database.get_recent_logs(days=30)
+        
+        # Get analytics
+        analytics = ml_engine.aggregate_analytics(logs)
+        
+        # Get stored history analysis
+        history_analysis = database.get_latest_history_analysis()
+        
+        # Generate recommendations from weekly plan
+        base_recommendations = ml_engine.generate_weekly_plan(logs)
+        
+        # Add ML-enhanced recommendations if history analysis exists
+        if history_analysis:
+            entities = history_analysis.get('entities', {})
+            pattern = history_analysis.get('pattern_type', 'explorer')
+            
+            # Add personalized recommendations
+            personalized = generate_smart_recommendations(history_analysis, entities)
+            base_recommendations.extend(personalized)
+        
+        # Remove duplicates and limit
+        seen_titles = set()
+        unique_recommendations = []
+        for rec in base_recommendations:
+            title = rec.get('title', '')
+            if title not in seen_titles:
+                seen_titles.add(title)
+                unique_recommendations.append(rec)
+        
+        return jsonify({
+            "status": "success",
+            "recommendations": unique_recommendations[:6],
+            "analytics_summary": {
+                "total_sessions": analytics.get('total_sessions', 0),
+                "top_topic": analytics.get('top_topic', 'General'),
+                "engagement_score": analytics.get('engagement_score', 0)
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting recommendations: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# RESUME BUILDER ENDPOINTS
+# ==========================================
+
+@app.route('/api/resume/generate', methods=['POST'])
+def generate_resume():
+    """Generate resume from learning analytics"""
+    try:
+        data = request.json or {}
+        user_info = data.get('user_info', {})
+        
+        # Get comprehensive analytics
+        logs = database.get_recent_logs(days=90)
+        analytics = ml_engine.aggregate_analytics(logs)
+        
+        # Generate resume using Resume Builder
+        result = ml_engine.ResumeBuilder.generate_resume(analytics, user_info)
+        
+        # Save resume to database
+        if result.get('status') == 'success':
+            database.save_generated_resume(result.get('resume', {}))
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"❌ Error generating resume: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/resume/latest', methods=['GET'])
+def get_latest_resume():
+    """Get the most recently generated resume"""
+    try:
+        resume = database.get_latest_resume()
+        
+        if resume:
+            return jsonify({
+                "status": "success",
+                "resume": resume
+            })
+        else:
+            return jsonify({
+                "status": "not_found",
+                "message": "No resume generated yet"
+            }), 404
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/resume/update', methods=['PUT'])
+def update_resume():
+    """Update user info for resume"""
+    try:
+        data = request.json
+        
+        # Get current resume and regenerate with new user info
+        logs = database.get_recent_logs(days=90)
+        analytics = ml_engine.aggregate_analytics(logs)
+        
+        result = ml_engine.ResumeBuilder.generate_resume(analytics, data.get('user_info', {}))
+        
+        if result.get('status') == 'success':
+            database.save_generated_resume(result.get('resume', {}))
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/resume/export/<format_type>', methods=['GET'])
+def export_resume(format_type):
+    """Export resume in specified format"""
+    try:
+        resume = database.get_latest_resume()
+        
+        if not resume:
+            return jsonify({"status": "error", "message": "No resume to export"}), 404
+        
+        if format_type == 'json':
+            return jsonify(resume)
+        elif format_type == 'html':
+            # Generate HTML version
+            html = generate_resume_html(resume)
+            return html, 200, {'Content-Type': 'text/html'}
+        else:
+            return jsonify({
+                "status": "success",
+                "resume": resume,
+                "format": format_type,
+                "message": f"Export as {format_type} - client-side rendering required"
+            })
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def generate_resume_html(resume: dict) -> str:
+    """Generate HTML version of resume"""
+    header = resume.get('header', {})
+    skills = resume.get('skills', {})
+    achievements = resume.get('learning_achievements', [])
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Resume - {header.get('name', 'Learning Professional')}</title>
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
+            h1 {{ color: #1a73e8; margin-bottom: 5px; }}
+            h2 {{ color: #333; border-bottom: 2px solid #1a73e8; padding-bottom: 5px; }}
+            .subtitle {{ color: #666; font-size: 1.1em; }}
+            .summary {{ background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+            .skills {{ display: flex; flex-wrap: wrap; gap: 10px; }}
+            .skill-tag {{ background: #e3f2fd; padding: 5px 12px; border-radius: 20px; font-size: 0.9em; }}
+            .achievement {{ background: #f0f9ff; padding: 10px; border-left: 3px solid #1a73e8; margin: 10px 0; }}
+        </style>
+    </head>
+    <body>
+        <h1>{header.get('name', 'Learning Professional')}</h1>
+        <p class="subtitle">{header.get('title', 'Technology Professional')}</p>
+        
+        <h2>Professional Summary</h2>
+        <div class="summary">{resume.get('summary', '')}</div>
+        
+        <h2>Technical Skills</h2>
+        <div class="skills">
+            {''.join(f'<span class="skill-tag">{s}</span>' for s in skills.get('technical', []))}
+        </div>
+        
+        <h2>Tools & Technologies</h2>
+        <div class="skills">
+            {''.join(f'<span class="skill-tag">{s}</span>' for s in skills.get('tools', []))}
+        </div>
+        
+        <h2>Learning Achievements</h2>
+        {''.join(f'<div class="achievement"><strong>{a.get("title", "")}</strong><br>{a.get("description", "")}</div>' for a in achievements)}
+        
+        <h2>Soft Skills</h2>
+        <div class="skills">
+            {''.join(f'<span class="skill-tag">{s}</span>' for s in skills.get('soft_skills', []))}
+        </div>
+        
+        <footer style="margin-top: 30px; text-align: center; color: #999; font-size: 0.8em;">
+            Generated by SupriAI Learning Analytics
+        </footer>
+    </body>
+    </html>
+    """
+    return html
 
 
 # ==========================================

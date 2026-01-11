@@ -88,7 +88,9 @@ function setupNavigation() {
                 'reviews': 'Reviews',
                 'goals': 'Goals & Streak',
                 'community': 'Community',
-                'settings': 'Settings'
+                'settings': 'Settings',
+                'chat-assistant': 'AI Assistant',
+                'resume-builder': 'Resume Builder'
             };
             document.getElementById('pageTitle').innerText = titleMap[item.dataset.target] || 'Dashboard';
 
@@ -312,6 +314,12 @@ async function loadViewData(viewName) {
             break;
         case 'analytics':
             await loadAnalyticsData();
+            break;
+        case 'chat-assistant':
+            await loadChatData();
+            break;
+        case 'resume-builder':
+            await loadResumeData();
             break;
     }
 }
@@ -1224,6 +1232,576 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+
+// ==========================================
+// AI CHAT ASSISTANT
+// ==========================================
+
+let chatHistory = [];
+
+async function loadChatData() {
+    try {
+        // Load AI recommendations
+        await loadAIRecommendations();
+        
+        // Load chat history
+        const response = await fetch(`${API_URL}/api/chat/history?limit=20`);
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.history.length > 0) {
+            // Render existing chat history
+            const container = document.getElementById('chatMessages');
+            data.history.reverse().forEach(msg => {
+                appendChatMessage(msg.user_message, 'user', false);
+                appendChatMessage(msg.ai_response, 'ai', false);
+            });
+        }
+    } catch (e) {
+        console.error("Failed to load chat data:", e);
+    }
+}
+
+async function loadAIRecommendations() {
+    const container = document.getElementById('aiRecommendations');
+    if (!container) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/api/recommendations`);
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.recommendations) {
+            renderAIRecommendations(data.recommendations);
+        }
+    } catch (e) {
+        container.innerHTML = `
+            <div class="google-card" style="text-align: center; padding: 40px;">
+                <i class="ri-error-warning-line" style="font-size: 32px; color: #d93025;"></i>
+                <p style="margin-top: 10px; color: #5f6368;">Failed to load recommendations</p>
+            </div>
+        `;
+    }
+}
+
+function renderAIRecommendations(recommendations) {
+    const container = document.getElementById('aiRecommendations');
+    if (!container) return;
+    
+    if (!recommendations || recommendations.length === 0) {
+        container.innerHTML = `
+            <div class="google-card" style="text-align: center; padding: 40px;">
+                <i class="ri-lightbulb-line" style="font-size: 32px; color: #f9ab00;"></i>
+                <p style="margin-top: 10px; color: #5f6368;">Keep learning to get personalized recommendations!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const colors = {
+        course: '#1a73e8',
+        practice: '#188038',
+        challenge: '#d93025',
+        tutorial: '#a142f4',
+        project: '#f9ab00',
+        focus: '#e8710a',
+        deep_dive: '#1967d2'
+    };
+    
+    container.innerHTML = recommendations.map(rec => `
+        <div class="recommendation-card">
+            <div class="recommendation-header">
+                <div class="recommendation-icon" style="background: ${colors[rec.type] || '#5f6368'}20; color: ${colors[rec.type] || '#5f6368'};">
+                    <i class="${rec.icon || 'ri-lightbulb-line'}"></i>
+                </div>
+                <div>
+                    <div class="recommendation-type">${rec.type || 'recommendation'}</div>
+                    <div class="recommendation-title">${rec.title}</div>
+                </div>
+            </div>
+            <p class="recommendation-description">${rec.description}</p>
+            ${rec.url ? `
+                <a href="${rec.url}" target="_blank" class="recommendation-action">
+                    Explore <i class="ri-external-link-line"></i>
+                </a>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    // Clear input
+    input.value = '';
+    
+    // Add user message to chat
+    appendChatMessage(message, 'user');
+    
+    // Show typing indicator
+    showTypingIndicator();
+    
+    try {
+        const response = await fetch(`${API_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: message,
+                context: { history: chatHistory }
+            })
+        });
+        
+        const data = await response.json();
+        
+        // Hide typing indicator
+        hideTypingIndicator();
+        
+        if (data.status === 'success') {
+            appendChatMessage(data.response, 'ai');
+            
+            // Update suggestions
+            if (data.suggestions) {
+                updateChatSuggestions(data.suggestions);
+            }
+            
+            // Store in history
+            chatHistory.push({ user: message, ai: data.response });
+            if (chatHistory.length > 10) chatHistory.shift();
+        } else {
+            appendChatMessage(data.response || "Sorry, I couldn't process your message.", 'ai');
+        }
+        
+    } catch (e) {
+        hideTypingIndicator();
+        appendChatMessage("I'm having trouble connecting. Please check if the server is running.", 'ai');
+    }
+}
+
+function sendSuggestion(text) {
+    document.getElementById('chatInput').value = text;
+    sendChatMessage();
+}
+
+function appendChatMessage(text, sender, scroll = true) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${sender}-message`;
+    
+    messageDiv.innerHTML = `
+        <div class="message-avatar">
+            <i class="${sender === 'ai' ? 'ri-robot-line' : 'ri-user-line'}"></i>
+        </div>
+        <div class="message-content">${formatChatText(text)}</div>
+    `;
+    
+    container.appendChild(messageDiv);
+    
+    if (scroll) {
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
+function formatChatText(text) {
+    // Convert markdown-like formatting
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>')
+        .replace(/• /g, '&bull; ');
+}
+
+function showTypingIndicator() {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    
+    const indicator = document.createElement('div');
+    indicator.id = 'typingIndicator';
+    indicator.className = 'chat-message ai-message';
+    indicator.innerHTML = `
+        <div class="message-avatar">
+            <i class="ri-robot-line"></i>
+        </div>
+        <div class="typing-indicator">
+            <span></span><span></span><span></span>
+        </div>
+    `;
+    
+    container.appendChild(indicator);
+    container.scrollTop = container.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) indicator.remove();
+}
+
+function updateChatSuggestions(suggestions) {
+    const container = document.getElementById('chatSuggestions');
+    if (!container || !suggestions) return;
+    
+    container.innerHTML = suggestions.map(s => 
+        `<button class="suggestion-chip" onclick="sendSuggestion('${s}')">${s}</button>`
+    ).join('');
+}
+
+async function clearChatHistory() {
+    const result = await Swal.fire({
+        title: 'Clear Chat History?',
+        text: 'This will delete all your chat messages.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d93025',
+        confirmButtonText: 'Clear'
+    });
+    
+    if (result.isConfirmed) {
+        try {
+            await fetch(`${API_URL}/api/chat/clear`, { method: 'POST' });
+            
+            // Clear UI
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = `
+                <div class="chat-message ai-message">
+                    <div class="message-avatar">
+                        <i class="ri-robot-line"></i>
+                    </div>
+                    <div class="message-content">
+                        <p>👋 Chat history cleared! How can I help you today?</p>
+                    </div>
+                </div>
+            `;
+            
+            chatHistory = [];
+            showToast('Chat history cleared', 'success');
+        } catch (e) {
+            showToast('Failed to clear history', 'error');
+        }
+    }
+}
+
+
+// ==========================================
+// RESUME BUILDER
+// ==========================================
+
+let currentResume = null;
+
+async function loadResumeData() {
+    try {
+        const response = await fetch(`${API_URL}/api/resume/latest`);
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.resume) {
+            currentResume = data.resume;
+            displayResume(data.resume);
+        }
+    } catch (e) {
+        console.log("No existing resume found");
+    }
+}
+
+async function generateResume() {
+    const userInfo = {
+        name: document.getElementById('resumeName')?.value || '',
+        email: document.getElementById('resumeEmail')?.value || '',
+        location: document.getElementById('resumeLocation')?.value || '',
+        github: document.getElementById('resumeGithub')?.value || '',
+        linkedin: document.getElementById('resumeLinkedin')?.value || '',
+        portfolio: document.getElementById('resumePortfolio')?.value || ''
+    };
+    
+    // Show loading
+    const preview = document.getElementById('resumePreview');
+    const noResume = document.getElementById('noResumeMessage');
+    if (noResume) noResume.style.display = 'none';
+    if (preview) {
+        preview.style.display = 'block';
+        preview.innerHTML = `
+            <div style="text-align: center; padding: 60px;">
+                <i class="ri-loader-4-line spinning" style="font-size: 48px; color: #1a73e8;"></i>
+                <p style="margin-top: 20px; color: #5f6368;">Generating your resume from learning analytics...</p>
+            </div>
+        `;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/resume/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_info: userInfo })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.resume) {
+            currentResume = data.resume;
+            
+            // Restore preview container and display
+            if (preview) {
+                preview.innerHTML = createResumePreviewHTML();
+            }
+            displayResume(data.resume);
+            showToast('Resume generated successfully!', 'success');
+        } else {
+            throw new Error(data.message || 'Failed to generate resume');
+        }
+        
+    } catch (e) {
+        console.error('Resume generation error:', e);
+        showToast('Failed to generate resume: ' + e.message, 'error');
+        if (preview) {
+            preview.style.display = 'none';
+        }
+        if (noResume) {
+            noResume.style.display = 'block';
+        }
+    }
+}
+
+function createResumePreviewHTML() {
+    return `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h4 style="margin: 0;">Resume Preview</h4>
+            <div style="display: flex; gap: 10px;">
+                <button class="text-btn" onclick="exportResume('json')"><i class="ri-code-line"></i> JSON</button>
+                <button class="text-btn" onclick="exportResume('html')"><i class="ri-file-code-line"></i> HTML</button>
+            </div>
+        </div>
+        <div id="resumeContent" style="background: white; border: 1px solid #e8eaed; border-radius: 8px; padding: 30px;">
+            <div style="text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #1a73e8;">
+                <h2 id="previewName" style="margin: 0; color: #1a73e8; font-size: 1.8em;">Your Name</h2>
+                <p id="previewTitle" style="margin: 5px 0; color: #5f6368; font-size: 1.1em;">Professional Title</p>
+                <div id="previewContact" style="margin-top: 10px; font-size: 0.9em; color: #5f6368;"></div>
+            </div>
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                    <i class="ri-user-line"></i> Professional Summary
+                </h3>
+                <p id="previewSummary" style="color: #333; line-height: 1.6;"></p>
+            </div>
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                    <i class="ri-code-s-slash-line"></i> Technical Skills
+                </h3>
+                <div id="previewTechnicalSkills" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;"></div>
+            </div>
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                    <i class="ri-tools-line"></i> Tools & Technologies
+                </h3>
+                <div id="previewTools" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;"></div>
+            </div>
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                    <i class="ri-bar-chart-box-line"></i> Skill Proficiency
+                </h3>
+                <div id="previewProficiency" style="margin-top: 15px;"></div>
+            </div>
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                    <i class="ri-award-line"></i> Learning Achievements
+                </h3>
+                <div id="previewAchievements" style="margin-top: 10px;"></div>
+            </div>
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                    <i class="ri-medal-line"></i> Suggested Certifications
+                </h3>
+                <div id="previewCertifications" style="margin-top: 10px;"></div>
+            </div>
+            <div>
+                <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                    <i class="ri-folder-line"></i> Suggested Projects
+                </h3>
+                <div id="previewProjects" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-around; text-align: center;">
+            <div>
+                <div id="statHours" style="font-size: 1.5em; font-weight: 700; color: #1a73e8;">0</div>
+                <div style="color: #5f6368; font-size: 0.85em;">Learning Hours</div>
+            </div>
+            <div>
+                <div id="statTopics" style="font-size: 1.5em; font-weight: 700; color: #188038;">0</div>
+                <div style="color: #5f6368; font-size: 0.85em;">Topics Explored</div>
+            </div>
+            <div>
+                <div id="statSessions" style="font-size: 1.5em; font-weight: 700; color: #f9ab00;">0</div>
+                <div style="color: #5f6368; font-size: 0.85em;">Sessions Completed</div>
+            </div>
+        </div>
+    `;
+}
+
+function displayResume(resume) {
+    const preview = document.getElementById('resumePreview');
+    const noResume = document.getElementById('noResumeMessage');
+    
+    if (noResume) noResume.style.display = 'none';
+    if (preview) preview.style.display = 'block';
+    
+    // Header
+    const header = resume.header || {};
+    updateElement('previewName', header.name || 'Your Name');
+    updateElement('previewTitle', header.title || 'Professional');
+    
+    // Contact info
+    const contactParts = [];
+    if (header.email) contactParts.push(`<i class="ri-mail-line"></i> ${header.email}`);
+    if (header.location) contactParts.push(`<i class="ri-map-pin-line"></i> ${header.location}`);
+    if (header.github) contactParts.push(`<i class="ri-github-line"></i> ${header.github}`);
+    if (header.linkedin) contactParts.push(`<i class="ri-linkedin-box-line"></i> ${header.linkedin}`);
+    
+    const contactEl = document.getElementById('previewContact');
+    if (contactEl) contactEl.innerHTML = contactParts.join(' &nbsp;|&nbsp; ');
+    
+    // Summary
+    updateElement('previewSummary', resume.summary || '');
+    
+    // Technical Skills
+    const techSkillsEl = document.getElementById('previewTechnicalSkills');
+    if (techSkillsEl && resume.skills?.technical) {
+        techSkillsEl.innerHTML = resume.skills.technical.map(s => 
+            `<span class="skill-tag">${s}</span>`
+        ).join('');
+    }
+    
+    // Tools
+    const toolsEl = document.getElementById('previewTools');
+    if (toolsEl && resume.skills?.tools) {
+        toolsEl.innerHTML = resume.skills.tools.map(s => 
+            `<span class="tool-tag">${s}</span>`
+        ).join('');
+    }
+    
+    // Proficiency Chart
+    const profEl = document.getElementById('previewProficiency');
+    if (profEl && resume.proficiency_chart) {
+        profEl.innerHTML = resume.proficiency_chart.map(p => `
+            <div class="proficiency-bar">
+                <span class="proficiency-label">${p.skill}</span>
+                <div class="proficiency-track">
+                    <div class="proficiency-fill" style="width: ${p.score}%;"></div>
+                </div>
+                <span class="proficiency-value">${p.level}</span>
+            </div>
+        `).join('');
+    }
+    
+    // Achievements
+    const achieveEl = document.getElementById('previewAchievements');
+    if (achieveEl && resume.learning_achievements) {
+        achieveEl.innerHTML = resume.learning_achievements.map(a => `
+            <div class="achievement-card">
+                <div class="achievement-icon"><i class="${a.icon || 'ri-star-line'}"></i></div>
+                <div class="achievement-text">
+                    <h4>${a.title}</h4>
+                    <p>${a.description}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Certifications
+    const certEl = document.getElementById('previewCertifications');
+    if (certEl && resume.certifications) {
+        certEl.innerHTML = resume.certifications.map(c => `
+            <div class="cert-card">
+                <div class="cert-icon"><i class="ri-medal-line"></i></div>
+                <div class="cert-text">
+                    <h4>${c.name}</h4>
+                    <p>${c.provider} • Relevance: ${c.relevance}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Projects
+    const projEl = document.getElementById('previewProjects');
+    if (projEl && resume.projects) {
+        projEl.innerHTML = resume.projects.map(p => `
+            <div class="project-card">
+                <h4>${p.name}</h4>
+                <p>${p.description}</p>
+            </div>
+        `).join('');
+    }
+    
+    // Stats
+    if (resume.learning_stats) {
+        updateElement('statHours', resume.learning_stats.total_hours || 0);
+        updateElement('statTopics', resume.learning_stats.topics_explored || 0);
+        updateElement('statSessions', resume.learning_stats.sessions_completed || 0);
+    }
+    
+    // Fill form with header data
+    if (header.name) document.getElementById('resumeName').value = header.name;
+    if (header.email) document.getElementById('resumeEmail').value = header.email;
+    if (header.location) document.getElementById('resumeLocation').value = header.location;
+    if (header.github) document.getElementById('resumeGithub').value = header.github;
+    if (header.linkedin) document.getElementById('resumeLinkedin').value = header.linkedin;
+    if (header.portfolio) document.getElementById('resumePortfolio').value = header.portfolio;
+}
+
+async function exportResume(format) {
+    if (!currentResume) {
+        showToast('Generate a resume first', 'error');
+        return;
+    }
+    
+    try {
+        if (format === 'json') {
+            const blob = new Blob([JSON.stringify(currentResume, null, 2)], { type: 'application/json' });
+            downloadBlob(blob, 'supri_resume.json');
+        } else if (format === 'html') {
+            const response = await fetch(`${API_URL}/api/resume/export/html`);
+            const html = await response.text();
+            const blob = new Blob([html], { type: 'text/html' });
+            downloadBlob(blob, 'supri_resume.html');
+        }
+        
+        showToast(`Resume exported as ${format.toUpperCase()}`, 'success');
+    } catch (e) {
+        showToast('Export failed: ' + e.message, 'error');
+    }
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+
+// ==========================================
+// CHROME HISTORY SYNC
+// ==========================================
+
+async function syncBrowsingHistory() {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+        try {
+            const response = await new Promise((resolve) => {
+                chrome.runtime.sendMessage({ type: 'COLLECT_HISTORY' }, resolve);
+            });
+            
+            if (response?.status === 'success') {
+                showToast(`Analyzed ${response.count} history items`, 'success');
+                // Reload recommendations
+                await loadAIRecommendations();
+            }
+        } catch (e) {
+            console.error('History sync failed:', e);
+        }
+    }
+}
 
 
 // ==========================================

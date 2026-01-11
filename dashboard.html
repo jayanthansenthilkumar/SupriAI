@@ -76,9 +76,20 @@
                         <i class="ri-group-line"></i> <span>Community</span>
                     </li>
 
+                    <div class="nav-label">AI Features</div>
+                    <li class="nav-item" data-target="chat-assistant">
+                        <i class="ri-robot-line"></i> <span>AI Assistant</span>
+                    </li>
+                    <li class="nav-item" data-target="resume-builder">
+                        <i class="ri-file-user-line"></i> <span>Resume Builder</span>
+                    </li>
+
                     <div class="nav-label">System</div>
                     <li class="nav-item" data-target="settings">
                         <i class="ri-settings-4-line"></i> <span>Settings</span>
+                    </li>
+                    <li class="nav-item" onclick="window.location.href='api_docs.html'">
+                        <i class="ri-server-line"></i> <span>API Docs</span>
                     </li>
                 </ul>
             </div>
@@ -587,6 +598,247 @@
                                 </div>
                                 <span style="font-weight: 600;">8,100 pts</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: AI CHAT ASSISTANT -->
+                <div id="view-chat-assistant" class="page-view" style="display: none;">
+                    <div style="max-width: 900px; margin: 0 auto;">
+                        <!-- Chat Header -->
+                        <div class="google-card" style="margin-bottom: 20px; padding: 20px;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #1a73e8, #4285f4); display: flex; align-items: center; justify-content: center;">
+                                    <i class="ri-robot-line" style="font-size: 24px; color: white;"></i>
+                                </div>
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.2em;">SupriAI Assistant</h3>
+                                    <p style="margin: 0; color: #5f6368; font-size: 0.9em;">Your personal learning companion</p>
+                                </div>
+                                <button class="icon-btn" style="margin-left: auto;" onclick="clearChatHistory()" title="Clear Chat">
+                                    <i class="ri-delete-bin-line"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Chat Container -->
+                        <div class="google-card" style="height: 450px; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+                            <!-- Chat Messages Area -->
+                            <div id="chatMessages" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+                                <!-- Welcome Message -->
+                                <div class="chat-message ai-message">
+                                    <div class="message-avatar">
+                                        <i class="ri-robot-line"></i>
+                                    </div>
+                                    <div class="message-content">
+                                        <p>👋 Hello! I'm SupriAI, your personal learning assistant.</p>
+                                        <p>I can help you with:</p>
+                                        <ul style="margin: 10px 0; padding-left: 20px;">
+                                            <li>Learning recommendations based on your history</li>
+                                            <li>Study tips and productivity advice</li>
+                                            <li>Career guidance in tech</li>
+                                            <li>Goal setting and tracking</li>
+                                        </ul>
+                                        <p>How can I assist you today?</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Suggestions -->
+                            <div id="chatSuggestions" style="padding: 10px 20px; border-top: 1px solid #e8eaed; display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button class="suggestion-chip" onclick="sendSuggestion('What should I learn next?')">What should I learn next?</button>
+                                <button class="suggestion-chip" onclick="sendSuggestion('Give me study tips')">Study tips</button>
+                                <button class="suggestion-chip" onclick="sendSuggestion('Show my progress')">My progress</button>
+                                <button class="suggestion-chip" onclick="sendSuggestion('Career advice')">Career advice</button>
+                            </div>
+
+                            <!-- Chat Input -->
+                            <div style="padding: 15px 20px; border-top: 1px solid #e8eaed; background: #f8f9fa;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="text" id="chatInput" placeholder="Type your message..." 
+                                        style="flex: 1; padding: 12px 16px; border: 1px solid #e8eaed; border-radius: 24px; font-size: 14px; outline: none;"
+                                        onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                                    <button class="primary-btn" onclick="sendChatMessage()" style="border-radius: 50%; width: 44px; height: 44px; padding: 0;">
+                                        <i class="ri-send-plane-fill"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Recommendations -->
+                        <h3 class="section-title" style="margin-top: 30px;">
+                            <i class="ri-lightbulb-flash-line"></i> AI Recommendations
+                        </h3>
+                        <div id="aiRecommendations" class="analytics-grid">
+                            <div class="google-card" style="text-align: center; padding: 40px;">
+                                <i class="ri-loader-4-line spinning" style="font-size: 32px; color: #1a73e8;"></i>
+                                <p style="margin-top: 10px; color: #5f6368;">Loading recommendations...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: RESUME BUILDER -->
+                <div id="view-resume-builder" class="page-view" style="display: none;">
+                    <div style="max-width: 1000px; margin: 0 auto;">
+                        <!-- Resume Header -->
+                        <div class="google-card" style="margin-bottom: 20px; padding: 20px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #188038, #34a853); display: flex; align-items: center; justify-content: center;">
+                                        <i class="ri-file-user-line" style="font-size: 24px; color: white;"></i>
+                                    </div>
+                                    <div>
+                                        <h3 style="margin: 0; font-size: 1.2em;">AI Resume Builder</h3>
+                                        <p style="margin: 0; color: #5f6368; font-size: 0.9em;">Generate your resume from learning analytics</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="secondary-btn" onclick="generateResume()">
+                                        <i class="ri-refresh-line"></i> Regenerate
+                                    </button>
+                                    <button class="primary-btn" onclick="exportResume('html')">
+                                        <i class="ri-download-line"></i> Export
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Info Form -->
+                        <div class="google-card" style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 15px;">Personal Information</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                                <div class="form-group">
+                                    <label>Full Name</label>
+                                    <input type="text" id="resumeName" placeholder="Your name" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Email</label>
+                                    <input type="email" id="resumeEmail" placeholder="your@email.com" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Location</label>
+                                    <input type="text" id="resumeLocation" placeholder="City, Country" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>GitHub</label>
+                                    <input type="text" id="resumeGithub" placeholder="github.com/username" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>LinkedIn</label>
+                                    <input type="text" id="resumeLinkedin" placeholder="linkedin.com/in/username" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label>Portfolio</label>
+                                    <input type="text" id="resumePortfolio" placeholder="yourportfolio.com" class="form-input">
+                                </div>
+                            </div>
+                            <button class="primary-btn" onclick="generateResume()" style="margin-top: 15px;">
+                                <i class="ri-magic-line"></i> Generate Resume
+                            </button>
+                        </div>
+
+                        <!-- Resume Preview -->
+                        <div class="google-card" id="resumePreview" style="display: none;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h4 style="margin: 0;">Resume Preview</h4>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="text-btn" onclick="exportResume('json')"><i class="ri-code-line"></i> JSON</button>
+                                    <button class="text-btn" onclick="exportResume('html')"><i class="ri-file-code-line"></i> HTML</button>
+                                </div>
+                            </div>
+
+                            <!-- Resume Content -->
+                            <div id="resumeContent" style="background: white; border: 1px solid #e8eaed; border-radius: 8px; padding: 30px;">
+                                <!-- Header -->
+                                <div style="text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #1a73e8;">
+                                    <h2 id="previewName" style="margin: 0; color: #1a73e8; font-size: 1.8em;">Your Name</h2>
+                                    <p id="previewTitle" style="margin: 5px 0; color: #5f6368; font-size: 1.1em;">Professional Title</p>
+                                    <div id="previewContact" style="margin-top: 10px; font-size: 0.9em; color: #5f6368;"></div>
+                                </div>
+
+                                <!-- Summary -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-user-line"></i> Professional Summary
+                                    </h3>
+                                    <p id="previewSummary" style="color: #333; line-height: 1.6;"></p>
+                                </div>
+
+                                <!-- Technical Skills -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-code-s-slash-line"></i> Technical Skills
+                                    </h3>
+                                    <div id="previewTechnicalSkills" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;"></div>
+                                </div>
+
+                                <!-- Tools -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-tools-line"></i> Tools & Technologies
+                                    </h3>
+                                    <div id="previewTools" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;"></div>
+                                </div>
+
+                                <!-- Proficiency Chart -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-bar-chart-box-line"></i> Skill Proficiency
+                                    </h3>
+                                    <div id="previewProficiency" style="margin-top: 15px;"></div>
+                                </div>
+
+                                <!-- Achievements -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-award-line"></i> Learning Achievements
+                                    </h3>
+                                    <div id="previewAchievements" style="margin-top: 10px;"></div>
+                                </div>
+
+                                <!-- Certifications -->
+                                <div style="margin-bottom: 25px;">
+                                    <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-medal-line"></i> Suggested Certifications
+                                    </h3>
+                                    <div id="previewCertifications" style="margin-top: 10px;"></div>
+                                </div>
+
+                                <!-- Projects -->
+                                <div>
+                                    <h3 style="color: #1a73e8; border-bottom: 1px solid #e8eaed; padding-bottom: 5px; font-size: 1.1em;">
+                                        <i class="ri-folder-line"></i> Suggested Projects
+                                    </h3>
+                                    <div id="previewProjects" style="margin-top: 10px;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Learning Stats -->
+                            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-around; text-align: center;">
+                                <div>
+                                    <div id="statHours" style="font-size: 1.5em; font-weight: 700; color: #1a73e8;">0</div>
+                                    <div style="color: #5f6368; font-size: 0.85em;">Learning Hours</div>
+                                </div>
+                                <div>
+                                    <div id="statTopics" style="font-size: 1.5em; font-weight: 700; color: #188038;">0</div>
+                                    <div style="color: #5f6368; font-size: 0.85em;">Topics Explored</div>
+                                </div>
+                                <div>
+                                    <div id="statSessions" style="font-size: 1.5em; font-weight: 700; color: #f9ab00;">0</div>
+                                    <div style="color: #5f6368; font-size: 0.85em;">Sessions Completed</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Resume Message -->
+                        <div class="google-card" id="noResumeMessage" style="text-align: center; padding: 60px;">
+                            <i class="ri-file-user-line" style="font-size: 64px; color: #dadce0;"></i>
+                            <h3 style="margin: 20px 0 10px;">No Resume Generated Yet</h3>
+                            <p style="color: #5f6368; margin-bottom: 20px;">Fill in your personal information and click "Generate Resume" to create your AI-powered resume based on your learning analytics.</p>
+                            <button class="primary-btn" onclick="generateResume()">
+                                <i class="ri-magic-line"></i> Generate My Resume
+                            </button>
                         </div>
                     </div>
                 </div>

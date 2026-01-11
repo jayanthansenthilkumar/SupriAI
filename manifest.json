@@ -10,7 +10,10 @@
         "alarms",
         "activeTab",
         "scripting",
-        "identity"
+        "identity",
+        "history",
+        "notifications",
+        "contextMenus"
     ],
     "host_permissions": [
         "http://localhost:5000/*",
