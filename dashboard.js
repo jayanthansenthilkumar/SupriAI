@@ -64,18 +64,33 @@ async function checkServerStatus() {
 // ==========================================
 
 function setupNavigation() {
-    document.querySelectorAll('.nav-item').forEach(item => {
+    // Select all navigation elements: Sidebar items, App Menu items, User Dropdown items
+    const navElements = document.querySelectorAll('.nav-item, .app-item[data-target], .dropdown-item[data-target]');
+
+    navElements.forEach(item => {
         item.addEventListener('click', () => {
-            // Update active state
-            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
+            const target = item.dataset.target;
+            if (!target) return;
+
+            // Update sidebar active state (visual only)
+            document.querySelectorAll('.nav-item').forEach(nav => {
+                if (nav.dataset.target === target) {
+                    nav.classList.add('active');
+                } else {
+                    nav.classList.remove('active');
+                }
+            });
 
             // Show target view
             document.querySelectorAll('.page-view').forEach(view => view.style.display = 'none');
-            const targetId = `view-${item.dataset.target}`;
+            const targetId = `view-${target}`;
             const targetView = document.getElementById(targetId);
             if (targetView) {
                 targetView.style.display = 'block';
+                // Special handling for chat view to resize if needed
+                if (target === 'chat-assistant') {
+                    scrollToBottom();
+                }
             }
 
             // Update page title
@@ -92,10 +107,19 @@ function setupNavigation() {
                 'chat-assistant': 'AI Assistant',
                 'resume-builder': 'Resume Builder'
             };
-            document.getElementById('pageTitle').innerText = titleMap[item.dataset.target] || 'Dashboard';
+            const pageTitle = document.getElementById('pageTitle');
+            if (pageTitle) pageTitle.innerText = titleMap[target] || 'Dashboard';
+
+            // Hide any open dropdowns
+            document.querySelectorAll('.header-dropdown-wrapper').forEach(wrapper => {
+                wrapper.classList.remove('active');
+                // Force blur to close hover states if any (though CSS hover handles most)
+                const btn = wrapper.querySelector('button');
+                if (btn) btn.blur();
+            });
 
             // Load view-specific data
-            loadViewData(item.dataset.target);
+            loadViewData(target);
         });
     });
 }
@@ -1893,39 +1917,8 @@ async function syncBrowsingHistory() {
 // ==========================================
 
 function setupHeaderDropdowns() {
-    // Handle dropdown item clicks for navigation
-    document.querySelectorAll('.dropdown-item[data-target]').forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const target = this.getAttribute('data-target');
-            
-            // Find and click the corresponding nav item
-            const navItem = document.querySelector(`.nav-item[data-target="${target}"]`);
-            if (navItem) {
-                navItem.click();
-            }
-            
-            // Close the dropdown
-            this.closest('.header-dropdown-wrapper')?.classList.remove('active');
-        });
-    });
+    // Handle dropdown item clicks for navigation is now handled in setupNavigation() to avoid duplicate listeners.
 
-    // Handle apps menu item clicks
-    document.querySelectorAll('.app-item[data-target]').forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const target = this.getAttribute('data-target');
-            
-            // Find and click the corresponding nav item
-            const navItem = document.querySelector(`.nav-item[data-target="${target}"]`);
-            if (navItem) {
-                navItem.click();
-            }
-            
-            // Close the dropdown
-            this.closest('.header-dropdown-wrapper')?.classList.remove('active');
-        });
-    });
 
     // Toggle dropdowns on click (for mobile/touch devices)
     const userBtn = document.querySelector('.usericon-btn');
@@ -1933,11 +1926,11 @@ function setupHeaderDropdowns() {
     const appsBtn = document.querySelector('.apps-menu-btn');
 
     if (userBtn) {
-        userBtn.addEventListener('click', function(e) {
+        userBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             const wrapper = this.closest('.header-dropdown-wrapper');
             wrapper?.classList.toggle('active');
-            
+
             // Close other dropdowns
             document.querySelectorAll('.header-dropdown-wrapper').forEach(w => {
                 if (w !== wrapper) {
@@ -1948,11 +1941,11 @@ function setupHeaderDropdowns() {
     }
 
     if (notificationBtn) {
-        notificationBtn.addEventListener('click', function(e) {
+        notificationBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             const wrapper = this.closest('.header-dropdown-wrapper');
             wrapper?.classList.toggle('active');
-            
+
             // Close other dropdowns
             document.querySelectorAll('.header-dropdown-wrapper').forEach(w => {
                 if (w !== wrapper) {
@@ -1963,11 +1956,11 @@ function setupHeaderDropdowns() {
     }
 
     if (appsBtn) {
-        appsBtn.addEventListener('click', function(e) {
+        appsBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             const wrapper = this.closest('.header-dropdown-wrapper');
             wrapper?.classList.toggle('active');
-            
+
             // Close other dropdowns
             document.querySelectorAll('.header-dropdown-wrapper').forEach(w => {
                 if (w !== wrapper) {
@@ -1978,7 +1971,7 @@ function setupHeaderDropdowns() {
     }
 
     // Close dropdowns when clicking outside
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         if (!e.target.closest('.header-dropdown-wrapper')) {
             document.querySelectorAll('.header-dropdown-wrapper').forEach(wrapper => {
                 wrapper.classList.remove('active');

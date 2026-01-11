@@ -1192,67 +1192,7 @@ input:checked+.slider:before {
    AI CHAT ASSISTANT STYLES
    ========================================== */
 
-.chat-message {
-    display: flex;
-    gap: 12px;
-    max-width: 85%;
-}
-
-.chat-message.ai-message {
-    align-self: flex-start;
-}
-
-.chat-message.user-message {
-    align-self: flex-end;
-    flex-direction: row-reverse;
-}
-
-.message-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #1a73e8, #4285f4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: white;
-    font-size: 16px;
-}
-
-.user-message .message-avatar {
-    background: linear-gradient(135deg, #188038, #34a853);
-}
-
-.message-content {
-    background: #f1f3f4;
-    padding: 12px 16px;
-    border-radius: 18px;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.user-message .message-content {
-    background: #1a73e8;
-    color: white;
-}
-
-.message-content p {
-    margin: 0 0 8px 0;
-}
-
-.message-content p:last-child {
-    margin-bottom: 0;
-}
-
-.message-content ul {
-    margin: 8px 0;
-    padding-left: 20px;
-}
-
-.message-content li {
-    margin-bottom: 4px;
-}
+/* Chat Styles Consolidate to Gemini UI section */
 
 .suggestion-chip {
     background: #e8f0fe;
@@ -1571,12 +1511,15 @@ input:checked+.slider:before {
 .gemini-wrapper {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 80px);
-    /* Adjust based on header height */
-    max-width: 900px;
+    height: 100%;
+    /* Fill parent (page-view) */
+    max-width: 1000px;
+    /* Slightly wider */
     margin: 0 auto;
     position: relative;
     font-family: 'Google Sans', sans-serif;
+    overflow: hidden;
+    /* Prevent double scrollbars */
 }
 
 .gemini-scroll-area {
