@@ -45,18 +45,224 @@ document.addEventListener('DOMContentLoaded', () => {
 // SERVER STATUS CHECK
 // ==========================================
 
+let serverOnline = false;
+
 async function checkServerStatus() {
+    const indicator = document.getElementById('serverIndicator');
+    const btn = document.getElementById('serverStatusBtn');
+
+    if (indicator) {
+        indicator.className = 'server-indicator checking';
+    }
+
     try {
-        const response = await fetch(`${API_URL}/health`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        const response = await fetch(`${API_URL}/health`, {
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
         if (response.ok) {
+            const data = await response.json();
+            serverOnline = true;
+
+            if (indicator) {
+                indicator.className = 'server-indicator online';
+            }
+            if (btn) {
+                btn.setAttribute('data-tooltip', `Server Online - ${data.version || 'v1.0'}`);
+            }
+
             console.log("✅ Backend server connected");
-            showToast("Connected to SupriAI Server", "success");
+
+            // Only show toast on first connect
+            if (!window.serverWasOnline) {
+                showToast("Connected to SupriAI Server", "success");
+                window.serverWasOnline = true;
+            }
+        } else {
+            throw new Error('Server responded with error');
         }
     } catch (e) {
+        serverOnline = false;
+
+        if (indicator) {
+            indicator.className = 'server-indicator offline';
+        }
+        if (btn) {
+            btn.setAttribute('data-tooltip', 'Server Offline - Click to start');
+        }
+
         console.warn("⚠️ Backend server not available");
-        showToast("Server offline. Run 'python app.py' in backend folder", "error");
+
+        // Only show toast if was previously online
+        if (window.serverWasOnline) {
+            showToast("Server connection lost", "error");
+            window.serverWasOnline = false;
+        }
     }
 }
+
+// Show server status modal with instructions
+function showServerStatusModal() {
+    Swal.fire({
+        title: serverOnline ? '🟢 Server Online' : '🔴 Server Offline',
+        html: serverOnline ? `
+            <div style="text-align: left;">
+                <p><strong>Status:</strong> Running</p>
+                <p><strong>URL:</strong> <code>${API_URL}</code></p>
+                <p><strong>Features:</strong> All AI features available</p>
+                <hr style="margin: 16px 0; border: none; border-top: 1px solid #e0e0e0;">
+                <p style="color: #666;">
+                    <a href="${API_URL}/docs" target="_blank" style="color: #1a73e8;">📚 View Documentation</a>
+                </p>
+                <p style="color: #666;">
+                    <a href="${API_URL}/schema" target="_blank" style="color: #1a73e8;">🗄️ View Database Schema</a>
+                </p>
+            </div>
+        ` : `
+            <div style="text-align: left;">
+                <p><strong>Status:</strong> Not Running</p>
+                
+                <button onclick="startBackendServer()" style="
+                    width: 100%;
+                    background: linear-gradient(135deg, #1a73e8, #4285f4);
+                    color: white;
+                    border: none;
+                    padding: 14px 24px;
+                    border-radius: 8px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    margin: 16px 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+                    transition: all 0.2s ease;
+                " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(26, 115, 232, 0.4)'" 
+                   onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(26, 115, 232, 0.3)'">
+                    <i class="ri-play-circle-fill" style="font-size: 20px;"></i>
+                    Start Backend Server
+                </button>
+                
+                <div style="background: #fff3e0; padding: 12px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #ff9800;">
+                    <p style="margin: 0; font-size: 13px; color: #e65100;">
+                        <strong>⚠️ First time?</strong> Run <code>register-protocol.reg</code> once to enable this button.
+                    </p>
+                </div>
+                
+                <details style="margin-top: 12px;">
+                    <summary style="cursor: pointer; color: #666; font-size: 13px;">Manual start instructions</summary>
+                    <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-top: 8px;">
+                        <p style="margin: 0 0 8px 0;"><strong>Option 1:</strong> Double-click <code>backend.bat</code></p>
+                        <p style="margin: 0;"><strong>Option 2:</strong></p>
+                        <code style="display: block; background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 4px; margin-top: 8px; font-size: 12px;">
+                            cd backend<br>
+                            python app.py
+                        </code>
+                    </div>
+                </details>
+            </div>
+        `,
+        icon: serverOnline ? 'success' : 'warning',
+        confirmButtonText: serverOnline ? 'Close' : 'Retry Connection',
+        confirmButtonColor: '#1a73e8',
+        showCancelButton: !serverOnline,
+        cancelButtonText: 'Close',
+        width: 450
+    }).then((result) => {
+        if (result.isConfirmed && !serverOnline) {
+            checkServerStatus();
+        }
+    });
+}
+
+// Start backend server via custom protocol
+function startBackendServer() {
+    // Try to start via custom protocol
+    const startFrame = document.createElement('iframe');
+    startFrame.style.display = 'none';
+    startFrame.src = 'supri://start';
+    document.body.appendChild(startFrame);
+
+    // Remove iframe after a moment
+    setTimeout(() => {
+        document.body.removeChild(startFrame);
+    }, 1000);
+
+    // Show waiting message
+    Swal.fire({
+        title: '🚀 Starting Server...',
+        html: `
+            <div style="text-align: center;">
+                <p style="color: #666;">Please wait while the backend server starts.</p>
+                <p style="color: #666; font-size: 13px;">A command window should open...</p>
+                <div style="margin: 20px 0;">
+                    <div style="width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #1a73e8; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite;"></div>
+                </div>
+                <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+            </div>
+        `,
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        timer: 5000,
+        timerProgressBar: true
+    }).then(() => {
+        // Check if server is now online
+        checkServerStatus();
+
+        setTimeout(() => {
+            if (serverOnline) {
+                Swal.fire({
+                    title: '✅ Server Started!',
+                    text: 'Backend server is now running.',
+                    icon: 'success',
+                    confirmButtonColor: '#1a73e8'
+                });
+            } else {
+                Swal.fire({
+                    title: '⏳ Server Starting...',
+                    html: `
+                        <p>If the command window opened, the server is starting.</p>
+                        <p style="font-size: 13px; color: #666; margin-top: 12px;">
+                            Wait a few seconds and click "Check Again"
+                        </p>
+                    `,
+                    icon: 'info',
+                    confirmButtonText: 'Check Again',
+                    confirmButtonColor: '#1a73e8',
+                    showCancelButton: true,
+                    cancelButtonText: 'Close'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        checkServerStatus();
+                        setTimeout(() => {
+                            if (serverOnline) {
+                                showToast('Server is now online!', 'success');
+                            }
+                        }, 1000);
+                    }
+                });
+            }
+        }, 1500);
+    });
+}
+
+// Override the onclick to show modal
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('serverStatusBtn');
+    if (btn) {
+        btn.onclick = showServerStatusModal;
+    }
+
+    // Check status every 30 seconds
+    setInterval(checkServerStatus, 30000);
+});
 
 
 // ==========================================
