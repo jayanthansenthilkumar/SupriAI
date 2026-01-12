@@ -1,0 +1,16 @@
+Windows Registry Editor Version 5.00
+
+; SupriAI Custom Protocol Handler
+; This allows starting the backend server from the browser
+; Run this file (double-click) to register the protocol
+
+[HKEY_CLASSES_ROOT\supri]
+@="URL:SupriAI Protocol"
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\supri\shell]
+
+[HKEY_CLASSES_ROOT\supri\shell\open]
+
+[HKEY_CLASSES_ROOT\supri\shell\open\command]
+@="cmd /c \"%USERPROFILE%\\OneDrive\\Desktop\\SupriAI\\backend.bat\""

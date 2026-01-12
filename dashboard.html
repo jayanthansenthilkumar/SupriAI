@@ -30,7 +30,6 @@
     <!-- Icons: Remix Icon (CDN for reliability) -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="cursor.css">
     <script src="libs/chart.js"></script>
     <script src="libs/sweetalert2.all.min.js"></script>
 </head>
@@ -102,9 +101,16 @@
                 </div>
 
                 <div class="header-actions">
+                    <!-- Server Status Button -->
+                    <button class="icon-btn server-status-btn" id="serverStatusBtn" title="Backend Server"
+                        data-tooltip="Server Status" onclick="checkServerStatus()">
+                        <i class="ri-server-line"></i>
+                        <span class="server-indicator" id="serverIndicator"></span>
+                    </button>
+
                     <button class="icon-btn" title="Help" data-tooltip="Help Center"><i
                             class="ri-question-line"></i></button>
-                    
+
                     <!-- Notification Dropdown -->
                     <div class="header-dropdown-wrapper">
                         <button class="icon-btn notification-btn" title="Notifications" data-tooltip="Notifications">
@@ -177,7 +183,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- User Icon Dropdown -->
                     <div class="header-dropdown-wrapper">
                         <div class="avatar-sm usericon-btn">S</div>

@@ -21,6 +21,10 @@
     --radius: 8px;
     --shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
     --shadow-hover: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15);
+    
+    /* Custom Cursor SVGs */
+    --cursor-default: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3L10.07 19.97L12.58 12.58L19.97 10.07L3 3Z" fill="black" stroke="white" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>') 2 2;
+    --cursor-pointer: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3L10.07 19.97L12.58 12.58L19.97 10.07L3 3Z" fill="%231a73e8" stroke="white" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>') 2 2;
 }
 
 * {
@@ -52,6 +56,13 @@ body {
     height: 100vh;
     overflow: hidden;
     font-size: 14px;
+    cursor: var(--cursor-default), auto !important;
+}
+
+/* Custom Cursor Styles */
+a, button, [role="button"], input, select, textarea,
+.nav-item, .icon-btn, .google-card, .data-table tr {
+    cursor: var(--cursor-pointer), pointer !important;
 }
 
 /* Layout */
@@ -322,6 +333,55 @@ body {
 
 .notification-btn {
     position: relative;
+}
+
+/* Server Status Button */
+.server-status-btn {
+    position: relative;
+}
+
+.server-indicator {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9e9e9e;
+    border: 2px solid var(--surface-color);
+    transition: all 0.3s ease;
+}
+
+.server-indicator.online {
+    background: #188038;
+    box-shadow: 0 0 8px rgba(24, 128, 56, 0.6);
+    animation: pulse-green 2s infinite;
+}
+
+.server-indicator.offline {
+    background: #d93025;
+    box-shadow: 0 0 8px rgba(217, 48, 37, 0.6);
+    animation: pulse-red 1.5s infinite;
+}
+
+.server-indicator.checking {
+    background: #f9ab00;
+    animation: pulse-yellow 1s infinite;
+}
+
+@keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(24, 128, 56, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(24, 128, 56, 0); }
+}
+
+@keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(217, 48, 37, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(217, 48, 37, 0); }
+}
+
+@keyframes pulse-yellow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 /* Google Apps Menu Grid */
