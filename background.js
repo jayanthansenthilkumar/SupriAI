@@ -1,7 +1,7 @@
 /**
  * SupriAI Background Service Worker
- * Enhanced with retry logic, better error handling, and offline support
  * Handles backend communication, data synchronization, and Chrome history collection
+ * Enhanced with full AI automation capabilities
  */
 
 // ==========================================
@@ -16,8 +16,6 @@ const HISTORY_DAYS_TO_FETCH = 7; // days
 const AI_INSIGHTS_INTERVAL = 60; // minutes - auto-fetch AI insights
 const AUTO_RECOMMEND_INTERVAL = 120; // minutes - auto-fetch recommendations
 const WEEKLY_REPORT_DAY = 0; // Sunday
-const MAX_RETRY_ATTEMPTS = 3;
-const RETRY_DELAY = 2000; // milliseconds
 
 
 // ==========================================
@@ -25,91 +23,6 @@ const RETRY_DELAY = 2000; // milliseconds
 // ==========================================
 
 console.log("🚀 SupriAI Advanced AI Background Service Started");
-
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-
-/**
- * Retry a fetch request with exponential backoff
- */
-async function fetchWithRetry(url, options = {}, maxRetries = MAX_RETRY_ATTEMPTS) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
-            const response = await fetch(url, {
-                ...options,
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-                return response;
-            }
-            
-            // Don't retry on 4xx errors (client errors)
-            if (response.status >= 400 && response.status < 500) {
-                throw new Error(`Client error: ${response.status}`);
-            }
-        } catch (error) {
-            console.log(`Attempt ${attempt}/${maxRetries} failed: ${error.message}`);
-            
-            if (attempt === maxRetries) {
-                throw error;
-            }
-            
-            // Exponential backoff
-            const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
-}
-
-/**
- * Safely store data with size limit checking
- */
-async function safeStorageSet(key, value) {
-    try {
-        // Chrome storage has a quota limit
-        const data = { [key]: value };
-        await chrome.storage.local.set(data);
-        return true;
-    } catch (error) {
-        console.error(`Storage error for ${key}:`, error);
-        
-        // If quota exceeded, try to clear old data
-        if (error.message.includes('QUOTA')) {
-            await cleanupStorage();
-            try {
-                await chrome.storage.local.set({ [key]: value });
-                return true;
-            } catch (e) {
-                console.error('Still unable to store after cleanup:', e);
-                return false;
-            }
-        }
-        return false;
-    }
-}
-
-/**
- * Cleanup old storage data
- */
-async function cleanupStorage() {
-    console.log('Cleaning up storage...');
-    const result = await chrome.storage.local.get(['offlineLogs']);
-    const logs = result.offlineLogs || [];
-    
-    // Keep only last 50 logs
-    if (logs.length > 50) {
-        await chrome.storage.local.set({
-            offlineLogs: logs.slice(-50)
-        });
-    }
-}
 
 // Initialize on install
 chrome.runtime.onInstalled.addListener(() => {

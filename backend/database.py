@@ -1,128 +1,71 @@
 """
 SupriAI - Database Module
 SQLite Database for Learning Analytics System
-Enhanced with connection pooling and transaction management
+Clean, well-structured database operations
 """
 
 import sqlite3
 import json
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
-from contextlib import contextmanager
 import os
-import logging
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Database file path
 DB_PATH = os.path.join(os.path.dirname(__file__), "supri_learning.db")
 
-# Connection pool
-_connection_pool = []
-MAX_POOL_SIZE = 5
-
 
 def get_connection() -> sqlite3.Connection:
-    """Get a database connection from pool or create new"""
-    if _connection_pool:
-        conn = _connection_pool.pop()
-        try:
-            # Test if connection is still valid
-            conn.execute("SELECT 1")
-            return conn
-        except:
-            pass  # Connection is invalid, create new
-    
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10.0)
+    """Create and return a database connection with row factory"""
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")  # Write-Ahead Logging for better concurrency
     return conn
 
 
-def return_connection(conn: sqlite3.Connection):
-    """Return connection to pool"""
-    if len(_connection_pool) < MAX_POOL_SIZE:
-        _connection_pool.append(conn)
-    else:
-        conn.close()
-
-
-@contextmanager
-def get_db():
-    """Context manager for database connections"""
-    conn = get_connection()
-    try:
-        yield conn
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Database error: {e}")
-        raise
-    finally:
-        return_connection(conn)
-
-
 def init_db():
-    """Initialize all database tables with indexes for performance"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        
-        # ==========================================
-        # Users Table
-        # ==========================================
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE,
-                display_name TEXT,
-                avatar_initial TEXT,
-                plan_type TEXT DEFAULT 'free',
-                streak_days INTEGER DEFAULT 0,
-                total_points INTEGER DEFAULT 0,
-                settings TEXT DEFAULT '{}',
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # ==========================================
-        # Learning Logs Table (Activity Tracking)
-        # ==========================================
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS learning_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER DEFAULT 1,
-                url TEXT NOT NULL,
-                title TEXT,
-                topic TEXT,
-                confidence REAL DEFAULT 0,
-                duration REAL DEFAULT 0,
-                max_scroll REAL DEFAULT 0,
-                clicks INTEGER DEFAULT 0,
-                mouse_distance REAL DEFAULT 0,
-                engagement_score REAL DEFAULT 0,
-                content_preview TEXT,
-                timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
-        ''')
-        
-        # Create indexes for better query performance
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_learning_logs_timestamp 
-            ON learning_logs(timestamp DESC)
-        ''')
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_learning_logs_topic 
-            ON learning_logs(topic)
-        ''')
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_learning_logs_user_id 
-            ON learning_logs(user_id)
-        ''')
+    """Initialize all database tables"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # ==========================================
+    # Users Table
+    # ==========================================
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE,
+            display_name TEXT,
+            avatar_initial TEXT,
+            plan_type TEXT DEFAULT 'free',
+            streak_days INTEGER DEFAULT 0,
+            total_points INTEGER DEFAULT 0,
+            settings TEXT DEFAULT '{}',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # ==========================================
+    # Learning Logs Table (Activity Tracking)
+    # ==========================================
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS learning_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT 1,
+            url TEXT NOT NULL,
+            title TEXT,
+            topic TEXT,
+            confidence REAL DEFAULT 0,
+            duration REAL DEFAULT 0,
+            max_scroll REAL DEFAULT 0,
+            clicks INTEGER DEFAULT 0,
+            mouse_distance REAL DEFAULT 0,
+            engagement_score REAL DEFAULT 0,
+            content_preview TEXT,
+            timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
     
     # ==========================================
     # Goals Table

@@ -1,7 +1,7 @@
 /**
  * SupriAI Content Script
  * Advanced AI-powered learning activity tracking
- * Enhanced with performance optimizations and better data collection
+ * Sends data to background script for AI processing and analysis
  */
 
 // ==========================================
@@ -15,9 +15,7 @@ const CONFIG = {
     SCROLL_DEBOUNCE: 100,      // Scroll debounce ms
     IDLE_TIMEOUT: 60000,       // Consider idle after 60 seconds
     USE_AI_LOG: true,          // Use AI-enhanced logging
-    EXTRACT_METADATA: true,    // Extract page metadata for better classification
-    BATCH_SIZE: 5,             // Send logs in batches
-    USE_INTERSECTION_OBSERVER: true  // Use modern APIs for better performance
+    EXTRACT_METADATA: true     // Extract page metadata for better classification
 };
 
 

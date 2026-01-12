@@ -1,15 +1,12 @@
 """
 SupriAI - Flask Backend API
 Complete REST API for Learning Analytics System
-Clean, well-structured API endpoints with enhanced features
+Clean, well-structured API endpoints
 """
 
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from datetime import datetime, timedelta
-from functools import wraps
-from collections import defaultdict
-import time
 import database
 import engine  # Unified AI/ML Engine
 
@@ -22,74 +19,6 @@ CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins for extensio
 
 # Initialize Database
 database.init_db()
-
-# ==========================================
-# RATE LIMITING & CACHING
-# ==========================================
-
-# Simple in-memory rate limiter
-rate_limit_store = defaultdict(list)
-RATE_LIMIT_REQUESTS = 100  # requests per window
-RATE_LIMIT_WINDOW = 60  # seconds
-
-# Simple cache
-cache_store = {}
-CACHE_TTL = 300  # 5 minutes
-
-def rate_limit(max_requests=RATE_LIMIT_REQUESTS, window=RATE_LIMIT_WINDOW):
-    """Rate limiting decorator"""
-    def decorator(f):
-        @wraps(f)
-        def wrapped(*args, **kwargs):
-            # Get client IP
-            client_ip = request.remote_addr or 'unknown'
-            now = time.time()
-            
-            # Clean old requests
-            rate_limit_store[client_ip] = [
-                req_time for req_time in rate_limit_store[client_ip]
-                if now - req_time < window
-            ]
-            
-            # Check rate limit
-            if len(rate_limit_store[client_ip]) >= max_requests:
-                return jsonify({
-                    "status": "error",
-                    "message": "Rate limit exceeded. Please try again later."
-                }), 429
-            
-            # Add current request
-            rate_limit_store[client_ip].append(now)
-            
-            return f(*args, **kwargs)
-        return wrapped
-    return decorator
-
-def cache_response(ttl=CACHE_TTL):
-    """Simple caching decorator"""
-    def decorator(f):
-        @wraps(f)
-        def wrapped(*args, **kwargs):
-            # Create cache key from function name and args
-            cache_key = f"{f.__name__}:{str(request.args)}"
-            now = time.time()
-            
-            # Check cache
-            if cache_key in cache_store:
-                cached_data, cached_time = cache_store[cache_key]
-                if now - cached_time < ttl:
-                    return jsonify(cached_data)
-            
-            # Get fresh data
-            result = f(*args, **kwargs)
-            
-            # Cache if successful
-            if result and hasattr(result, 'get_json'):
-                cache_store[cache_key] = (result.get_json(), now)
-            
-            return result
-        return wrapped
-    return decorator
 
 print("""
 ╔═══════════════════════════════════════════════════════╗
@@ -163,29 +92,13 @@ def api_status():
 # ==========================================
 
 @app.route('/log_activity', methods=['POST'])
-@rate_limit(max_requests=200)  # Higher limit for logging
 def log_activity():
     """Log a learning activity from the extension"""
     try:
         data = request.json
         
-        # Enhanced validation
         if not data:
             return jsonify({"status": "error", "message": "No data provided"}), 400
-        
-        # Validate required fields
-        required_fields = ['url', 'title']
-        missing_fields = [field for field in required_fields if not data.get(field)]
-        if missing_fields:
-            return jsonify({
-                "status": "error",
-                "message": f"Missing required fields: {', '.join(missing_fields)}"
-            }), 400
-        
-        # Sanitize URL
-        url = data.get('url', '')[:2000]  # Limit URL length
-        if not url.startswith(('http://', 'https://')):
-            return jsonify({"status": "error", "message": "Invalid URL"}), 400
         
         # Extract content for classification
         content = data.get('content', '')
@@ -297,13 +210,10 @@ def bulk_log_activity():
 # ==========================================
 
 @app.route('/get_analytics', methods=['GET'])
-@rate_limit()
-@cache_response(ttl=60)  # Cache for 1 minute
 def get_analytics():
     """Get comprehensive analytics for dashboard"""
     try:
         days = request.args.get('days', 7, type=int)
-        days = max(1, min(days, 365))  # Limit between 1-365 days
         logs = database.get_recent_logs(days=days)
         
         # Process analytics

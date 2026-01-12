@@ -1,7 +1,7 @@
 """
 SupriAI - Unified AI Engine
 Complete AI/ML functionality for automated learning companion
-Enhanced with caching and performance optimizations
+Combines all ML, NLP, and AI features in a single module
 """
 
 import re
@@ -12,7 +12,6 @@ import hashlib
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional, Any
-from functools import lru_cache
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -32,10 +31,6 @@ try:
         print("✨ SupriAI Engine Initialized with Gemini AI")
 except ImportError:
     print("⚠️ Google GenAI not available. Using local AI engine.")
-
-# Cache for classification results
-classification_cache = {}
-CACHE_MAX_SIZE = 1000
 
 
 # ==========================================
