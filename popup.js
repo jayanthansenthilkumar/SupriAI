@@ -7,7 +7,7 @@
 // CONFIGURATION
 // ==========================================
 
-const API_URL = "http://localhost:5000";
+// Backend removed
 
 
 // ==========================================
@@ -20,9 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Setup event listeners
     setupEventListeners();
-    
-    // Check server status
-    checkServerStatus();
 });
 
 
@@ -51,7 +48,8 @@ function setupEventListeners() {
             chrome.storage.local.set({ trackingPaused: true });
             
             // Update backend settings
-            await updateTrackingStatus(false);
+            // Backend removed
+
             
         } else {
             // Resume tracking
@@ -63,7 +61,8 @@ function setupEventListeners() {
             chrome.storage.local.set({ trackingPaused: false });
             
             // Update backend settings
-            await updateTrackingStatus(true);
+            // Backend removed
+
         }
     });
 }
@@ -73,42 +72,7 @@ function setupEventListeners() {
 // SERVER STATUS
 // ==========================================
 
-async function checkServerStatus() {
-    try {
-        const response = await fetch(`${API_URL}/health`, { 
-            method: 'GET',
-            signal: AbortSignal.timeout(3000)
-        });
-        
-        if (response.ok) {
-            // Server is running
-            updateServerIndicator(true);
-        } else {
-            updateServerIndicator(false);
-        }
-    } catch (e) {
-        updateServerIndicator(false);
-    }
-}
-
-function updateServerIndicator(isOnline) {
-    const badge = document.getElementById('statusBadge');
-    if (!badge) return;
-    
-    // Check if tracking is paused
-    chrome.storage.local.get(['trackingPaused'], (result) => {
-        if (result.trackingPaused) {
-            badge.innerHTML = `<span class="dot" style="width:6px;height:6px;background:currentColor;border-radius:50%"></span> Paused`;
-            badge.classList.add('paused');
-        } else if (isOnline) {
-            badge.innerHTML = `<span class="dot" style="width:6px;height:6px;background:currentColor;border-radius:50%"></span> Active`;
-            badge.classList.remove('paused');
-        } else {
-            badge.innerHTML = `<span class="dot" style="width:6px;height:6px;background:#f9ab00;border-radius:50%"></span> Offline`;
-            badge.classList.add('paused');
-        }
-    });
-}
+// Server Status Check Removed
 
 
 // ==========================================
@@ -118,20 +82,7 @@ function updateServerIndicator(isOnline) {
 async function loadPopupData() {
     // First, load from local storage (fast)
     loadFromStorage();
-    
-    // Then, try to get fresh data from backend
-    try {
-        const response = await fetch(`${API_URL}/get_analytics?days=1`, {
-            signal: AbortSignal.timeout(3000)
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            updatePopupWithServerData(data);
-        }
-    } catch (e) {
-        console.log("Using cached data (server unavailable)");
-    }
+    // Backend data loading removed
 }
 
 function loadFromStorage() {
@@ -219,15 +170,8 @@ function updatePopupWithServerData(data) {
 // ==========================================
 
 async function updateTrackingStatus(enabled) {
-    try {
-        await fetch(`${API_URL}/api/settings`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tracking_enabled: enabled ? 1 : 0 })
-        });
-    } catch (e) {
-        console.log("Could not update server settings");
-    }
+    // Local update only
+    console.log("Tracking status updated locally:", enabled);
 }
 
 
@@ -312,12 +256,10 @@ function formatMinutes(minutes) {
 
 chrome.runtime.onMessage?.addListener((message, sender, sendResponse) => {
     if (message.type === 'UPDATE_POPUP') {
-        // Refresh popup data when new activity is logged
         loadPopupData();
     }
     
     if (message.type === 'SESSION_UPDATE') {
-        // Update session time in real-time
         if (message.data?.duration) {
             updateElement('sessionTime', formatTime(message.data.duration));
         }
