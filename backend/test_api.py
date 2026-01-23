@@ -9,14 +9,14 @@ from datetime import datetime
 API_URL = "http://127.0.0.1:8000"
 
 def test_health():
-    print("\n🏥 Testing health endpoint...")
+    print("\n[TEST] Testing health endpoint...")
     response = requests.get(f"{API_URL}/api/health")
     print(f"Status: {response.status_code}")
     print(f"Response: {response.json()}")
     return response.status_code == 200
 
 def test_history_bulk():
-    print("\n📊 Testing history bulk ingestion...")
+    print("\n[TEST] Testing history bulk ingestion...")
     payload = {
         "url": "https://github.com/python/cpython",
         "title": "Python GitHub Repository",
@@ -32,7 +32,7 @@ def test_history_bulk():
     return response.status_code == 200
 
 def test_history_list():
-    print("\n📋 Testing history list...")
+    print("\n[TEST] Testing history list...")
     response = requests.get(f"{API_URL}/api/history?limit=5")
     print(f"Status: {response.status_code}")
     data = response.json()
@@ -42,7 +42,7 @@ def test_history_list():
     return response.status_code == 200
 
 def test_analytics_summary():
-    print("\n📈 Testing analytics summary...")
+    print("\n[TEST] Testing analytics summary...")
     response = requests.get(f"{API_URL}/api/analytics/summary")
     print(f"Status: {response.status_code}")
     data = response.json()
@@ -51,7 +51,7 @@ def test_analytics_summary():
     return response.status_code == 200
 
 def test_bookmarks():
-    print("\n🔖 Testing bookmarks...")
+    print("\n[TEST] Testing bookmarks...")
     # Create bookmark
     payload = {"url": "https://python.org", "title": "Python Official Site"}
     response = requests.post(f"{API_URL}/api/bookmarks", json=payload)
@@ -64,7 +64,7 @@ def test_bookmarks():
     return response.status_code == 200
 
 def test_notes():
-    print("\n📝 Testing notes...")
+    print("\n[TEST] Testing notes...")
     # Create note
     payload = {
         "title": "Test Note",
@@ -81,7 +81,7 @@ def test_notes():
     return response.status_code == 200
 
 def test_dataset_export():
-    print("\n💾 Testing dataset export...")
+    print("\n[TEST] Testing dataset export...")
     response = requests.get(f"{API_URL}/api/dataset?limit=10")
     print(f"Status: {response.status_code}")
     data = response.json()
@@ -90,7 +90,7 @@ def test_dataset_export():
 
 def main():
     print("="*60)
-    print("🧪 SupriAI Backend API Test Suite")
+    print("[INFO] SupriAI Backend API Test Suite")
     print("="*60)
     
     tests = [
@@ -109,14 +109,14 @@ def main():
             passed = test_func()
             results.append((name, passed))
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"[ERROR] Error: {e}")
             results.append((name, False))
     
     print("\n" + "="*60)
-    print("📊 Test Results Summary")
+    print("[INFO] Test Results Summary")
     print("="*60)
     for name, passed in results:
-        status = "✅ PASS" if passed else "❌ FAIL"
+        status = "[PASS]" if passed else "[FAIL]"
         print(f"{status} - {name}")
     
     passed_count = sum(1 for _, p in results if p)
@@ -127,6 +127,6 @@ if __name__ == "__main__":
     try:
         main()
     except requests.exceptions.ConnectionError:
-        print("\n❌ Error: Cannot connect to backend!")
+        print("\n[ERROR] Cannot connect to backend!")
         print("Make sure the server is running on http://127.0.0.1:8000")
         print("Start it with: python main.py")
