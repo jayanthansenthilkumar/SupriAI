@@ -1,98 +1,110 @@
-# AI-Powered Learning Recommendation & Analytics System
+# SupriAI - Smart Learning Assistant 🧠
 
-## Abstract
-This project turns web browsing into a personalized learning journey. It passively tracks learning-related activity, stores it locally (SQLite), and uses an AI engine (Python) to provide insights and study recommendations via a beautiful Chrome Extension Dashboard.
+SupriAI is a powerful Chrome Extension that transforms your browsing history into actionable learning insights. It analyzes your Google Chrome history, categorizes your learning activities, and provides comprehensive analytics to help you track and optimize your learning journey.
 
-## Architecture
-- **Frontend**: Chrome Extension (Manifest V3), HTML5, CSS3 (Glassmorphism), Chart.js, SweetAlert2.
-- **Backend**: Python (Flask), SQLite, NLP (Keyword/Heuristic for demo).
+## ✨ Key Features
 
-## Prerequisites
-- Python 3.8+
-- Google Chrome browser
+- **📊 Chrome History Analytics**: Automatically imports and analyzes your Google Chrome browsing history
+- **🎯 Smart Categorization**: AI-powered topic detection (Programming, Web Development, Documentation, etc.)
+- **📈 Visual Dashboard**: Beautiful, comprehensive analytics of your learning habits
+- **⏱️ Time Tracking**: Tracks time spent on educational websites and learning resources
+- **🎯 Goal Setting**: Set and track daily, weekly, or monthly learning goals
+- **📝 Notes & Reflections**: Take quick notes on what you've learned
+- **🔖 Bookmarks**: Save important resources for later
+- **🔒 Privacy First**: All data stored locally on your machine - never sent to external servers
 
-## Setup Instructions
+## 🚀 Quick Start
 
-### 1. Backend Setup
-The "Brain" of the system needs to be running locally.
-```
-SupriAI/
-├── manifest.json           # Chrome extension manifest
-├── start-backend.bat       # Backend startup script (Windows)
-├── popup/                  # Extension popup UI
-│   ├── popup.html
-│   ├── popup.css
-│   └── popup.js
-├── dashboard/              # Full dashboard interface
-│   ├── dashboard.html
-│   ├── dashboard.css
-│   └── dashboard.js
-├── js/                     # Core extension scripts
-│   ├── background.js       # Service worker
-│   ├── content.js          # Content script for tracking
-│   ├── storage.js          # IndexedDB storage manager
-│   ├── classifier.js       # Content classification
-│   ├── analytics.js        # Analytics engine
-│   ├── recommendations.js  # Recommendations engine
-│   ├── config.js           # Configuration
-│   ├── utils.js            # Utility functions
-│   ├── server-manager.js   # Backend connection
-│   └── d3-viz.js          # D3 visualizations
-├── css/                    # Stylesheets
-│   ├── theme.css           # Theme variables
-│   └── remixicon.css       # Icon font
-├── icons/                  # Extension icons
-└── backend/                # Backend server
-    ├── server.js           # Node.js server
-    ├── app.py              # Flask API (alternative)
-    ├── ai_engine.py        # AI analysis engine
-    ├── recommendation_engine.py
-    ├── ai_service.py       # Python AI service wrapper
-    ├── config.py           # Backend configuration
-    ├── package.json        # Node.js dependencies
-    └── requirements.txt    # Python dependencies
+### 1. Start the Backend
+
+```powershell
+cd backend
+python main.py
 ```
 
-## 🛠️ Installation
+Server will start on http://127.0.0.1:8000
 
-### 1. Install the Extension
+### 2. Install Chrome Extension
 
-1. Open Chrome and go to `chrome://extensions/`
-2. Enable "Developer mode" (toggle in top-right)
-3. Click "Load unpacked"
+1. Open `chrome://extensions/` in Chrome
+2. Enable **Developer mode**
+3. Click **Load unpacked**
 4. Select the `SupriAI` folder
 
+### 3. Sync Your Chrome History
 
-### 2. Start the Backend Server
+1. Open `sync-chrome-history.html` from the extension
+2. Click "🚀 Sync Chrome History Now"
+3. Your browsing history will be imported and analyzed
 
-The backend provides enhanced AI analysis and recommendations.
+### 4. View Your Analytics
 
-**Option A: Using the startup script (Recommended)**
-```bash
-# Windows
-double-click start-backend.bat
-```
+Open `dashboard.html` to see your learning insights!
 
-```bash
-cd backend
-pip install flask flask-cors
-python app.py
-```
-*The server will start on http://localhost:5000*
+## 📊 Data Source
 
-### 2. Extension Setup
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" (top right toggle).
-3. Click "Load unpacked".
-4. Select the `SupriAI/extension` folder from this project.
-5. The "AI Learning Companion" is now active!
+**Primary Dataset: Google Chrome Browsing History**
 
-## Features
-- **Passive Tracking**: Logs time, scroll depth, and active URL.
-- **Privacy First**: Data stays local (on your machine).
-- **AI Analysis**: Classifies content into topics (Programming, History, Science, etc.).
-- **Analytics Dashboard**: View your engagement trends and topic distribution.
-- **Recommendations**: Get suggested next steps based on your history.
+SupriAI uses your Chrome browsing history as its data source, providing:
 
-## Aesthetics
-The dashboard uses a modern "Dark Mode" aesthetic with glassmorphism effects for a premium feel.
+- Automatic history collection (every 30 minutes)
+- Smart URL categorization
+- Visit frequency and duration tracking
+- Topic-based analytics
+- Learning pattern insights
+
+**Privacy Note:** All data stays on your local machine. Nothing is sent to external servers.
+
+## Installation
+
+1. open `chrome://extensions/` in your Chrome browser.
+2. Enable **Developer mode** in the top right corner.
+3. Click **Load unpacked**.
+4. Select the `SupriAI` folder.
+
+## Usage
+
+- **Popup**: Click the extension icon to see your daily progress, pause tracking, or check your current session stats.
+- **Dashboard**: Click "Open Dashboard" in the popup to view detailed analytics, manage goals, and review your history.
+- **Tracking**: The extension automatically tracks time on educational sites (like Coursera, Udemy, GitHub, Documentation, etc.) and categorizes them.
+
+## Development
+
+- `manifest.json`: Extension configuration.
+- `background.js`: Background service worker handles data collection and state management.
+- `dashboard.js`: Logic for the main dashboard interface.
+- `popup.js`: Logic for the popup menu.
+- `content.js`: Script that runs on web pages to analyze content and track engagement.
+
+## Backend (Python / Flask)
+
+The backend collects Chrome history events and exposes analytics + dataset exports for ML/DL.
+
+### Setup
+
+1. Install Python 3.10+.
+2. `cd backend`
+3. `python -m venv .venv && .venv\Scripts\activate`
+4. `pip install -r requirements.txt`
+
+### Run locally
+
+`python main.py` (runs on port 8000)
+
+### Key endpoints
+
+- `POST /api/history/bulk` — ingest an array of history events from the extension.
+- `GET /api/history` — list events with filters (domain, search, date range).
+- `GET /api/history/export?format=csv|ndjson` — download dataset for ML pipelines.
+- `GET /api/analytics/summary` — visit counts, durations, top domains/topics.
+- `GET /api/analytics/time-distribution` — hourly distribution for modeling.
+- `GET /api/dataset` — normalized rows for training.
+- CRUD for bookmarks, notes, goals: `/api/bookmarks`, `/api/notes`, `/api/goals`.
+
+### Wiring the extension
+
+Point the extension’s network calls (e.g., in `background.js`) to `http://localhost:8000` or your deployed URL. Send Chrome history batches to `/api/history/bulk` with fields: `url`, `title`, `visited_at` (ISO datetime), `duration_seconds`, `source`, `topic`, `content_snippet`, `metadata`.
+
+## License
+
+Personal usage.

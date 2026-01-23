@@ -10,35 +10,38 @@
 let libraryFilter = 'all';
 let libraryData = [];
 
+const API_URL = window.API_URL || 'http://127.0.0.1:8000';
+
 async function loadLibraryData() {
     try {
-        showLoadingState('libraryHistoryTable');
+        const res = await fetch(`${API_URL}/api/history?limit=200`);
+        const history = await res.json();
+        libraryData = (history || []).map(item => ({
+            id: item.id,
+            topic: item.topic || 'General',
+            title: item.title || item.domain || 'Untitled',
+            url: item.url,
+            duration: item.duration_seconds || 0,
+            engagement_score: Math.min(100, Math.round((item.duration_seconds || 0) / 60 * 5)),
+            timestamp: item.visited_at,
+            is_bookmarked: false
+        }));
 
-        // Load history
-        const historyResponse = await fetch(`${API_URL}/api/history?days=30&limit=100`);
-        const historyData = await historyResponse.json();
+        const bookmarksRes = await fetch(`${API_URL}/api/bookmarks`);
+        const bookmarks = await bookmarksRes.json();
 
-        if (historyData.status === 'success') {
-            libraryData = historyData.history || [];
-            renderLibraryHistory(libraryData);
-            updateLibraryStats(libraryData);
-        }
-
-        // Load bookmarks
-        const bookmarksResponse = await fetch(`${API_URL}/api/bookmarks`);
-        const bookmarksData = await bookmarksResponse.json();
-
-        if (bookmarksData.status === 'success') {
-            renderBookmarks(bookmarksData.bookmarks || []);
-        }
-
+        renderLibraryHistory(libraryData);
+        renderBookmarks(bookmarks || []);
+        updateLibraryStats(libraryData, bookmarks || []);
     } catch (e) {
-        console.error("Failed to load library:", e);
-        showError('libraryHistoryTable', 'Failed to load library data');
+        console.error("Failed to load library data", e);
+        renderLibraryHistory([]);
+        renderBookmarks([]);
+        updateLibraryStats([]);
     }
 }
 
-function updateLibraryStats(history) {
+function updateLibraryStats(history, bookmarks = []) {
     // Update stats if elements exist
     const totalEl = document.getElementById('libraryTotalItems');
     const bookmarksEl = document.getElementById('libraryBookmarks');
@@ -49,12 +52,7 @@ function updateLibraryStats(history) {
 
     // Count bookmarks
     if (bookmarksEl) {
-        fetch(`${API_URL}/api/bookmarks`)
-            .then(r => r.json())
-            .then(data => {
-                const count = data.bookmarks?.length || 0;
-                bookmarksEl.textContent = count;
-            });
+        bookmarksEl.textContent = (bookmarks || []).length;
     }
 
     // This week count
@@ -202,26 +200,20 @@ function searchLibrary() {
 }
 
 async function bookmarkHistoryItem(historyId) {
+    const item = libraryData.find(h => h.id === historyId);
+    if (!item) {
+        showNotification('History item not found', 'error');
+        return;
+    }
     try {
-        const item = libraryData.find(h => h.id === historyId);
-        if (!item) return;
-
-        const response = await fetch(`${API_URL}/api/bookmarks`, {
+        const res = await fetch(`${API_URL}/api/bookmarks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                url: item.url,
-                title: item.title,
-                topic: item.topic,
-                notes: ''
-            })
+            body: JSON.stringify({ url: item.url, title: item.title })
         });
-
-        const data = await response.json();
-        if (data.status === 'success') {
-            showNotification('Bookmarked successfully!', 'success');
-            loadLibraryData();
-        }
+        if (!res.ok) throw new Error('Failed');
+        showNotification('Bookmarked!', 'success');
+        loadLibraryData();
     } catch (e) {
         showNotification('Failed to bookmark', 'error');
     }
@@ -229,68 +221,36 @@ async function bookmarkHistoryItem(historyId) {
 
 async function deleteBookmark(bookmarkId) {
     if (!confirm('Delete this bookmark?')) return;
-
     try {
-        const response = await fetch(`${API_URL}/api/bookmarks/${bookmarkId}`, {
-            method: 'DELETE'
-        });
-
-        const data = await response.json();
-        if (data.status === 'success') {
-            showNotification('Bookmark deleted', 'success');
-            loadLibraryData();
-        }
+        const res = await fetch(`${API_URL}/api/bookmarks/${bookmarkId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed');
+        showNotification('Bookmark deleted', 'success');
+        loadLibraryData();
     } catch (e) {
-        showNotification('Failed to delete', 'error');
+        showNotification('Failed to delete bookmark', 'error');
     }
 }
 
 function showAddBookmarkDialog() {
-    Swal.fire({
-        title: 'Add Bookmark',
-        html: `
-            <input id="bookmark-url" class="swal2-input" placeholder="URL">
-            <input id="bookmark-title" class="swal2-input" placeholder="Title">
-            <select id="bookmark-topic" class="swal2-input">
-                <option value="">Select Topic</option>
-                <option value="Programming">Programming</option>
-                <option value="AI/ML">AI/ML</option>
-                <option value="Web Development">Web Development</option>
-                <option value="Data Science">Data Science</option>
-                <option value="Design">Design</option>
-                <option value="Other">Other</option>
-            </select>
-            <textarea id="bookmark-notes" class="swal2-textarea" placeholder="Notes (optional)"></textarea>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Save',
-        preConfirm: () => {
-            return {
-                url: document.getElementById('bookmark-url').value,
-                title: document.getElementById('bookmark-title').value,
-                topic: document.getElementById('bookmark-topic').value,
-                notes: document.getElementById('bookmark-notes').value
-            };
-        }
-    }).then(async (result) => {
-        if (result.isConfirmed && result.value.url) {
-            try {
-                const response = await fetch(`${API_URL}/api/bookmarks`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(result.value)
-                });
+    const url = prompt('Enter URL to bookmark');
+    if (!url) return;
+    const title = prompt('Optional title');
+    bookmarkFromDialog(url, title);
+}
 
-                const data = await response.json();
-                if (data.status === 'success') {
-                    showNotification('Bookmark added!', 'success');
-                    loadLibraryData();
-                }
-            } catch (e) {
-                showNotification('Failed to add bookmark', 'error');
-            }
-        }
-    });
+async function bookmarkFromDialog(url, title) {
+    try {
+        const res = await fetch(`${API_URL}/api/bookmarks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, title })
+        });
+        if (!res.ok) throw new Error('Failed');
+        showNotification('Bookmark saved', 'success');
+        loadLibraryData();
+    } catch (e) {
+        showNotification('Failed to save bookmark', 'error');
+    }
 }
 
 function exportLibraryCSV() {
@@ -323,17 +283,15 @@ let notesData = [];
 
 async function loadNotesData() {
     try {
-        const response = await fetch(`${API_URL}/api/notes`);
-        const data = await response.json();
-
-        if (data.status === 'success') {
-            notesData = data.notes || [];
-            renderNotes(notesData);
-        }
+        const res = await fetch(`${API_URL}/api/notes`);
+        notesData = await res.json();
+        renderNotes(notesData);
     } catch (e) {
-        console.error("Failed to load notes:", e);
+        console.error('Failed to load notes', e);
+        notesData = [];
+        renderNotes([]);
     }
-}// Try alternate container if notesGrid doesn't exist
+}
 function renderNotes(notes) {
     const grid = document.getElementById('notesGrid');
 
@@ -392,34 +350,25 @@ function renderNotes(notes) {
 }
 
 async function saveNote() {
-    const title = document.getElementById('noteTitle').value.trim();
-    const category = document.getElementById('noteCategory').value;
-    const content = document.getElementById('noteContent').value.trim();
-    const tags = document.getElementById('noteTags').value.trim();
+    const title = document.getElementById('noteTitle')?.value || '';
+    const content = document.getElementById('noteContent')?.value || '';
+    const tags = document.getElementById('noteTags')?.value || '';
 
-    if (!content) {
-        showNotification('Please enter note content', 'error');
+    if (!title || !content) {
+        showNotification('Title and content are required', 'error');
         return;
     }
 
     try {
-        const response = await fetch(`${API_URL}/api/notes`, {
+        const res = await fetch(`${API_URL}/api/notes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title: title || 'Untitled Note',
-                category: category,
-                content: content,
-                tags: tags
-            })
+            body: JSON.stringify({ title, content, tags })
         });
-
-        const data = await response.json();
-        if (data.status === 'success') {
-            showNotification('Note saved successfully!', 'success');
-            clearNoteForm();
-            loadNotesData();
-        }
+        if (!res.ok) throw new Error('Failed');
+        clearNoteForm();
+        await loadNotesData();
+        showNotification('Note saved', 'success');
     } catch (e) {
         showNotification('Failed to save note', 'error');
     }
@@ -436,65 +385,39 @@ async function editNote(noteId) {
     const note = notesData.find(n => n.id === noteId);
     if (!note) return;
 
-    Swal.fire({
-        title: 'Edit Note',
-        html: `
-            <input id="edit-title" class="swal2-input" value="${note.title || ''}" placeholder="Title">
-            <select id="edit-category" class="swal2-input">
-                <option value="reflection" ${note.category === 'reflection' ? 'selected' : ''}>Reflection</option>
-                <option value="tip" ${note.category === 'tip' ? 'selected' : ''}>Tip/Trick</option>
-                <option value="problem" ${note.category === 'problem' ? 'selected' : ''}>Problem Solved</option>
-                <option value="resource" ${note.category === 'resource' ? 'selected' : ''}>Resource Note</option>
-                <option value="idea" ${note.category === 'idea' ? 'selected' : ''}>Idea</option>
-            </select>
-            <textarea id="edit-content" class="swal2-textarea" placeholder="Content">${note.content || ''}</textarea>
-            <input id="edit-tags" class="swal2-input" value="${note.tags || ''}" placeholder="Tags">
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Update',
-        width: 600,
-        preConfirm: () => {
-            return {
-                title: document.getElementById('edit-title').value,
-                category: document.getElementById('edit-category').value,
-                content: document.getElementById('edit-content').value,
-                tags: document.getElementById('edit-tags').value
-            };
-        }
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            try {
-                const response = await fetch(`${API_URL}/api/notes/${noteId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(result.value)
-                });
+    const newTitle = prompt('Edit title', note.title) || note.title;
+    const newContent = prompt('Edit content', note.content) || note.content;
+    const newTags = prompt('Tags (comma separated)', note.tags || '') || note.tags;
 
-                const data = await response.json();
-                if (data.status === 'success') {
-                    showNotification('Note updated!', 'success');
-                    loadNotesData();
-                }
-            } catch (e) {
-                showNotification('Failed to update note', 'error');
-            }
-        }
-    });
+    try {
+        const res = await fetch(`${API_URL}/api/notes/${noteId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: newTitle, content: newContent, tags: newTags })
+        });
+        if (!res.ok) throw new Error('Failed');
+        await loadNotesData();
+        showNotification('Note updated', 'success');
+    } catch (e) {
+        showNotification('Failed to update note', 'error');
+    }
 }
 
 async function deleteNote(noteId) {
     if (!confirm('Delete this note?')) return;
-
     try {
-        const response = await fetch(`${API_URL}/api/notes/${noteId}`, {
-            method: 'DELETE'
-        });
-
-        const data = await response.json();
-        if (data.status === 'success') {
-            showNotification('Note deleted', 'success');
-            loadNotesData();
-        }
+        const res = await fetch(`${API_URL}/api/notes/${noteId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed');
+        await loadNotesData();
+        showNotification('Note deleted', 'success');
+    } catch (e) {
+        showNotification('Failed to delete note', 'error');
+    }
+    try {
+        const res = await fetch(`${API_URL}/api/notes/${noteId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed');
+        await loadNotesData();
+        showNotification('Note deleted', 'success');
     } catch (e) {
         showNotification('Failed to delete note', 'error');
     }
@@ -537,63 +460,20 @@ function filterNotes() {
 let goalsData = { active: [], completed: [] };
 
 async function loadGoalsData() {
-    try {
-        // Load active goals
-        const response = await fetch(`${API_URL}/api/goals?active=true`);
-        const data = await response.json();
-
-        if (data.status === 'success') {
-            goalsData.active = data.goals || [];
-            renderActiveGoals(goalsData.active);
-        }
-
-        // Load completed goals
-        const completedResponse = await fetch(`${API_URL}/api/goals?active=false`);
-        const completedData = await completedResponse.json();
-
-        if (completedData.status === 'success') {
-            goalsData.completed = completedData.goals || [];
-            renderCompletedGoals(goalsData.completed);
-        }
-
-        // Load achievements
-        const achievementsResponse = await fetch(`${API_URL}/api/achievements`);
-        const achievementsData = await achievementsResponse.json();
-
-        if (achievementsData.status === 'success') {
-            renderAchievements(achievementsData.achievements || []);
-        }
-
-        // Load user stats
-        loadGoalStats();
-
-    } catch (e) {
-        console.error("Failed to load goals:", e);
-    }
+    goalsData = { active: [], completed: [] };
+    renderActiveGoals([]);
+    renderCompletedGoals([]);
+    renderAchievements([]);
+    loadGoalStats();
 }
 
 async function loadGoalStats() {
-    try {
-        const userResponse = await fetch(`${API_URL}/api/user`);
-        const userData = await userResponse.json();
-
-        if (userData.status === 'success' && userData.user) {
-            document.getElementById('streakDays').textContent = userData.user.streak_days || 0;
-            document.getElementById('totalPoints').textContent = userData.user.total_points || 0;
-        }
-
-        // Load this week stats
-        const statsResponse = await fetch(`${API_URL}/api/stats/week`);
-        const statsData = await statsResponse.json();
-
-        if (statsData.status === 'success') {
-            document.getElementById('weekGoalsCompleted').textContent = statsData.goals_completed || 0;
-            document.getElementById('weekLearningHours').textContent = (statsData.total_minutes / 60).toFixed(1) + 'h';
-            document.getElementById('weekSessions').textContent = statsData.sessions || 0;
-        }
-    } catch (e) {
-        console.error("Failed to load goal stats:", e);
-    }
+    // Local stats only
+    document.getElementById('streakDays').textContent = 0;
+    document.getElementById('totalPoints').textContent = 0;
+    document.getElementById('weekGoalsCompleted').textContent = 0;
+    document.getElementById('weekLearningHours').textContent = '0h';
+    document.getElementById('weekSessions').textContent = 0;
 }
 
 function renderActiveGoals(goals) {
@@ -704,98 +584,11 @@ function renderAchievements(achievements) {
 }
 
 function showCreateGoalDialog() {
-    Swal.fire({
-        title: 'Create New Goal',
-        html: `
-            <input id="goal-title" class="swal2-input" placeholder="Goal title">
-            <select id="goal-frequency" class="swal2-input">
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="custom">Custom</option>
-            </select>
-            <input id="goal-target" class="swal2-input" type="number" placeholder="Target value" min="1">
-            <input id="goal-unit" class="swal2-input" placeholder="Unit (e.g., minutes, articles, sessions)">
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Create',
-        preConfirm: () => {
-            return {
-                title: document.getElementById('goal-title').value,
-                frequency: document.getElementById('goal-frequency').value,
-                target_value: parseInt(document.getElementById('goal-target').value),
-                unit: document.getElementById('goal-unit').value
-            };
-        }
-    }).then(async (result) => {
-        if (result.isConfirmed && result.value.title && result.value.target_value) {
-            try {
-                const response = await fetch(`${API_URL}/api/goals`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...result.value,
-                        current_value: 0,
-                        is_active: true
-                    })
-                });
-
-                const data = await response.json();
-                if (data.status === 'success') {
-                    showNotification('Goal created!', 'success');
-                    loadGoalsData();
-                }
-            } catch (e) {
-                showNotification('Failed to create goal', 'error');
-            }
-        }
-    });
+    showNotification('Goal creation disabled (No Backend)', 'error');
 }
 
 async function updateGoalProgress(goalId) {
-    const goal = goalsData.active.find(g => g.id === goalId);
-    if (!goal) return;
-
-    Swal.fire({
-        title: 'Update Progress',
-        text: `Current: ${goal.current_value} / ${goal.target_value} ${goal.unit || ''}`,
-        input: 'number',
-        inputLabel: 'Add to progress',
-        inputPlaceholder: 'Enter amount',
-        showCancelButton: true
-    }).then(async (result) => {
-        if (result.isConfirmed && result.value) {
-            try {
-                const newValue = goal.current_value + parseInt(result.value);
-                const response = await fetch(`${API_URL}/api/goals/${goalId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        current_value: newValue,
-                        is_active: newValue < goal.target_value
-                    })
-                });
-
-                const data = await response.json();
-                if (data.status === 'success') {
-                    showNotification('Progress updated!', 'success');
-                    loadGoalsData();
-
-                    // Check if goal completed
-                    if (newValue >= goal.target_value) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Goal Completed!',
-                            text: `Congratulations! You achieved: ${goal.title}`,
-                            confirmButtonText: 'Awesome!'
-                        });
-                    }
-                }
-            } catch (e) {
-                showNotification('Failed to update progress', 'error');
-            }
-        }
-    });
+    showNotification('Progress update disabled', 'error');
 }
 
 async function deleteGoal(goalId) {

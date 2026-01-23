@@ -8,7 +8,7 @@
 // CONFIGURATION
 // ==========================================
 
-const SERVER_URL = "http://localhost:5000";
+const API_URL = 'http://127.0.0.1:8000';
 const SYNC_INTERVAL = 5; // minutes
 const MAX_OFFLINE_LOGS = 100;
 const HISTORY_SYNC_INTERVAL = 30; // minutes
@@ -216,52 +216,48 @@ async function handleLogActivity(data) {
         return { status: 'skipped', reason: 'tracking_paused' };
     }
 
-    // Try to send to backend
     try {
-        const result = await sendDataToBackend(data);
+        await sendDataToBackend(data);
+        await updateLocalStorage(data, { topic: data.topic || 'General' });
 
-        // Update local storage with latest data
-        await updateLocalStorage(data, result);
+        try { chrome.runtime.sendMessage({ type: 'UPDATE_POPUP' }); } catch (e) {}
 
-        // Notify popup to update
-        try {
-            chrome.runtime.sendMessage({ type: 'UPDATE_POPUP' });
-        } catch (e) {
-            // Popup might not be open
-        }
-
-        return result;
-
+        return { status: 'success', message: 'Synced to backend' };
     } catch (error) {
-        console.warn("Backend not reachable. Storing locally for retry.");
+        console.warn("Backend unavailable, queuing log:", error.message);
         await storeLocally(data);
-        return { status: 'queued', message: 'Stored for offline sync' };
+        return { status: 'queued', message: 'Stored locally until online' };
     }
 }
 
 async function sendDataToBackend(data) {
-    const response = await fetch(`${SERVER_URL}/log_activity`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data),
-        signal: AbortSignal.timeout(10000) // 10 second timeout
+    const payloads = Array.isArray(data) ? data.map(mapLogToPayload) : [mapLogToPayload(data)];
+
+    const response = await fetch(`${API_URL}/api/history/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloads)
     });
 
     if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+        const text = await response.text();
+        throw new Error(`Backend error: ${response.status} ${text}`);
     }
 
-    const result = await response.json();
-    console.log("✅ Data logged successfully:", result);
+    return response.json();
+}
 
-    // Store recommendation if provided
-    if (result.recommendation) {
-        chrome.storage.local.set({ latestRecommendation: result.recommendation });
-    }
-
-    return result;
+function mapLogToPayload(log) {
+    return {
+        url: log.url,
+        title: log.title,
+        visited_at: log.timestamp || new Date().toISOString(),
+        duration_seconds: Math.round(log.duration || 0),
+        source: log.trigger || log.source || 'content_script',
+        topic: (log.metadata && log.metadata.topic) || log.topic || 'General',
+        content_snippet: log.content ? String(log.content).slice(0, 2000) : undefined,
+        metadata: log.metadata || {}
+    };
 }
 
 
@@ -323,39 +319,17 @@ async function syncOfflineLogs() {
     const logs = storage.offlineLogs || [];
 
     if (logs.length === 0) {
-        console.log("No offline logs to sync");
         return { status: 'success', synced: 0 };
     }
 
-    console.log(`🔄 Syncing ${logs.length} offline logs...`);
-
     try {
-        // Try bulk sync first
-        const response = await fetch(`${SERVER_URL}/bulk_log`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(logs),
-            signal: AbortSignal.timeout(30000) // 30 second timeout for bulk
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log(`✅ Synced ${result.synced_count || logs.length} offline logs`);
-
-            // Clear the queue
-            await chrome.storage.local.set({
-                offlineLogs: [],
-                lastSyncTime: Date.now()
-            });
-
-            return { status: 'success', synced: result.synced_count || logs.length };
-        } else {
-            throw new Error(`Bulk sync failed: ${response.status}`);
-        }
-
-    } catch (e) {
-        console.warn("Bulk sync failed, trying individual sync...");
-        return await syncLogsIndividually(logs);
+        await sendDataToBackend(logs);
+        await chrome.storage.local.set({ offlineLogs: [], lastSyncTime: Date.now() });
+        console.log(`✅ Synced ${logs.length} queued logs`);
+        return { status: 'success', synced: logs.length };
+    } catch (error) {
+        console.warn("Sync failed, will retry later", error.message);
+        return { status: 'error', synced: 0 };
     }
 }
 
@@ -464,84 +438,46 @@ async function collectAndSendBrowsingHistory() {
     const storage = await chrome.storage.local.get(['historyCollectionEnabled', 'lastHistorySync']);
 
     if (!storage.historyCollectionEnabled) {
-        console.log("History collection disabled");
         return { status: 'disabled' };
     }
 
     console.log("🔍 Collecting Chrome browsing history...");
-
     const endTime = Date.now();
-    const startTime = storage.lastHistorySync || (endTime - (HISTORY_DAYS_TO_FETCH * 24 * 60 * 60 * 1000));
+    const startTime = endTime - HISTORY_DAYS_TO_FETCH * 24 * 60 * 60 * 1000;
 
-    try {
-        // Search Chrome history
-        const historyItems = await chrome.history.search({
-            text: '',
-            startTime: startTime,
-            endTime: endTime,
-            maxResults: 500
-        });
+    const historyItems = await new Promise((resolve) => {
+        chrome.history.search({ text: '', startTime, maxResults: 500 }, (results) => resolve(results || []));
+    });
 
-        if (historyItems.length === 0) {
-            console.log("No new history items found");
-            return { status: 'success', count: 0 };
-        }
+    const payloads = historyItems.map(item => ({
+        url: item.url,
+        title: item.title,
+        visited_at: new Date(item.lastVisitTime || Date.now()).toISOString(),
+        duration_seconds: 0,
+        source: 'chrome_history',
+        topic: 'General',
+        metadata: { transition: item.transition }
+    }));
 
-        console.log(`📚 Found ${historyItems.length} history items`);
-
-        // Process and categorize history items
-        const processedHistory = historyItems.map(item => ({
-            url: item.url,
-            title: item.title || 'Untitled',
-            visitCount: item.visitCount || 1,
-            lastVisitTime: item.lastVisitTime,
-            domain: extractDomain(item.url)
-        })).filter(item => {
-            // Filter out extension pages, chrome internal pages
-            return !item.url.startsWith('chrome://') &&
-                !item.url.startsWith('chrome-extension://') &&
-                !item.url.startsWith('about:');
-        });
-
-        // Send to backend for ML processing
-        const response = await fetch(`${SERVER_URL}/api/history/analyze`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                history: processedHistory,
-                startTime: startTime,
-                endTime: endTime
-            }),
-            signal: AbortSignal.timeout(30000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log("✅ History analyzed successfully:", result);
-
-            // Update last sync time
-            await chrome.storage.local.set({
-                lastHistorySync: endTime,
-                historyAnalysis: result
+    if (payloads.length > 0) {
+        // Send in a single batch
+        try {
+            await sendDataToBackend(payloads);
+            console.log(`✅ Sent ${payloads.length} history items to backend`);
+        } catch (e) {
+            console.warn("Failed to sync history, queuing", e.message);
+            await storeLocally({
+                url: 'chrome-history-batch',
+                title: 'history_batch',
+                timestamp: new Date().toISOString(),
+                duration: 0,
+                metadata: { batch: payloads }
             });
-
-            // Store recommendations
-            if (result.recommendations) {
-                await chrome.storage.local.set({
-                    aiRecommendations: result.recommendations,
-                    recommendationsUpdatedAt: Date.now()
-                });
-            }
-
-            return { status: 'success', count: processedHistory.length, analysis: result };
-        } else {
-            throw new Error(`Server error: ${response.status}`);
         }
-
-    } catch (error) {
-        console.error("History collection failed:", error);
-        return { status: 'error', message: error.message };
     }
+
+    await chrome.storage.local.set({ lastHistorySync: endTime });
+    return { status: 'success', count: payloads.length };
 }
 
 function extractDomain(url) {
@@ -559,47 +495,11 @@ function extractDomain(url) {
 // ==========================================
 
 async function sendChatMessage(data) {
-    console.log("💬 Sending chat message to AI...");
-
-    try {
-        // Get user context for personalized responses
-        const storage = await chrome.storage.local.get([
-            'historyAnalysis',
-            'aiRecommendations',
-            'todayTotalTime'
-        ]);
-
-        const response = await fetch(`${SERVER_URL}/api/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message: data.message,
-                context: {
-                    historyAnalysis: storage.historyAnalysis || null,
-                    recommendations: storage.aiRecommendations || null,
-                    todayLearningTime: storage.todayTotalTime || 0,
-                    conversationHistory: data.history || []
-                }
-            }),
-            signal: AbortSignal.timeout(30000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log("✅ AI response received");
-            return result;
-        } else {
-            throw new Error(`Chat API error: ${response.status}`);
-        }
-
-    } catch (error) {
-        console.error("Chat failed:", error);
-        return {
-            status: 'error',
-            message: error.message,
-            response: "I'm sorry, I couldn't process your message. Please check your connection and try again."
-        };
-    }
+    console.log("💬 Sending chat message (Local Response - Backend Removed)");
+    return {
+        status: 'success',
+        response: "I'm sorry, I cannot process your message because the AI backend server has been removed."
+    };
 }
 
 
@@ -608,44 +508,8 @@ async function sendChatMessage(data) {
 // ==========================================
 
 async function getAIRecommendations() {
-    console.log("🎯 Fetching AI recommendations...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/recommendations`, {
-            method: 'GET',
-            signal: AbortSignal.timeout(15000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            // Cache recommendations locally
-            await chrome.storage.local.set({
-                aiRecommendations: result.recommendations,
-                recommendationsUpdatedAt: Date.now()
-            });
-
-            console.log("✅ Recommendations received:", result);
-            return result;
-        } else {
-            throw new Error(`Recommendations API error: ${response.status}`);
-        }
-
-    } catch (error) {
-        console.error("Failed to get recommendations:", error);
-
-        // Return cached recommendations if available
-        const storage = await chrome.storage.local.get(['aiRecommendations']);
-        if (storage.aiRecommendations) {
-            return {
-                status: 'cached',
-                recommendations: storage.aiRecommendations,
-                message: 'Using cached recommendations'
-            };
-        }
-
-        return { status: 'error', message: error.message };
-    }
+    console.log("Recommendations disabled (No Backend)");
+    return { status: 'success', recommendations: [] };
 }
 
 
@@ -654,35 +518,8 @@ async function getAIRecommendations() {
 // ==========================================
 
 async function generateResume() {
-    console.log("📄 Generating resume from learning analytics...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/resume/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}),
-            signal: AbortSignal.timeout(30000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log("✅ Resume generated successfully");
-
-            // Cache the resume
-            await chrome.storage.local.set({
-                generatedResume: result.resume,
-                resumeGeneratedAt: Date.now()
-            });
-
-            return result;
-        } else {
-            throw new Error(`Resume API error: ${response.status}`);
-        }
-
-    } catch (error) {
-        console.error("Resume generation failed:", error);
-        return { status: 'error', message: error.message };
-    }
+    console.log("Resume generation disabled");
+    return { status: 'error', message: 'Backend removed' };
 }
 
 
@@ -692,15 +529,9 @@ async function generateResume() {
 
 async function getServerStatus() {
     try {
-        const response = await fetch(`${SERVER_URL}/health`, {
-            signal: AbortSignal.timeout(3000)
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            return { status: 'online', ...data };
-        }
-        return { status: 'error' };
+        const res = await fetch(`${API_URL}/api/health`);
+        if (!res.ok) throw new Error('offline');
+        return { status: 'online' };
     } catch (e) {
         return { status: 'offline' };
     }
@@ -789,53 +620,22 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
     if (info.menuItemId === "supriBookmark") {
-        const url = info.linkUrl || info.pageUrl || tab.url;
-        const title = tab.title || 'Untitled';
-
-        try {
-            const response = await fetch(`${SERVER_URL}/api/bookmarks`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    url: url,
-                    title: title,
-                    resource_type: 'article'
-                })
-            });
-
-            if (response.ok) {
-                // Show notification
-                chrome.notifications?.create({
-                    type: 'basic',
-                    iconUrl: 'libs/icon48.png',
-                    title: 'SupriAI',
-                    message: 'Page saved to your library!'
-                });
-            }
-        } catch (e) {
-            console.error("Failed to save bookmark:", e);
-        }
+        showNotification("SupriAI", "Bookmarks are disabled (Backend Removed)");
     }
 
     if (info.menuItemId === "supriAnalyze") {
-        const content = info.selectionText || '';
-        const url = info.pageUrl || tab.url;
-        const title = tab.title || 'Untitled';
-
-        try {
-            const analysis = await analyzeContent({ text: content, title, url });
-
-            chrome.notifications?.create({
-                type: 'basic',
-                iconUrl: 'libs/icon48.png',
-                title: `SupriAI: ${analysis.analysis?.topic || 'Analyzed'}`,
-                message: `Learning value: ${analysis.analysis?.learning_value || 'N/A'}% | ${analysis.analysis?.content_type || 'content'}`
-            });
-        } catch (e) {
-            console.error("Failed to analyze:", e);
-        }
+        showNotification("SupriAI", "AI Analysis unavailable (Backend Removed)");
     }
 });
+
+function showNotification(title, message) {
+     chrome.notifications?.create({
+        type: 'basic',
+        iconUrl: 'libs/icon48.png',
+        title: title,
+        message: message
+    });
+}
 
 
 // ==========================================
@@ -843,307 +643,44 @@ chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
 // ==========================================
 
 async function handleAutoLogWithAI(data) {
-    console.log("🤖 Auto-logging with AI analysis...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/auto-log`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            signal: AbortSignal.timeout(15000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log("✅ AI Auto-log successful:", result);
-
-            // Cache the AI analysis
-            await chrome.storage.local.set({
-                lastAIAnalysis: result.ai_analysis,
-                lastRecommendation: result.recommendation,
-                lastLogTime: Date.now()
-            });
-
-            // Show smart notification if high learning value
-            if (result.ai_analysis?.learning_value > 70) {
-                chrome.notifications?.create({
-                    type: 'basic',
-                    iconUrl: 'libs/icon48.png',
-                    title: '📚 High-Value Learning Detected!',
-                    message: `${result.ai_analysis.topic} - ${result.ai_analysis.learning_value}% learning value`
-                });
-            }
-
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("AI Auto-log failed:", e);
-        // Fallback to regular log
-        return handleLogActivity(data);
-    }
+    // Fallback to regular log (local)
+    return handleLogActivity(data);
 }
 
 async function fetchAIDashboardSummary() {
-    console.log("📊 Fetching AI dashboard summary...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/dashboard-summary`, {
-            signal: AbortSignal.timeout(15000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            // Cache dashboard summary
-            await chrome.storage.local.set({
-                aiDashboardSummary: result.summary,
-                dashboardSummaryUpdatedAt: Date.now()
-            });
-
-            console.log("✅ Dashboard summary fetched");
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("Dashboard summary failed:", e);
-
-        // Return cached if available
-        const storage = await chrome.storage.local.get(['aiDashboardSummary']);
-        if (storage.aiDashboardSummary) {
-            return { status: 'cached', summary: storage.aiDashboardSummary };
-        }
-        return { status: 'error', message: e.message };
-    }
+    return { status: 'success', summary: {} };
 }
 
 async function fetchAIInsights(days = 30) {
-    console.log(`🧠 Fetching AI insights for ${days} days...`);
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/insights?days=${days}`, {
-            signal: AbortSignal.timeout(15000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            // Cache insights
-            await chrome.storage.local.set({
-                aiInsights: result.insights,
-                insightsUpdatedAt: Date.now()
-            });
-
-            console.log("✅ AI insights fetched");
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("AI insights failed:", e);
-
-        const storage = await chrome.storage.local.get(['aiInsights']);
-        if (storage.aiInsights) {
-            return { status: 'cached', insights: storage.aiInsights };
-        }
-        return { status: 'error', message: e.message };
-    }
+    return { status: 'success', insights: [] };
 }
 
 async function fetchLearningPath(data = {}) {
-    console.log("📚 Generating learning path...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/learning-path`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            signal: AbortSignal.timeout(15000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            // Cache learning path
-            await chrome.storage.local.set({
-                learningPath: result.learning_path,
-                learningPathUpdatedAt: Date.now()
-            });
-
-            console.log("✅ Learning path generated");
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("Learning path generation failed:", e);
-        return { status: 'error', message: e.message };
-    }
+    return { status: 'error', message: 'Backend removed' };
 }
 
 async function fetchSmartSchedule(data = {}) {
-    console.log("📅 Generating smart study schedule...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/smart-schedule`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            signal: AbortSignal.timeout(15000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            // Cache schedule
-            await chrome.storage.local.set({
-                smartSchedule: result.schedule,
-                scheduleUpdatedAt: Date.now()
-            });
-
-            console.log("✅ Smart schedule generated");
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("Smart schedule generation failed:", e);
-        return { status: 'error', message: e.message };
-    }
+    return { status: 'error', message: 'Backend removed' };
 }
 
 async function fetchSkillAssessment() {
-    console.log("📈 Fetching skill assessment...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/skill-assessment`, {
-            signal: AbortSignal.timeout(15000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            // Cache assessment
-            await chrome.storage.local.set({
-                skillAssessment: result.assessment,
-                assessmentUpdatedAt: Date.now()
-            });
-
-            console.log("✅ Skill assessment fetched");
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("Skill assessment failed:", e);
-
-        const storage = await chrome.storage.local.get(['skillAssessment']);
-        if (storage.skillAssessment) {
-            return { status: 'cached', assessment: storage.skillAssessment };
-        }
-        return { status: 'error', message: e.message };
-    }
+    return { status: 'error', message: 'Backend removed' };
 }
 
 async function fetchWeeklyReport() {
-    console.log("📊 Fetching weekly report...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/weekly-report`, {
-            signal: AbortSignal.timeout(20000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            // Cache report
-            await chrome.storage.local.set({
-                weeklyReport: result.report,
-                weeklyReportUpdatedAt: Date.now()
-            });
-
-            console.log("✅ Weekly report fetched");
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("Weekly report failed:", e);
-        return { status: 'error', message: e.message };
-    }
+    return { status: 'success', report: {} };
 }
 
 async function summarizeContent(data) {
-    console.log("📝 Summarizing content...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/summarize`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            signal: AbortSignal.timeout(15000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log("✅ Content summarized");
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("Content summarization failed:", e);
-        return { status: 'error', message: e.message };
-    }
+    return { status: 'error', message: 'Backend removed' };
 }
 
 async function analyzeContent(data) {
-    console.log("🔍 Analyzing content...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/analyze-content`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            signal: AbortSignal.timeout(10000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log("✅ Content analyzed");
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("Content analysis failed:", e);
-        return { status: 'error', message: e.message };
-    }
+    return { status: 'error', message: 'Backend removed' };
 }
 
 async function fetchAutoRecommendations() {
-    console.log("🎯 Fetching auto recommendations...");
-
-    try {
-        const response = await fetch(`${SERVER_URL}/api/ai/auto-recommendations`, {
-            signal: AbortSignal.timeout(20000)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-
-            // Cache recommendations
-            await chrome.storage.local.set({
-                autoRecommendations: result.recommendations,
-                recommendationsUpdatedAt: Date.now()
-            });
-
-            console.log("✅ Auto recommendations fetched");
-            return result;
-        }
-        throw new Error(`Server error: ${response.status}`);
-    } catch (e) {
-        console.error("Auto recommendations failed:", e);
-
-        const storage = await chrome.storage.local.get(['autoRecommendations']);
-        if (storage.autoRecommendations) {
-            return { status: 'cached', recommendations: storage.autoRecommendations };
-        }
-        return { status: 'error', message: e.message };
-    }
+    return { status: 'success', recommendations: [] };
 }
 
 async function generateAndNotifyWeeklyReport() {

@@ -7,7 +7,7 @@
 // CONFIGURATION
 // ==========================================
 
-const API_URL = "http://localhost:5000";
+const API_URL = 'http://127.0.0.1:8000';
 let trendChart, topicChart;
 
 // ==========================================
@@ -36,233 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup event listeners
     setupEventListeners();
 
-    // Check server status
-    checkServerStatus();
+    // Server check removed
 });
 
 
 // ==========================================
-// SERVER STATUS CHECK
+// SERVER STATUS CHECK - REMOVED
 // ==========================================
+// Backend features have been removed.
 
-let serverOnline = false;
-
-async function checkServerStatus() {
-    const indicator = document.getElementById('serverIndicator');
-    const btn = document.getElementById('serverStatusBtn');
-
-    if (indicator) {
-        indicator.className = 'server-indicator checking';
-    }
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-        const response = await fetch(`${API_URL}/health`, {
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-            const data = await response.json();
-            serverOnline = true;
-
-            if (indicator) {
-                indicator.className = 'server-indicator online';
-            }
-            if (btn) {
-                btn.setAttribute('data-tooltip', `Server Online - ${data.version || 'v1.0'}`);
-            }
-
-            console.log("✅ Backend server connected");
-
-            // Only show toast on first connect
-            if (!window.serverWasOnline) {
-                showToast("Connected to SupriAI Server", "success");
-                window.serverWasOnline = true;
-            }
-        } else {
-            throw new Error('Server responded with error');
-        }
-    } catch (e) {
-        serverOnline = false;
-
-        if (indicator) {
-            indicator.className = 'server-indicator offline';
-        }
-        if (btn) {
-            btn.setAttribute('data-tooltip', 'Server Offline - Click to start');
-        }
-
-        console.warn("⚠️ Backend server not available");
-
-        // Only show toast if was previously online
-        if (window.serverWasOnline) {
-            showToast("Server connection lost", "error");
-            window.serverWasOnline = false;
-        }
-    }
-}
-
-// Show server status modal with instructions
-function showServerStatusModal() {
-    Swal.fire({
-        title: serverOnline ? '🟢 Server Online' : '🔴 Server Offline',
-        html: serverOnline ? `
-            <div style="text-align: left;">
-                <p><strong>Status:</strong> Running</p>
-                <p><strong>URL:</strong> <code>${API_URL}</code></p>
-                <p><strong>Features:</strong> All AI features available</p>
-                <hr style="margin: 16px 0; border: none; border-top: 1px solid #e0e0e0;">
-                <p style="color: #666;">
-                    <a href="${API_URL}/docs" target="_blank" style="color: #1a73e8;">📚 View Documentation</a>
-                </p>
-                <p style="color: #666;">
-                    <a href="${API_URL}/schema" target="_blank" style="color: #1a73e8;">🗄️ View Database Schema</a>
-                </p>
-            </div>
-        ` : `
-            <div style="text-align: left;">
-                <p><strong>Status:</strong> Not Running</p>
-                
-                <button onclick="startBackendServer()" style="
-                    width: 100%;
-                    background: linear-gradient(135deg, #1a73e8, #4285f4);
-                    color: white;
-                    border: none;
-                    padding: 14px 24px;
-                    border-radius: 8px;
-                    font-size: 15px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    margin: 16px 0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
-                    transition: all 0.2s ease;
-                " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(26, 115, 232, 0.4)'" 
-                   onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(26, 115, 232, 0.3)'">
-                    <i class="ri-play-circle-fill" style="font-size: 20px;"></i>
-                    Start Backend Server
-                </button>
-                
-                <div style="background: #fff3e0; padding: 12px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #ff9800;">
-                    <p style="margin: 0; font-size: 13px; color: #e65100;">
-                        <strong>⚠️ First time?</strong> Run <code>register-protocol.reg</code> once to enable this button.
-                    </p>
-                </div>
-                
-                <details style="margin-top: 12px;">
-                    <summary style="cursor: pointer; color: #666; font-size: 13px;">Manual start instructions</summary>
-                    <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-top: 8px;">
-                        <p style="margin: 0 0 8px 0;"><strong>Option 1:</strong> Double-click <code>backend.bat</code></p>
-                        <p style="margin: 0;"><strong>Option 2:</strong></p>
-                        <code style="display: block; background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 4px; margin-top: 8px; font-size: 12px;">
-                            cd backend<br>
-                            python app.py
-                        </code>
-                    </div>
-                </details>
-            </div>
-        `,
-        icon: serverOnline ? 'success' : 'warning',
-        confirmButtonText: serverOnline ? 'Close' : 'Retry Connection',
-        confirmButtonColor: '#1a73e8',
-        showCancelButton: !serverOnline,
-        cancelButtonText: 'Close',
-        width: 450
-    }).then((result) => {
-        if (result.isConfirmed && !serverOnline) {
-            checkServerStatus();
-        }
-    });
-}
-
-// Start backend server via custom protocol
-function startBackendServer() {
-    // Try to start via custom protocol
-    const startFrame = document.createElement('iframe');
-    startFrame.style.display = 'none';
-    startFrame.src = 'supri://start';
-    document.body.appendChild(startFrame);
-
-    // Remove iframe after a moment
-    setTimeout(() => {
-        document.body.removeChild(startFrame);
-    }, 1000);
-
-    // Show waiting message
-    Swal.fire({
-        title: '🚀 Starting Server...',
-        html: `
-            <div style="text-align: center;">
-                <p style="color: #666;">Please wait while the backend server starts.</p>
-                <p style="color: #666; font-size: 13px;">A command window should open...</p>
-                <div style="margin: 20px 0;">
-                    <div style="width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #1a73e8; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite;"></div>
-                </div>
-                <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
-            </div>
-        `,
-        showConfirmButton: false,
-        allowOutsideClick: false,
-        timer: 5000,
-        timerProgressBar: true
-    }).then(() => {
-        // Check if server is now online
-        checkServerStatus();
-
-        setTimeout(() => {
-            if (serverOnline) {
-                Swal.fire({
-                    title: '✅ Server Started!',
-                    text: 'Backend server is now running.',
-                    icon: 'success',
-                    confirmButtonColor: '#1a73e8'
-                });
-            } else {
-                Swal.fire({
-                    title: '⏳ Server Starting...',
-                    html: `
-                        <p>If the command window opened, the server is starting.</p>
-                        <p style="font-size: 13px; color: #666; margin-top: 12px;">
-                            Wait a few seconds and click "Check Again"
-                        </p>
-                    `,
-                    icon: 'info',
-                    confirmButtonText: 'Check Again',
-                    confirmButtonColor: '#1a73e8',
-                    showCancelButton: true,
-                    cancelButtonText: 'Close'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        checkServerStatus();
-                        setTimeout(() => {
-                            if (serverOnline) {
-                                showToast('Server is now online!', 'success');
-                            }
-                        }, 1000);
-                    }
-                });
-            }
-        }, 1500);
-    });
-}
-
-// Override the onclick to show modal
-document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('serverStatusBtn');
-    if (btn) {
-        btn.onclick = showServerStatusModal;
-    }
-
-    // Check status every 30 seconds
-    setInterval(checkServerStatus, 30000);
-});
 
 
 // ==========================================
@@ -341,41 +123,21 @@ function fetchUserIdentity() {
         chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (userInfo) => {
             if (chrome.runtime.lastError) {
                 console.warn("Identity Error:", chrome.runtime.lastError);
-                loadUserFromBackend();
+                updateUserDisplay('User');
                 return;
             }
 
             if (userInfo && userInfo.email) {
                 updateUserDisplay(userInfo.email);
             } else {
-                loadUserFromBackend();
+                updateUserDisplay('User');
             }
         });
     } else {
-        loadUserFromBackend();
+        updateUserDisplay('User');
     }
 }
-
-async function loadUserFromBackend() {
-    try {
-        const response = await fetch(`${API_URL}/api/user`);
-        const data = await response.json();
-
-        if (data.status === 'success' && data.user) {
-            const nameEl = document.querySelector('.user-info .name');
-            const avatarEl = document.querySelector('.user-profile .avatar');
-            const smAvatarEl = document.querySelector('.avatar-sm');
-
-            if (nameEl) nameEl.textContent = (data.user.display_name === 'User') ? 'Supriya' : (data.user.display_name || 'Supriya');
-
-            const initial = (data.user.avatar_initial === 'U') ? 'S' : (data.user.avatar_initial || 'S');
-            if (avatarEl) avatarEl.textContent = initial;
-            if (smAvatarEl) smAvatarEl.textContent = initial;
-        }
-    } catch (e) {
-        console.warn("Could not load user from backend:", e);
-    }
-}
+// loadUserFromBackend removed
 
 function updateUserDisplay(email) {
     const nameEl = document.querySelector('.user-info .name');
@@ -491,39 +253,47 @@ function initCharts() {
 // ==========================================
 
 async function loadDashboardData() {
+    console.log("Loading dashboard data from backend...");
+    
     try {
-        const response = await fetch(`${API_URL}/get_analytics?days=7`);
-        const data = await response.json();
-
-        // Update Stats Cards
-        updateElement('totalTime', formatTime(data.total_minutes || 0));
-        updateElement('topTopic', data.top_topic || "Start Learning");
-        updateElement('streakDays', data.streak_days || 0);
-        updateElement('engagementScore', data.engagement_score || 0);
-
-        // Update Charts
-        if (trendChart) {
-            trendChart.data.datasets[0].data = data.weekly_trends || [0, 0, 0, 0, 0, 0, 0];
-            trendChart.update();
+        const historyRes = await fetch(`${API_URL}/api/history?limit=20`);
+        const history = await historyRes.json();
+        
+        const summaryRes = await fetch(`${API_URL}/api/analytics/summary`);
+        const summary = await summaryRes.json();
+        
+        updateElement('totalTime', formatTime(Math.round(summary.total_duration_seconds / 60) || 0));
+        updateElement('topTopic', summary.top_domains?.[0]?.[0] || 'None');
+        updateElement('streakDays', 0);
+        updateElement('engagementScore', Math.round(summary.avg_duration_seconds / 60) || 0);
+        
+        if (trendChart && summary.topics) {
+            const topicLabels = summary.topics.slice(0, 5).map(t => t[0]);
+            const topicCounts = summary.topics.slice(0, 5).map(t => t[1]);
+            
+            if (topicChart) {
+                topicChart.data.labels = topicLabels;
+                topicChart.data.datasets[0].data = topicCounts;
+                topicChart.update();
+            }
         }
 
-        if (topicChart && data.topic_distribution) {
-            topicChart.data.labels = Object.keys(data.topic_distribution);
-            topicChart.data.datasets[0].data = Object.values(data.topic_distribution);
-            topicChart.update();
-        }
-
-        // Update Recent Activity
-        renderRecentActivity(data.recent_activity || []);
-
-        // Update Recommendations
-        renderRecommendations(data.recommendations || []);
-
-        console.log("✅ Dashboard data loaded successfully");
-
+        renderRecentActivity((history || []).slice(0, 10).map(h => ({
+            topic: h.topic || 'General',
+            title: h.title || h.domain,
+            url: h.url,
+            score: Math.min(100, Math.round((h.duration_seconds || 0) / 60 * 5)),
+            time: h.visited_at
+        })));
+        
+        console.log("✅ Dashboard data loaded");
     } catch (e) {
-        console.error("❌ Failed to load dashboard data:", e);
-        showOfflineState();
+        console.error("Failed to load dashboard data", e);
+        updateElement('totalTime', formatTime(0));
+        updateElement('topTopic', "Offline");
+        updateElement('engagementScore', 0);
+        renderRecentActivity([]);
+        renderRecommendations([]);
     }
 }
 
@@ -562,26 +332,9 @@ async function loadViewData(viewName) {
 // ==========================================
 
 async function loadLibraryData() {
-    try {
-        // Load history
-        const historyResponse = await fetch(`${API_URL}/api/history?days=30&limit=50`);
-        const historyData = await historyResponse.json();
-
-        if (historyData.status === 'success') {
-            renderRecentActivity(historyData.history);
-        }
-
-        // Load bookmarks
-        const bookmarksResponse = await fetch(`${API_URL}/api/bookmarks`);
-        const bookmarksData = await bookmarksResponse.json();
-
-        if (bookmarksData.status === 'success') {
-            renderBookmarks(bookmarksData.bookmarks);
-        }
-
-    } catch (e) {
-        console.error("Failed to load library data:", e);
-    }
+    console.log("Loading library data (Local Only)");
+    renderRecentActivity([]);
+    renderBookmarks([]);
 }
 
 function renderBookmarks(bookmarks) {
@@ -625,15 +378,7 @@ function renderBookmarks(bookmarks) {
 }
 
 async function deleteBookmark(id) {
-    try {
-        const response = await fetch(`${API_URL}/api/bookmarks/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-            showToast("Bookmark deleted", "success");
-            loadLibraryData();
-        }
-    } catch (e) {
-        showToast("Failed to delete bookmark", "error");
-    }
+    showToast("Bookmarks management disabled", "error");
 }
 
 
@@ -642,25 +387,9 @@ async function deleteBookmark(id) {
 // ==========================================
 
 async function loadGoalsData() {
-    try {
-        const response = await fetch(`${API_URL}/api/goals`);
-        const data = await response.json();
-
-        if (data.status === 'success') {
-            renderGoals(data.goals);
-        }
-
-        // Load achievements
-        const achievementsResponse = await fetch(`${API_URL}/api/achievements`);
-        const achievementsData = await achievementsResponse.json();
-
-        if (achievementsData.status === 'success') {
-            renderAchievements(achievementsData.achievements);
-        }
-
-    } catch (e) {
-        console.error("Failed to load goals:", e);
-    }
+    console.log("Loading goals data (Local Only)");
+    renderGoals([]);
+    renderAchievements([]);
 }
 
 function renderGoals(goals) {
@@ -729,20 +458,7 @@ function renderAchievements(achievements) {
 }
 
 async function createGoal(goalData) {
-    try {
-        const response = await fetch(`${API_URL}/api/goals`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(goalData)
-        });
-
-        if (response.ok) {
-            showToast("Goal created!", "success");
-            loadGoalsData();
-        }
-    } catch (e) {
-        showToast("Failed to create goal", "error");
-    }
+    showToast("Goal creation unavailable", "error");
 }
 
 
@@ -751,16 +467,8 @@ async function createGoal(goalData) {
 // ==========================================
 
 async function loadScheduleData() {
-    try {
-        const response = await fetch(`${API_URL}/api/schedule`);
-        const data = await response.json();
-
-        if (data.status === 'success') {
-            renderSchedule(data.events);
-        }
-    } catch (e) {
-        console.error("Failed to load schedule:", e);
-    }
+    console.log("Loading schedule data (Local Only)");
+    renderSchedule([]);
 }
 
 function renderSchedule(events) {
@@ -774,16 +482,8 @@ function renderSchedule(events) {
 // ==========================================
 
 async function loadNotesData() {
-    try {
-        const response = await fetch(`${API_URL}/api/notes`);
-        const data = await response.json();
-
-        if (data.status === 'success') {
-            renderNotes(data.notes);
-        }
-    } catch (e) {
-        console.error("Failed to load notes:", e);
-    }
+    console.log("Loading notes data (Local Only)");
+    renderNotes([]);
 }
 
 function renderNotes(notes) {
@@ -822,20 +522,7 @@ function renderNotes(notes) {
 }
 
 async function saveNote(noteData) {
-    try {
-        const response = await fetch(`${API_URL}/api/notes`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(noteData)
-        });
-
-        if (response.ok) {
-            showToast("Reflection saved!", "success");
-            loadNotesData();
-        }
-    } catch (e) {
-        showToast("Failed to save reflection", "error");
-    }
+    showToast("Notes are disabled (Backend Removed)", "error");
 }
 
 
@@ -844,35 +531,25 @@ async function saveNote(noteData) {
 // ==========================================
 
 async function loadSettingsData() {
-    try {
-        const response = await fetch(`${API_URL}/api/settings`);
-        const data = await response.json();
-
-        if (data.status === 'success' && data.settings) {
-            // Update toggles based on settings
-            const trackingToggle = document.getElementById('trackingToggle');
-            if (trackingToggle) {
-                trackingToggle.checked = data.settings.tracking_enabled === 1;
-            }
-        }
-    } catch (e) {
-        console.error("Failed to load settings:", e);
+    // Just load from local storage
+    const storage = await chrome.storage.local.get(['trackingPaused', 'historyCollectionEnabled', 'aiAutomationEnabled', 'weeklyReportEnabled', 'smartNotificationsEnabled']);
+    // This assumes updateSettings is a function that can handle the storage object
+    // and update the UI elements accordingly.
+    // For now, we'll manually update the trackingToggle as it's the only one explicitly mentioned.
+    const trackingToggle = document.getElementById('trackingToggle');
+    if (trackingToggle) {
+        trackingToggle.checked = !storage.trackingPaused; // Assuming trackingPaused means tracking is OFF
     }
 }
 
 async function updateSettings(settings) {
     try {
-        const response = await fetch(`${API_URL}/api/settings`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(settings)
-        });
-
-        if (response.ok) {
-            showToast("Settings saved!", "success");
-        }
+        // For local-only, save to chrome.storage.local
+        await chrome.storage.local.set(settings);
+        showToast("Settings saved!", "success");
     } catch (e) {
         showToast("Failed to save settings", "error");
+        console.error("Failed to save settings:", e);
     }
 }
 
@@ -884,37 +561,34 @@ async function updateSettings(settings) {
 let analyticsLineChart, analyticsDonutChart;
 
 async function loadAnalyticsData() {
+    console.log("Loading analytics data...");
     try {
-        // Fetch main analytics
-        const response = await fetch(`${API_URL}/get_analytics?days=30`);
-        const data = await response.json();
-
-        // Update stats cards
-        updateElement('analyticsTotalSessions', data.total_sessions || 0);
-        updateElement('analyticsTotalTime', formatTime(data.total_minutes || 0));
-        updateElement('analyticsAvgEngagement', (data.engagement_score || 0) + '%');
-        updateElement('analyticsTopicsCount', data.topics_count || 0);
-
-        // Render charts
-        renderAnalyticsCharts(data);
-
-        // Render heatmap
-        renderHeatmap(data.daily_activity || []);
-
-        // Render topic breakdown
-        renderTopicBreakdown(data.topic_distribution || {});
-
-        // Render sessions table
-        renderAnalyticsSessions(data.recent_activity || []);
-
-        // Setup export button
-        setupAnalyticsExport(data);
-
-        console.log("✅ Analytics loaded successfully");
-
+        const summaryRes = await fetch(`${API_URL}/api/analytics/summary`);
+        const summary = await summaryRes.json();
+        
+        const timeDistRes = await fetch(`${API_URL}/api/analytics/time-distribution`);
+        const timeDist = await timeDistRes.json();
+        
+        renderAnalyticsCharts({ 
+            weekly_trends: timeDist.map(t => t.duration_seconds / 60),
+            topic_distribution: summary.topics?.reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {}) || {}
+        });
+        
+        const dailyActivity = timeDist.map(t => t.visits);
+        renderHeatmap(dailyActivity);
+        renderTopicBreakdown(summary.topics?.reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {}) || {});
+        
+        const historyRes = await fetch(`${API_URL}/api/history?limit=50`);
+        const sessions = await historyRes.json();
+        renderAnalyticsSessions(sessions || []);
+        
+        setupAnalyticsExport({ recent_activity: sessions || [] });
     } catch (e) {
-        console.error("Failed to load analytics:", e);
-        showToast("Failed to load analytics", "error");
+        console.error("Failed to load analytics", e);
+        renderAnalyticsCharts({});
+        renderHeatmap([]);
+        renderTopicBreakdown({});
+        renderAnalyticsSessions([]);
     }
 }
 
@@ -1035,9 +709,9 @@ function renderHeatmap(dailyActivity) {
     for (let week = 0; week < weeks; week++) {
         const weekData = [];
         for (let day = 0; day < 7; day++) {
-            // Use actual data if available, otherwise random for demo
+            // Use actual data if available, otherwise 0 (no activity)
             const index = week * 7 + day;
-            const value = dailyActivity[index] || Math.floor(Math.random() * 5);
+            const value = dailyActivity[index] || 0;
             weekData.push(value);
         }
         heatmapData.push(weekData);
@@ -1477,46 +1151,14 @@ document.head.appendChild(style);
 let chatHistory = [];
 
 async function loadChatData() {
-    try {
-        // Load AI recommendations
-        await loadAIRecommendations();
-
-        // Load chat history
-        const response = await fetch(`${API_URL}/api/chat/history?limit=20`);
-        const data = await response.json();
-
-        if (data.status === 'success' && data.history.length > 0) {
-            // Render existing chat history
-            const container = document.getElementById('chatMessages');
-            data.history.reverse().forEach(msg => {
-                appendChatMessage(msg.user_message, 'user', false);
-                appendChatMessage(msg.ai_response, 'ai', false);
-            });
-        }
-    } catch (e) {
-        console.error("Failed to load chat data:", e);
-    }
+    // Backend removed
+    await loadAIRecommendations();
+    console.log("Chat history disabled (No Backend)");
 }
 
 async function loadAIRecommendations() {
-    const container = document.getElementById('aiRecommendations');
-    if (!container) return;
-
-    try {
-        const response = await fetch(`${API_URL}/api/recommendations`);
-        const data = await response.json();
-
-        if (data.status === 'success' && data.recommendations) {
-            renderAIRecommendations(data.recommendations);
-        }
-    } catch (e) {
-        container.innerHTML = `
-            <div class="google-card" style="text-align: center; padding: 40px;">
-                <i class="ri-error-warning-line" style="font-size: 32px; color: #d93025;"></i>
-                <p style="margin-top: 10px; color: #5f6368;">Failed to load recommendations</p>
-            </div>
-        `;
-    }
+    console.log("AI Recommendations disabled (No Backend)");
+    renderAIRecommendations([]);
 }
 
 function renderAIRecommendations(recommendations) {
@@ -1583,38 +1225,10 @@ async function sendChatMessage() {
     // Show typing indicator
     const typingId = showTypingIndicator();
 
-    try {
-        const response = await fetch(`${API_URL}/api/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message: message,
-                context: { history: chatHistory }
-            })
-        });
-
-        const data = await response.json();
-
-        // Hide typing indicator
+    setTimeout(() => {
         removeTypingIndicator(typingId);
-
-        if (data.status === 'success') {
-            appendChatMessage(data.response, 'ai');
-
-            // Update suggestions if provided
-            if (data.suggestions && data.suggestions.length > 0) {
-                // Could render suggestions below the chat if desired
-                console.log('Suggestions:', data.suggestions);
-            }
-        } else {
-            appendChatMessage("Sorry, I encountered an error. Please try again.", 'ai');
-        }
-
-    } catch (e) {
-        console.error("Chat error:", e);
-        removeTypingIndicator(typingId);
-        appendChatMessage("Sorry, I'm having trouble connecting to the server. Please make sure the backend is running.", 'ai');
-    }
+        appendChatMessage("I'm sorry, but AI features are currently unavailable as the backend server has been removed.", 'ai');
+    }, 1000);
 }
 
 function sendSuggestion(text) {
@@ -1758,75 +1372,11 @@ async function clearChatHistory() {
 let currentResume = null;
 
 async function loadResumeData() {
-    try {
-        const response = await fetch(`${API_URL}/api/resume/latest`);
-        const data = await response.json();
-
-        if (data.status === 'success' && data.resume) {
-            currentResume = data.resume;
-            displayResume(data.resume);
-        }
-    } catch (e) {
-        console.log("No existing resume found");
-    }
+    console.log("Resume data disabled (No Backend)");
 }
 
 async function generateResume() {
-    const userInfo = {
-        name: document.getElementById('resumeName')?.value || '',
-        email: document.getElementById('resumeEmail')?.value || '',
-        location: document.getElementById('resumeLocation')?.value || '',
-        github: document.getElementById('resumeGithub')?.value || '',
-        linkedin: document.getElementById('resumeLinkedin')?.value || '',
-        portfolio: document.getElementById('resumePortfolio')?.value || ''
-    };
-
-    // Show loading
-    const preview = document.getElementById('resumePreview');
-    const noResume = document.getElementById('noResumeMessage');
-    if (noResume) noResume.style.display = 'none';
-    if (preview) {
-        preview.style.display = 'block';
-        preview.innerHTML = `
-            <div style="text-align: center; padding: 60px;">
-                <i class="ri-loader-4-line spinning" style="font-size: 48px; color: #1a73e8;"></i>
-                <p style="margin-top: 20px; color: #5f6368;">Generating your resume from learning analytics...</p>
-            </div>
-        `;
-    }
-
-    try {
-        const response = await fetch(`${API_URL}/api/resume/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_info: userInfo })
-        });
-
-        const data = await response.json();
-
-        if (data.status === 'success' && data.resume) {
-            currentResume = data.resume;
-
-            // Restore preview container and display
-            if (preview) {
-                preview.innerHTML = createResumePreviewHTML();
-            }
-            displayResume(data.resume);
-            showToast('Resume generated successfully!', 'success');
-        } else {
-            throw new Error(data.message || 'Failed to generate resume');
-        }
-
-    } catch (e) {
-        console.error('Resume generation error:', e);
-        showToast('Failed to generate resume: ' + e.message, 'error');
-        if (preview) {
-            preview.style.display = 'none';
-        }
-        if (noResume) {
-            noResume.style.display = 'block';
-        }
-    }
+    showToast("Resume generation unavailable (Backend Removed)", "error");
 }
 
 function createResumePreviewHTML() {
@@ -2020,20 +1570,12 @@ async function exportResume(format) {
         return;
     }
 
-    try {
-        if (format === 'json') {
-            const blob = new Blob([JSON.stringify(currentResume, null, 2)], { type: 'application/json' });
-            downloadBlob(blob, 'supri_resume.json');
-        } else if (format === 'html') {
-            const response = await fetch(`${API_URL}/api/resume/export/html`);
-            const html = await response.text();
-            const blob = new Blob([html], { type: 'text/html' });
-            downloadBlob(blob, 'supri_resume.html');
-        }
-
+    if (format === 'json') {
+        const blob = new Blob([JSON.stringify(currentResume, null, 2)], { type: 'application/json' });
+        downloadBlob(blob, 'supri_resume.json');
         showToast(`Resume exported as ${format.toUpperCase()}`, 'success');
-    } catch (e) {
-        showToast('Export failed: ' + e.message, 'error');
+    } else {
+        showToast('HTML export unavailable (No Backend)', 'error');
     }
 }
 

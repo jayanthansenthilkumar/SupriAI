@@ -1,22 +1,4 @@
-# SupriAI Backend Dependencies
-# Install with: pip install -r requirements.txt
-
-# Web Framework
-Flask==3.0.0
-Flask-Cors==4.0.0
-
-# AI/ML
-google-genai>=0.3.0
-python-dotenv>=1.0.0
-
-# Database (SQLite is built-in, no extra package needed)
-
-# Production Server (optional, for deployment)
-gunicorn==21.2.0
-
-# Utilities
-python-dateutil==2.8.2
-
-# Development (optional)
-pytest==7.4.3
-black==23.12.1
+Flask==3.0.2
+flask-cors==4.0.0
+SQLAlchemy==2.0.36
+python-dotenv==1.0.1
