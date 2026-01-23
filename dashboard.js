@@ -7,7 +7,7 @@
 // CONFIGURATION
 // ==========================================
 
-// Backend removed
+const API_URL = 'http://127.0.0.1:8000';
 let trendChart, topicChart;
 
 // ==========================================
@@ -253,30 +253,48 @@ function initCharts() {
 // ==========================================
 
 async function loadDashboardData() {
-    console.log("Loading dashboard data (Local Only)");
-    // Simulating empty/local data as backend is removed
-    const storage = await chrome.storage.local.get(['todayTotalTime']);
+    console.log("Loading dashboard data from backend...");
     
-    updateElement('totalTime', formatTime(storage.todayTotalTime || 0));
-    updateElement('topTopic', "General");
-    updateElement('streakDays', 0);
-    updateElement('engagementScore', 0);
-    
-    if (trendChart) {
-        trendChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0];
-        trendChart.update();
-    }
+    try {
+        const historyRes = await fetch(`${API_URL}/api/history?limit=20`);
+        const history = await historyRes.json();
+        
+        const summaryRes = await fetch(`${API_URL}/api/analytics/summary`);
+        const summary = await summaryRes.json();
+        
+        updateElement('totalTime', formatTime(Math.round(summary.total_duration_seconds / 60) || 0));
+        updateElement('topTopic', summary.top_domains?.[0]?.[0] || 'None');
+        updateElement('streakDays', 0);
+        updateElement('engagementScore', Math.round(summary.avg_duration_seconds / 60) || 0);
+        
+        if (trendChart && summary.topics) {
+            const topicLabels = summary.topics.slice(0, 5).map(t => t[0]);
+            const topicCounts = summary.topics.slice(0, 5).map(t => t[1]);
+            
+            if (topicChart) {
+                topicChart.data.labels = topicLabels;
+                topicChart.data.datasets[0].data = topicCounts;
+                topicChart.update();
+            }
+        }
 
-    if (topicChart) {
-        topicChart.data.labels = [];
-        topicChart.data.datasets[0].data = [];
-        topicChart.update();
+        renderRecentActivity((history || []).slice(0, 10).map(h => ({
+            topic: h.topic || 'General',
+            title: h.title || h.domain,
+            url: h.url,
+            score: Math.min(100, Math.round((h.duration_seconds || 0) / 60 * 5)),
+            time: h.visited_at
+        })));
+        
+        console.log("✅ Dashboard data loaded");
+    } catch (e) {
+        console.error("Failed to load dashboard data", e);
+        updateElement('totalTime', formatTime(0));
+        updateElement('topTopic', "Offline");
+        updateElement('engagementScore', 0);
+        renderRecentActivity([]);
+        renderRecommendations([]);
     }
-
-    renderRecentActivity([]);
-    renderRecommendations([]);
-    
-    console.log("✅ Local dashboard data loaded");
 }
 
 async function loadViewData(viewName) {
@@ -543,12 +561,35 @@ async function updateSettings(settings) {
 let analyticsLineChart, analyticsDonutChart;
 
 async function loadAnalyticsData() {
-    console.log("Analytics disabled (No Backend)");
-    // Render empty charts to prevent errors
-    renderAnalyticsCharts({});
-    renderHeatmap([]);
-    renderTopicBreakdown({});
-    renderAnalyticsSessions([]);
+    console.log("Loading analytics data...");
+    try {
+        const summaryRes = await fetch(`${API_URL}/api/analytics/summary`);
+        const summary = await summaryRes.json();
+        
+        const timeDistRes = await fetch(`${API_URL}/api/analytics/time-distribution`);
+        const timeDist = await timeDistRes.json();
+        
+        renderAnalyticsCharts({ 
+            weekly_trends: timeDist.map(t => t.duration_seconds / 60),
+            topic_distribution: summary.topics?.reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {}) || {}
+        });
+        
+        const dailyActivity = timeDist.map(t => t.visits);
+        renderHeatmap(dailyActivity);
+        renderTopicBreakdown(summary.topics?.reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {}) || {});
+        
+        const historyRes = await fetch(`${API_URL}/api/history?limit=50`);
+        const sessions = await historyRes.json();
+        renderAnalyticsSessions(sessions || []);
+        
+        setupAnalyticsExport({ recent_activity: sessions || [] });
+    } catch (e) {
+        console.error("Failed to load analytics", e);
+        renderAnalyticsCharts({});
+        renderHeatmap([]);
+        renderTopicBreakdown({});
+        renderAnalyticsSessions([]);
+    }
 }
 
 function renderAnalyticsCharts(data) {

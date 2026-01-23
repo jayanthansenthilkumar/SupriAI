@@ -8,7 +8,7 @@
 // CONFIGURATION
 // ==========================================
 
-// Backend removed
+const API_URL = 'http://127.0.0.1:8000';
 const SYNC_INTERVAL = 5; // minutes
 const MAX_OFFLINE_LOGS = 100;
 const HISTORY_SYNC_INTERVAL = 30; // minutes
@@ -216,26 +216,48 @@ async function handleLogActivity(data) {
         return { status: 'skipped', reason: 'tracking_paused' };
     }
 
-    // Backend removed: Log locally only
     try {
-        await updateLocalStorage(data, { topic: 'General' });
-        await storeLocally(data);
-        
-        try {
-            chrome.runtime.sendMessage({ type: 'UPDATE_POPUP' });
-        } catch (e) {}
+        await sendDataToBackend(data);
+        await updateLocalStorage(data, { topic: data.topic || 'General' });
 
-        return { status: 'success', message: 'Logged locally' };
+        try { chrome.runtime.sendMessage({ type: 'UPDATE_POPUP' }); } catch (e) {}
 
+        return { status: 'success', message: 'Synced to backend' };
     } catch (error) {
-        console.warn("Logging failed:", error);
-        return { status: 'error', message: error.message };
+        console.warn("Backend unavailable, queuing log:", error.message);
+        await storeLocally(data);
+        return { status: 'queued', message: 'Stored locally until online' };
     }
 }
 
 async function sendDataToBackend(data) {
-    // Backend removed
-    return { topic: 'General', recommendation: null };
+    const payloads = Array.isArray(data) ? data.map(mapLogToPayload) : [mapLogToPayload(data)];
+
+    const response = await fetch(`${API_URL}/api/history/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloads)
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Backend error: ${response.status} ${text}`);
+    }
+
+    return response.json();
+}
+
+function mapLogToPayload(log) {
+    return {
+        url: log.url,
+        title: log.title,
+        visited_at: log.timestamp || new Date().toISOString(),
+        duration_seconds: Math.round(log.duration || 0),
+        source: log.trigger || log.source || 'content_script',
+        topic: (log.metadata && log.metadata.topic) || log.topic || 'General',
+        content_snippet: log.content ? String(log.content).slice(0, 2000) : undefined,
+        metadata: log.metadata || {}
+    };
 }
 
 
@@ -293,8 +315,22 @@ async function storeLocally(data) {
 // ==========================================
 
 async function syncOfflineLogs() {
-    console.log("Sync disabled (No Backend)");
-    return { status: 'success', synced: 0 };
+    const storage = await chrome.storage.local.get(['offlineLogs']);
+    const logs = storage.offlineLogs || [];
+
+    if (logs.length === 0) {
+        return { status: 'success', synced: 0 };
+    }
+
+    try {
+        await sendDataToBackend(logs);
+        await chrome.storage.local.set({ offlineLogs: [], lastSyncTime: Date.now() });
+        console.log(`✅ Synced ${logs.length} queued logs`);
+        return { status: 'success', synced: logs.length };
+    } catch (error) {
+        console.warn("Sync failed, will retry later", error.message);
+        return { status: 'error', synced: 0 };
+    }
 }
 
 async function syncLogsIndividually(logs) {
@@ -405,10 +441,43 @@ async function collectAndSendBrowsingHistory() {
         return { status: 'disabled' };
     }
 
-    console.log("🔍 Collecting Chrome browsing history... (Local Only)");
+    console.log("🔍 Collecting Chrome browsing history...");
     const endTime = Date.now();
+    const startTime = endTime - HISTORY_DAYS_TO_FETCH * 24 * 60 * 60 * 1000;
+
+    const historyItems = await new Promise((resolve) => {
+        chrome.history.search({ text: '', startTime, maxResults: 500 }, (results) => resolve(results || []));
+    });
+
+    const payloads = historyItems.map(item => ({
+        url: item.url,
+        title: item.title,
+        visited_at: new Date(item.lastVisitTime || Date.now()).toISOString(),
+        duration_seconds: 0,
+        source: 'chrome_history',
+        topic: 'General',
+        metadata: { transition: item.transition }
+    }));
+
+    if (payloads.length > 0) {
+        // Send in a single batch
+        try {
+            await sendDataToBackend(payloads);
+            console.log(`✅ Sent ${payloads.length} history items to backend`);
+        } catch (e) {
+            console.warn("Failed to sync history, queuing", e.message);
+            await storeLocally({
+                url: 'chrome-history-batch',
+                title: 'history_batch',
+                timestamp: new Date().toISOString(),
+                duration: 0,
+                metadata: { batch: payloads }
+            });
+        }
+    }
+
     await chrome.storage.local.set({ lastHistorySync: endTime });
-    return { status: 'success', count: 0 };
+    return { status: 'success', count: payloads.length };
 }
 
 function extractDomain(url) {
@@ -459,7 +528,13 @@ async function generateResume() {
 // ==========================================
 
 async function getServerStatus() {
-    return { status: 'offline' };
+    try {
+        const res = await fetch(`${API_URL}/api/health`);
+        if (!res.ok) throw new Error('offline');
+        return { status: 'online' };
+    } catch (e) {
+        return { status: 'offline' };
+    }
 }
 
 

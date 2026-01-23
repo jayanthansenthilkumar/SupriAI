@@ -10,15 +10,38 @@
 let libraryFilter = 'all';
 let libraryData = [];
 
+const API_URL = window.API_URL || 'http://127.0.0.1:8000';
+
 async function loadLibraryData() {
-    console.log("Library disabled (No Backend)");
-    libraryData = [];
-    renderLibraryHistory([]);
-    renderBookmarks([]);
-    updateLibraryStats([]);
+    try {
+        const res = await fetch(`${API_URL}/api/history?limit=200`);
+        const history = await res.json();
+        libraryData = (history || []).map(item => ({
+            id: item.id,
+            topic: item.topic || 'General',
+            title: item.title || item.domain || 'Untitled',
+            url: item.url,
+            duration: item.duration_seconds || 0,
+            engagement_score: Math.min(100, Math.round((item.duration_seconds || 0) / 60 * 5)),
+            timestamp: item.visited_at,
+            is_bookmarked: false
+        }));
+
+        const bookmarksRes = await fetch(`${API_URL}/api/bookmarks`);
+        const bookmarks = await bookmarksRes.json();
+
+        renderLibraryHistory(libraryData);
+        renderBookmarks(bookmarks || []);
+        updateLibraryStats(libraryData, bookmarks || []);
+    } catch (e) {
+        console.error("Failed to load library data", e);
+        renderLibraryHistory([]);
+        renderBookmarks([]);
+        updateLibraryStats([]);
+    }
 }
 
-function updateLibraryStats(history) {
+function updateLibraryStats(history, bookmarks = []) {
     // Update stats if elements exist
     const totalEl = document.getElementById('libraryTotalItems');
     const bookmarksEl = document.getElementById('libraryBookmarks');
@@ -29,12 +52,7 @@ function updateLibraryStats(history) {
 
     // Count bookmarks
     if (bookmarksEl) {
-        fetch(`${API_URL}/api/bookmarks`)
-            .then(r => r.json())
-            .then(data => {
-                const count = data.bookmarks?.length || 0;
-                bookmarksEl.textContent = count;
-            });
+        bookmarksEl.textContent = (bookmarks || []).length;
     }
 
     // This week count
@@ -182,15 +200,57 @@ function searchLibrary() {
 }
 
 async function bookmarkHistoryItem(historyId) {
-    showNotification('Bookmarking disabled (No Backend)', 'error');
+    const item = libraryData.find(h => h.id === historyId);
+    if (!item) {
+        showNotification('History item not found', 'error');
+        return;
+    }
+    try {
+        const res = await fetch(`${API_URL}/api/bookmarks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: item.url, title: item.title })
+        });
+        if (!res.ok) throw new Error('Failed');
+        showNotification('Bookmarked!', 'success');
+        loadLibraryData();
+    } catch (e) {
+        showNotification('Failed to bookmark', 'error');
+    }
 }
 
 async function deleteBookmark(bookmarkId) {
-    showNotification('Delete disabled (No Backend)', 'error');
+    if (!confirm('Delete this bookmark?')) return;
+    try {
+        const res = await fetch(`${API_URL}/api/bookmarks/${bookmarkId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed');
+        showNotification('Bookmark deleted', 'success');
+        loadLibraryData();
+    } catch (e) {
+        showNotification('Failed to delete bookmark', 'error');
+    }
 }
 
 function showAddBookmarkDialog() {
-    showNotification('Add Bookmark unavailable (No Backend)', 'error');
+    const url = prompt('Enter URL to bookmark');
+    if (!url) return;
+    const title = prompt('Optional title');
+    bookmarkFromDialog(url, title);
+}
+
+async function bookmarkFromDialog(url, title) {
+    try {
+        const res = await fetch(`${API_URL}/api/bookmarks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, title })
+        });
+        if (!res.ok) throw new Error('Failed');
+        showNotification('Bookmark saved', 'success');
+        loadLibraryData();
+    } catch (e) {
+        showNotification('Failed to save bookmark', 'error');
+    }
 }
 
 function exportLibraryCSV() {
@@ -222,9 +282,16 @@ function exportLibraryCSV() {
 let notesData = [];
 
 async function loadNotesData() {
-    notesData = [];
-    renderNotes([]);
-}// Try alternate container if notesGrid doesn't exist
+    try {
+        const res = await fetch(`${API_URL}/api/notes`);
+        notesData = await res.json();
+        renderNotes(notesData);
+    } catch (e) {
+        console.error('Failed to load notes', e);
+        notesData = [];
+        renderNotes([]);
+    }
+}
 function renderNotes(notes) {
     const grid = document.getElementById('notesGrid');
 
@@ -283,7 +350,28 @@ function renderNotes(notes) {
 }
 
 async function saveNote() {
-    showNotification('Notes disabled (No Backend)', 'error');
+    const title = document.getElementById('noteTitle')?.value || '';
+    const content = document.getElementById('noteContent')?.value || '';
+    const tags = document.getElementById('noteTags')?.value || '';
+
+    if (!title || !content) {
+        showNotification('Title and content are required', 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/api/notes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content, tags })
+        });
+        if (!res.ok) throw new Error('Failed');
+        clearNoteForm();
+        await loadNotesData();
+        showNotification('Note saved', 'success');
+    } catch (e) {
+        showNotification('Failed to save note', 'error');
+    }
 }
 
 function clearNoteForm() {
@@ -294,11 +382,45 @@ function clearNoteForm() {
 }
 
 async function editNote(noteId) {
-    showNotification('Edit disabled', 'error');
+    const note = notesData.find(n => n.id === noteId);
+    if (!note) return;
+
+    const newTitle = prompt('Edit title', note.title) || note.title;
+    const newContent = prompt('Edit content', note.content) || note.content;
+    const newTags = prompt('Tags (comma separated)', note.tags || '') || note.tags;
+
+    try {
+        const res = await fetch(`${API_URL}/api/notes/${noteId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: newTitle, content: newContent, tags: newTags })
+        });
+        if (!res.ok) throw new Error('Failed');
+        await loadNotesData();
+        showNotification('Note updated', 'success');
+    } catch (e) {
+        showNotification('Failed to update note', 'error');
+    }
 }
 
 async function deleteNote(noteId) {
-    showNotification('Delete disabled', 'error');
+    if (!confirm('Delete this note?')) return;
+    try {
+        const res = await fetch(`${API_URL}/api/notes/${noteId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed');
+        await loadNotesData();
+        showNotification('Note deleted', 'success');
+    } catch (e) {
+        showNotification('Failed to delete note', 'error');
+    }
+    try {
+        const res = await fetch(`${API_URL}/api/notes/${noteId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed');
+        await loadNotesData();
+        showNotification('Note deleted', 'success');
+    } catch (e) {
+        showNotification('Failed to delete note', 'error');
+    }
 }
 
 function searchNotes() {

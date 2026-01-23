@@ -7,7 +7,7 @@
 // CONFIGURATION
 // ==========================================
 
-// Backend removed
+const API_URL = 'http://127.0.0.1:8000';
 
 
 // ==========================================
@@ -82,7 +82,15 @@ function setupEventListeners() {
 async function loadPopupData() {
     // First, load from local storage (fast)
     loadFromStorage();
-    // Backend data loading removed
+    
+    // Then fetch latest stats from backend
+    try {
+        const res = await fetch(`${API_URL}/api/analytics/summary`);
+        const data = await res.json();
+        updatePopupWithServerData(data);
+    } catch (e) {
+        console.log("Backend offline, using local cache");
+    }
 }
 
 function loadFromStorage() {
@@ -136,31 +144,27 @@ function loadFromStorage() {
 
 function updatePopupWithServerData(data) {
     // Update topic
-    if (data.top_topic && data.top_topic !== 'None') {
-        updateElement('currentTopic', data.top_topic);
-        updateTopicIcon(data.top_topic);
-        
-        // Save to storage for next time
-        chrome.storage.local.set({ lastTopic: data.top_topic });
+    if (data.topics && data.topics.length > 0) {
+        const topTopic = data.topics[0][0];
+        updateElement('currentTopic', topTopic);
+        updateTopicIcon(topTopic);
+        chrome.storage.local.set({ lastTopic: topTopic });
     }
 
-    // Update engagement score
-    if (data.engagement_score !== undefined) {
+    // Update engagement score (derived from avg duration)
+    if (data.avg_duration_seconds !== undefined) {
         const confFill = document.getElementById('confFill');
         if (confFill) {
-            confFill.style.width = `${data.engagement_score}%`;
+            const percentage = Math.min(100, Math.round(data.avg_duration_seconds / 60 * 5));
+            confFill.style.width = `${percentage}%`;
         }
     }
 
     // Update today's time
-    if (data.total_minutes !== undefined) {
-        updateElement('todayTime', formatMinutes(data.total_minutes));
-        chrome.storage.local.set({ todayTotalTime: data.total_minutes });
-    }
-
-    // Update streak
-    if (data.streak_days !== undefined) {
-        // Could add streak display to popup if needed
+    if (data.total_duration_seconds !== undefined) {
+        const totalMinutes = Math.round(data.total_duration_seconds / 60);
+        updateElement('todayTime', formatMinutes(totalMinutes));
+        chrome.storage.local.set({ todayTotalTime: totalMinutes });
     }
 }
 
