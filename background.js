@@ -631,7 +631,7 @@ chrome.contextMenus?.onClicked?.addListener(async (info, tab) => {
 function showNotification(title, message) {
      chrome.notifications?.create({
         type: 'basic',
-        iconUrl: 'libs/icon48.png',
+        iconUrl: 'assets/icons/icon48.png',
         title: title,
         message: message
     });
@@ -695,7 +695,7 @@ async function generateAndNotifyWeeklyReport() {
         // Send notification
         chrome.notifications?.create({
             type: 'basic',
-            iconUrl: 'libs/icon48.png',
+            iconUrl: 'assets/icons/icon48.png',
             title: '📊 Weekly Learning Report Ready!',
             message: `Sessions: ${summary.sessions || 0} | Hours: ${summary.total_hours || 0}h | Streak: ${summary.streak || 0} days`
         });
@@ -725,7 +725,7 @@ async function checkAndSendSmartNotifications() {
     if (currentHour >= 18 && currentHour <= 21 && todayMinutes < 15) {
         chrome.notifications?.create({
             type: 'basic',
-            iconUrl: 'libs/icon48.png',
+            iconUrl: 'assets/icons/icon48.png',
             title: '📖 Time for a Learning Session!',
             message: 'You haven\'t studied much today. A quick 25-minute focused session can make a difference!'
         });
@@ -737,7 +737,7 @@ async function checkAndSendSmartNotifications() {
     if (todayMinutes >= 60 && todayMinutes < 65) {
         chrome.notifications?.create({
             type: 'basic',
-            iconUrl: 'libs/icon48.png',
+            iconUrl: 'assets/icons/icon48.png',
             title: '🎉 1 Hour Achievement!',
             message: 'Amazing! You\'ve completed over an hour of learning today!'
         });
