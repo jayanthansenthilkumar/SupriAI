@@ -7,7 +7,7 @@
 // CONFIGURATION
 // ==========================================
 
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = 'http://localhost:5000';
 let trendChart, topicChart;
 
 // ==========================================
@@ -413,9 +413,18 @@ async function deleteBookmark(id) {
 // ==========================================
 
 async function loadGoalsData() {
-    console.log("Loading goals data (Local Only)");
-    renderGoals([]);
-    renderAchievements([]);
+    console.log("Loading goals data from backend...");
+    try {
+        const goalsRes = await fetch(`${API_URL}/api/goals`);
+        const goals = await goalsRes.json();
+        renderGoals(goals);
+        // Achievements can be hardcoded or derived from analytics
+        renderAchievements([]);
+    } catch (e) {
+        console.error("Failed to load goals", e);
+        renderGoals([]);
+        renderAchievements([]);
+    }
 }
 
 function renderGoals(goals) {
@@ -493,8 +502,16 @@ async function createGoal(goalData) {
 // ==========================================
 
 async function loadScheduleData() {
-    console.log("Loading schedule data (Local Only)");
-    renderSchedule([]);
+    console.log("Loading schedule data from backend...");
+    try {
+        // We can fetch schedule or just render static for now as we didn't make a schedule table
+        // But let's assume we want to pull some events later. 
+        // For now, let's keep it static but log it correctly to indicate intention
+        console.log("Schedule feature pending backend implementation.");
+        renderSchedule([]);
+    } catch (e) {
+        console.error("Failed to load schedule", e);
+    }
 }
 
 function renderSchedule(events) {

@@ -8,7 +8,7 @@
 // CONFIGURATION
 // ==========================================
 
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = 'http://localhost:5000';
 const SYNC_INTERVAL = 5; // minutes
 const MAX_OFFLINE_LOGS = 100;
 const HISTORY_SYNC_INTERVAL = 30; // minutes
@@ -648,11 +648,23 @@ async function handleAutoLogWithAI(data) {
 }
 
 async function fetchAIDashboardSummary() {
-    return { status: 'success', summary: {} };
+    try {
+        const res = await fetch(`${API_URL}/api/analytics/summary`);
+        const data = await res.json();
+        return { status: 'success', summary: data };
+    } catch (e) {
+        return { status: 'error', message: 'Offline' };
+    }
 }
 
 async function fetchAIInsights(days = 30) {
-    return { status: 'success', insights: [] };
+    try {
+        const res = await fetch(`${API_URL}/api/insights`);
+        const data = await res.json();
+        return data;
+    } catch (e) {
+        return { status: 'error', message: 'Offline' };
+    }
 }
 
 async function fetchLearningPath(data = {}) {
