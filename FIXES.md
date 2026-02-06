@@ -1,192 +1,200 @@
-# SupriAI - Issue Fixes Summary
+# SupriAI - Fixes and Known Issues
 
-## ✅ Fixed Issues
+## Recent Fixes
 
-### 1. **Gemini API 404 Error** - FIXED ✅
+### Fix #1: Gemini API 404 Error (February 6, 2026)
 
-**Problem:**
+**Issue:** Summary feature was failing with 404 error
 
 ```
-Error: API request failed with status 404: models/gemini-pro is not found for API version v1beta
+Error: API request failed with status 404: models/gemini-1.5-flash is not found for API version v1
 ```
 
-**Root Cause:**
+**Root Cause:** API endpoint was using `v1` instead of `v1beta` for the gemini-1.5-flash model
 
-- The old API endpoint used `v1beta/models/gemini-pro`
-- Google has updated their API and this model/endpoint is no longer available
+**Fix:**
 
-**Solution:**
-Updated the API configuration to use the current Gemini API:
+- Updated `config/keys.js` to use v1beta endpoint
+- Enhanced error handling in `services/gemini.js`
 
-- **Old:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent`
-- **New:** `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent`
+**Status:** ✅ Fixed and pushed to GitHub (commit e79c4f8)
 
-**Files Updated:**
+**Files Modified:**
 
-- `config/keys.js` - Updated API_URL to v1 endpoint with gemini-1.5-flash
-- `config/keys.example.js` - Updated example configuration
+- `config/keys.js` - Changed API URL from v1 to v1beta
+- `services/gemini.js` - Added better error handling for 404 and 500 errors
 
-**Model Change:**
+**How to Verify:**
 
-- **Old Model:** `gemini-pro` (deprecated)
-- **New Model:** `gemini-1.5-flash` (current, faster, and more efficient)
-
----
-
-### 2. **Enhanced Error Handling** - IMPROVED ✅
-
-**Improvements Made:**
-
-#### A. `services/gemini.js`
-
-- ✅ Validates CONFIG object exists
-- ✅ Checks if API key is configured (not placeholder)
-- ✅ Validates content before sending to API
-- ✅ Detailed HTTP status code handling (400, 403, 429, etc.)
-- ✅ Better error messages for users
-- ✅ Console logging for debugging
-
-#### B. `scripts/content.js`
-
-- ✅ Smarter content extraction (tries main, article, etc.)
-- ✅ Increased content limit (5000 → 8000 characters)
-- ✅ Validates content length before returning
-- ✅ Better error responses with success/failure flags
-
-#### C. `popup.js`
-
-- ✅ Validates CONFIG is loaded
-- ✅ Checks for valid webpage URLs
-- ✅ Better error messages for users
-- ✅ Handles common error scenarios
-- ✅ Improved user feedback during processing
+1. Reload the extension
+2. Navigate to any webpage
+3. Click extension icon and select "Generate Summary"
+4. Summary should be generated successfully
 
 ---
 
-### 3. **Google Sans Font Integration** - COMPLETED ✅
+### Fix #2: Database Backend Implementation (February 6, 2026)
 
-**What Was Done:**
+**Feature:** Complete SQLite-compatible database backend using IndexedDB
 
-- ✅ Created `styles/fonts.css` with font-face definitions
-- ✅ Updated `popup.css` to import and use Google Sans
-- ✅ Updated `styles/curation.css` to use fonts
-- ✅ Added fonts to `manifest.json` web_accessible_resources
-- ✅ Updated branding to "SupriAI" throughout
+**What Was Added:**
 
-**Font Weights Available:**
+- Database service with 4 data stores (tabs, sessions, domain_stats, tab_events)
+- Automatic tab tracking and persistence
+- Session management
+- Event logging
+- Data export/import functionality
+- Query helper utilities
+- Data migration tools
+- Comprehensive documentation
 
-- Regular (400) - Body text
-- Medium (500) - Emphasis
-- Bold (700) - Headings
+**Status:** ✅ Complete and pushed to GitHub
 
----
+**Files Created:**
 
-## 📋 Testing Checklist
+- `services/database.js` - Main database service
+- `services/databaseQueryHelper.js` - Query helpers
+- `services/dataMigration.js` - Migration utility
+- `background-enhanced.js` - Enhanced background script
+- `schema.sql` - SQLite schema
+- `examples/database-usage-examples.js` - Usage examples
+- 5 documentation files
 
-To verify everything works:
-
-### Step 1: Reload Extension
-
-1. Go to `chrome://extensions/`
-2. Find "SupriAI"
-3. Click the reload icon 🔄
-
-### Step 2: Test Summary Feature
-
-1. Navigate to any article webpage (e.g., Wikipedia, news site)
-2. Click the SupriAI extension icon
-3. Go to the "Summary" tab
-4. Click "Summarize This Page"
-5. Should see: "Generating summary with AI..."
-6. Should receive a bulleted summary
-
-### Step 3: Check Console (Optional)
-
-1. Press F12 to open DevTools
-2. Go to Console tab
-3. Should see:
-   - ✅ `Sending request to Gemini API...`
-   - ✅ `Response status: 200`
-   - ✅ `Summary generated successfully`
+**How to Use:**
+See `QUICKSTART_DATABASE.md` for quick start guide
 
 ---
 
-## 🔧 What Changed in API Configuration
+## Known Issues
 
-### Before (Broken):
+### Issue #1: Extension Context Warning
+
+**Description:** Console shows "Not running as a Chrome extension" warning when viewing files directly
+
+**Impact:** Low - This is expected behavior when viewing HTML files directly in browser
+
+**Workaround:** Load the extension properly through `chrome://extensions/`
+
+**Status:** Not a bug - expected behavior
+
+---
+
+### Issue #2: API Connection Test Warning
+
+**Description:** Console shows "API Connection Test" warning
+
+**Impact:** Low - Informational message for debugging
+
+**Status:** Working as intended - helps verify API configuration
+
+---
+
+## Troubleshooting
+
+### Summary Feature Not Working
+
+**Symptoms:**
+
+- Error messages when clicking "Generate Summary"
+- 404, 403, or 429 errors
+
+**Solutions:**
+
+1. **404 Error:** Make sure you're using the latest version (v0.0.2+)
+2. **403 Error:** Check your API key in `config/keys.js`
+3. **429 Error:** Wait a moment and try again (rate limit)
+
+### Database Not Initializing
+
+**Symptoms:**
+
+- No "Database initialized successfully" message in console
+- Data not persisting
+
+**Solutions:**
+
+1. Reload the extension in `chrome://extensions/`
+2. Check browser console for errors
+3. Make sure IndexedDB is enabled in browser settings
+4. Clear browser data and reinstall extension
+
+### Performance Issues
+
+**Symptoms:**
+
+- Extension running slowly
+- High memory usage
+
+**Solutions:**
+
+1. Clear old data: Run `DatabaseQueryHelper.clearOldData(30)` in console
+2. Reduce data retention period
+3. Check for slow queries in console
+
+---
+
+## How to Report Issues
+
+If you encounter a bug:
+
+1. **Check Console:** Open browser console (F12) and look for error messages
+2. **Check This File:** See if the issue is already documented above
+3. **Gather Information:**
+   - Error message (full text)
+   - Steps to reproduce
+   - Browser version
+   - Extension version
+4. **Create Issue:** Report on GitHub with the information above
+
+---
+
+## Version History
+
+### v0.0.2 (February 6, 2026)
+
+- ✅ Fixed Gemini API 404 error (v1 → v1beta)
+- ✅ Added complete database backend with IndexedDB
+- ✅ Enhanced error handling
+- ✅ Added comprehensive documentation
+- ✅ Added data migration tools
+
+### v0.0.1 (Previous)
+
+- Initial release
+- Basic tab tracking
+- Summary feature
+- Time tracking
+
+---
+
+## Useful Commands
+
+### Check Database Status
 
 ```javascript
-API_URL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+chrome.runtime.sendMessage({ action: "getSessionData" }, console.log);
 ```
 
-- Used deprecated `v1beta` endpoint
-- Used old `gemini-pro` model
-- Resulted in 404 errors
-
-### After (Working):
+### Export Data
 
 ```javascript
-API_URL: "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
+await DatabaseQueryHelper.downloadDataAsJSON();
 ```
 
-- Uses current `v1` endpoint
-- Uses `gemini-1.5-flash` model (faster, more efficient)
-- Fully supported and working
-
----
-
-## 🎯 Benefits of New Model (gemini-1.5-flash)
-
-1. **Faster Response Times** - Optimized for speed
-2. **Better Availability** - Current stable model
-3. **Improved Quality** - Enhanced understanding
-4. **Lower Latency** - Quicker summaries
-5. **Future-Proof** - Active development and support
-
----
-
-## 📚 Additional Resources Created
-
-1. **`TROUBLESHOOTING.md`** - Comprehensive troubleshooting guide
-2. **`setup-check.html`** - Visual setup verification tool
-3. **`fonts/README.md`** - Font integration documentation
-4. **`config/README.md`** - API setup instructions
-
----
-
-## 🚀 Next Steps
-
-1. **Reload the extension** in Chrome
-2. **Test on a real webpage** (not chrome:// pages)
-3. **Check the console** if any issues occur
-4. **Refer to TROUBLESHOOTING.md** for any problems
-
----
-
-## ⚠️ Important Notes
-
-- **API Key Security:** Your API key in `config/keys.js` is gitignored
-- **Supported Pages:** Only works on http:// and https:// pages
-- **Rate Limits:** Free tier has usage limits
-- **Model Updates:** If API changes again, update the `API_URL` in `config/keys.js`
-
----
-
-## 📞 Quick Reference
-
-**Current Working Configuration:**
+### Clear Old Data
 
 ```javascript
-const CONFIG = {
-  GEMINI_API_KEY: "YOUR_API_KEY_HERE",
-  API_URL:
-    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
-};
+await DatabaseQueryHelper.clearOldData(30); // Keep last 30 days
 ```
 
-**Test URL:** Try summarizing: https://en.wikipedia.org/wiki/Artificial_intelligence
+### View Browsing Summary
+
+```javascript
+const summary = await DatabaseQueryHelper.getBrowsingSummary("today");
+console.log(summary);
+```
 
 ---
 
-**Status:** ✅ All issues resolved and tested
-**Last Updated:** 2026-02-06
+**Last Updated:** February 6, 2026  
+**Current Version:** v0.0.2
