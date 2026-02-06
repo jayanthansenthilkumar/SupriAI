@@ -746,8 +746,8 @@ function displayTopDomains(domains) {
       <div class="domain-item">
         <span class="domain-name">${index + 1}. ${domain.domain}</span>
         <div class="domain-stats">
-          <span>📊 ${domain.visitCount} visits</span>
-          <span>⏱️ ${timeFormatted}</span>
+          <span>${domain.visitCount} visits</span>
+          <span>${timeFormatted}</span>
         </div>
       </div>
     `;
@@ -776,8 +776,8 @@ function displayRecentTabs(tabs) {
         <div class="tab-item-title">${tab.title || tab.domain}</div>
         <div class="tab-item-url">${tab.url}</div>
         <div class="tab-item-meta">
-          <span>🕒 ${date}</span>
-          <span>⏱️ ${timeFormatted}</span>
+          <span>${date}</span>
+          <span>${timeFormatted}</span>
         </div>
       </div>
     `;
