@@ -1,0 +1,5 @@
+flask
+mysql-connector-python
+pandas
+scikit-learn
+textblob

@@ -7,7 +7,7 @@
 // CONFIGURATION
 // ==========================================
 
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = 'http://localhost:5000';
 let trendChart, topicChart;
 
 // ==========================================
@@ -332,9 +332,16 @@ async function loadViewData(viewName) {
 // ==========================================
 
 async function loadLibraryData() {
-    console.log("Loading library data (Local Only)");
-    renderRecentActivity([]);
-    renderBookmarks([]);
+    console.log("Loading library data from backend...");
+    try {
+        const bookmarksRes = await fetch(`${API_URL}/api/bookmarks`);
+        const bookmarks = await bookmarksRes.json();
+        renderBookmarks(bookmarks);
+    } catch (e) {
+        console.error("Failed to load bookmarks", e);
+        renderBookmarks([]);
+        showToast("Failed to load bookmarks", "error");
+    }
 }
 
 function renderBookmarks(bookmarks) {
@@ -378,7 +385,26 @@ function renderBookmarks(bookmarks) {
 }
 
 async function deleteBookmark(id) {
-    showToast("Bookmarks management disabled", "error");
+    try {
+        const response = await fetch(`${API_URL}/api/bookmarks/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            showToast("Bookmark deleted", "success");
+            // Remove element from DOM immediately or reload
+            const el = document.querySelector(`.google-card[data-bookmark-id="${id}"]`);
+            if (el) el.remove();
+            
+            // If no bookmarks left, show empty state
+            const container = document.querySelector('#view-library .dashboard-grid:last-child');
+            if (container && !container.querySelector('.google-card')) {
+                renderBookmarks([]);
+            }
+        } else {
+            showToast("Failed to delete bookmark", "error");
+        }
+    } catch (e) {
+        console.error("Delete failed", e);
+        showToast("Failed to delete bookmark", "error");
+    }
 }
 
 
@@ -387,9 +413,18 @@ async function deleteBookmark(id) {
 // ==========================================
 
 async function loadGoalsData() {
-    console.log("Loading goals data (Local Only)");
-    renderGoals([]);
-    renderAchievements([]);
+    console.log("Loading goals data from backend...");
+    try {
+        const goalsRes = await fetch(`${API_URL}/api/goals`);
+        const goals = await goalsRes.json();
+        renderGoals(goals);
+        // Achievements can be hardcoded or derived from analytics
+        renderAchievements([]);
+    } catch (e) {
+        console.error("Failed to load goals", e);
+        renderGoals([]);
+        renderAchievements([]);
+    }
 }
 
 function renderGoals(goals) {
@@ -467,8 +502,16 @@ async function createGoal(goalData) {
 // ==========================================
 
 async function loadScheduleData() {
-    console.log("Loading schedule data (Local Only)");
-    renderSchedule([]);
+    console.log("Loading schedule data from backend...");
+    try {
+        // We can fetch schedule or just render static for now as we didn't make a schedule table
+        // But let's assume we want to pull some events later. 
+        // For now, let's keep it static but log it correctly to indicate intention
+        console.log("Schedule feature pending backend implementation.");
+        renderSchedule([]);
+    } catch (e) {
+        console.error("Failed to load schedule", e);
+    }
 }
 
 function renderSchedule(events) {
@@ -482,8 +525,16 @@ function renderSchedule(events) {
 // ==========================================
 
 async function loadNotesData() {
-    console.log("Loading notes data (Local Only)");
-    renderNotes([]);
+    console.log("Loading notes data from backend...");
+    try {
+        const notesRes = await fetch(`${API_URL}/api/notes`);
+        const notes = await notesRes.json();
+        renderNotes(notes);
+    } catch (e) {
+        console.error("Failed to load notes", e);
+        renderNotes([]);
+        showToast("Failed to load notes", "error");
+    }
 }
 
 function renderNotes(notes) {
@@ -522,7 +573,22 @@ function renderNotes(notes) {
 }
 
 async function saveNote(noteData) {
-    showToast("Notes are disabled (Backend Removed)", "error");
+    try {
+        const response = await fetch(`${API_URL}/api/notes`, {
+            method: 'POST',
+            body: JSON.stringify(noteData),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+            showToast("Reflection saved!", "success");
+            loadNotesData();
+        } else {
+            showToast("Failed to save note", "error");
+        }
+    } catch (e) {
+        console.error("Save failed", e);
+        showToast("Failed to save note", "error");
+    }
 }
 
 
