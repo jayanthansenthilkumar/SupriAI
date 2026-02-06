@@ -1,10 +1,16 @@
 /* Import Google Sans fonts */
-@import url('styles/fonts.css');
+@import url("styles/fonts.css");
 
 body {
   width: 400px;
   padding: 16px;
-  font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    "Google Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
 }
 
 .container {
@@ -71,7 +77,7 @@ h1 {
   margin-top: 16px;
   height: 200px;
   overflow-y: auto;
-} 
+}
 
 .empty-state {
   text-align: center;
@@ -80,7 +86,7 @@ h1 {
   background: #f5f5f5;
   border-radius: 4px;
   margin: 10px 0;
-} 
+}
 
 .timeline-item {
   display: flex;
@@ -103,14 +109,14 @@ h1 {
 }
 
 .time-limit-reached {
-  border: 2px solid #EA4335;
+  border: 2px solid #ea4335;
   background: #fff0f0;
 }
 
 .time-warning {
   margin-top: 8px;
   padding: 8px;
-  background: #EA4335;
+  background: #ea4335;
   color: white;
   border-radius: 4px;
 }
@@ -121,7 +127,7 @@ h1 {
 
 .time-warning button {
   background: white;
-  color: #EA4335;
+  color: #ea4335;
   border: none;
   padding: 4px 8px;
   border-radius: 4px;
@@ -139,20 +145,23 @@ h1 {
   border-radius: 8px;
 }
 
-.add-limit, .add-site {
+.add-limit,
+.add-site {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
 }
 
-.add-limit input, .add-site input {
+.add-limit input,
+.add-site input {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   flex: 1;
 }
 
-.site-list-item, .limit-item {
+.site-list-item,
+.limit-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -163,7 +172,7 @@ h1 {
 }
 
 .remove-button {
-  background: #EA4335;
+  background: #ea4335;
   color: white;
   border: none;
   padding: 4px 8px;
@@ -235,7 +244,7 @@ h1 {
 }
 
 .error-message {
-  color: #EA4335;
+  color: #ea4335;
   text-align: center;
   padding: 10px;
 }
@@ -274,4 +283,159 @@ h1 {
 .tabs::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 4px;
-} 
+}
+
+/* History Tab Styles */
+.history-section {
+  padding: 16px 0;
+}
+
+.history-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.period-select {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.secondary-button {
+  background: #34a853;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.secondary-button:hover {
+  background: #2d8e47;
+}
+
+.history-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 16px;
+  border-radius: 8px;
+  color: white;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.history-top-domains,
+.history-recent {
+  margin-bottom: 24px;
+}
+
+.history-top-domains h3,
+.history-recent h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.domain-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.domain-item:hover {
+  background: #e8eaed;
+  transform: translateX(4px);
+}
+
+.domain-name {
+  font-weight: 500;
+  color: #333;
+  flex: 1;
+}
+
+.domain-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #666;
+}
+
+.domain-stats span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tab-item {
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border-left: 3px solid #4285f4;
+}
+
+.tab-item-title {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.tab-item-url {
+  font-size: 11px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-item-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #999;
+}
+
+.empty-history {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.empty-history-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.empty-history-text {
+  font-size: 14px;
+}

@@ -9,6 +9,7 @@
   <script src="config/keys.js"></script>
   <script src="config.js"></script>
   <script src="services/gemini.js"></script>
+  <script src="services/databaseQueryHelper.js"></script>
   <script src="services/curationService.js"></script>
   <script src="components/curationWorkflow.js"></script>
   <script src="popup.js"></script>
@@ -21,6 +22,7 @@
       <button class="tab-button" data-tab="curate">Curate</button>
       <button class="tab-button" data-tab="summary">Summary</button>
       <button class="tab-button active" data-tab="overview">Overview</button>
+      <button class="tab-button" data-tab="history">History</button>
       <button class="tab-button" data-tab="groups">Tab Groups</button>
       <button class="tab-button" data-tab="inactive">Inactive Tabs</button>
       <button class="tab-button" data-tab="settings">Settings</button>
@@ -52,6 +54,48 @@
         <canvas id="dailyPattern"></canvas>
         <canvas id="productivity"></canvas>
         <div id="tabLifecycle"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="history">
+      <div class="history-section">
+        <div class="history-controls">
+          <select id="historyPeriod" class="period-select">
+            <option value="today">Today</option>
+            <option value="week" selected>This Week</option>
+            <option value="month">This Month</option>
+          </select>
+          <button id="exportDataBtn" class="secondary-button">Export Data</button>
+        </div>
+        
+        <div class="history-stats">
+          <div class="stat-card">
+            <div class="stat-label">Total Tabs</div>
+            <div class="stat-value" id="historyTotalTabs">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Unique Domains</div>
+            <div class="stat-value" id="historyUniqueDomains">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Time</div>
+            <div class="stat-value" id="historyTotalTime">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Visits</div>
+            <div class="stat-value" id="historyTotalVisits">-</div>
+          </div>
+        </div>
+
+        <div class="history-top-domains">
+          <h3>Top Domains</h3>
+          <div id="topDomainsList"></div>
+        </div>
+
+        <div class="history-recent">
+          <h3>Recent Tabs</h3>
+          <div id="recentTabsList"></div>
+        </div>
       </div>
     </div>
 

@@ -641,4 +641,178 @@ function displaySiteList(sites, containerId) {
     
     container.appendChild(item);
   });
+}
+
+// ========================================
+// HISTORY TAB - DATABASE INTEGRATION
+// ========================================
+
+// Initialize History tab when switching to it
+document.addEventListener('DOMContentLoaded', () => {
+  // Add listener for history period change
+  const historyPeriodSelect = document.getElementById('historyPeriod');
+  if (historyPeriodSelect) {
+    historyPeriodSelect.addEventListener('change', () => {
+      loadHistoryData();
+    });
+  }
+
+  // Add listener for export button
+  const exportBtn = document.getElementById('exportDataBtn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', async () => {
+      try {
+        exportBtn.textContent = 'Exporting...';
+        exportBtn.disabled = true;
+        
+        if (typeof DatabaseQueryHelper !== 'undefined') {
+          await DatabaseQueryHelper.downloadDataAsJSON();
+          exportBtn.textContent = '✓ Exported!';
+          setTimeout(() => {
+            exportBtn.textContent = 'Export Data';
+            exportBtn.disabled = false;
+          }, 2000);
+        } else {
+          throw new Error('Database not available');
+        }
+      } catch (error) {
+        console.error('Export error:', error);
+        exportBtn.textContent = '✗ Failed';
+        setTimeout(() => {
+          exportBtn.textContent = 'Export Data';
+          exportBtn.disabled = false;
+        }, 2000);
+      }
+    });
+  }
+
+  // Load history when tab is switched to
+  const originalSwitchTab = window.switchTab || switchTab;
+  window.switchTab = function(tabId) {
+    originalSwitchTab(tabId);
+    if (tabId === 'history') {
+      loadHistoryData();
+    }
+  };
+});
+
+async function loadHistoryData() {
+  try {
+    const period = document.getElementById('historyPeriod').value;
+    
+    // Check if DatabaseQueryHelper is available
+    if (typeof DatabaseQueryHelper === 'undefined') {
+      console.warn('DatabaseQueryHelper not loaded, showing placeholder data');
+      displayHistoryPlaceholder();
+      return;
+    }
+
+    // Get browsing summary
+    const summary = await DatabaseQueryHelper.getBrowsingSummary(period);
+    
+    // Update stats cards
+    document.getElementById('historyTotalTabs').textContent = summary.totalTabs || 0;
+    document.getElementById('historyUniqueDomains').textContent = summary.uniqueDomains || 0;
+    document.getElementById('historyTotalTime').textContent = summary.totalActiveTimeFormatted || '0s';
+    document.getElementById('historyTotalVisits').textContent = summary.totalVisits || 0;
+
+    // Get and display top domains
+    const topDomains = await DatabaseQueryHelper.getMostVisitedDomains(5, period);
+    displayTopDomains(topDomains);
+
+    // Display recent tabs
+    displayRecentTabs(summary.tabs || []);
+
+  } catch (error) {
+    console.error('Error loading history:', error);
+    displayHistoryError(error.message);
+  }
+}
+
+function displayTopDomains(domains) {
+  const container = document.getElementById('topDomainsList');
+  
+  if (!domains || domains.length === 0) {
+    container.innerHTML = '<div class="empty-history"><div class="empty-history-text">No browsing data yet. Start browsing to see statistics!</div></div>';
+    return;
+  }
+
+  container.innerHTML = domains.map((domain, index) => {
+    const timeFormatted = typeof DatabaseQueryHelper !== 'undefined' 
+      ? DatabaseQueryHelper.formatTime(domain.totalActiveTime)
+      : formatTime(domain.totalActiveTime);
+    
+    return `
+      <div class="domain-item">
+        <span class="domain-name">${index + 1}. ${domain.domain}</span>
+        <div class="domain-stats">
+          <span>📊 ${domain.visitCount} visits</span>
+          <span>⏱️ ${timeFormatted}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function displayRecentTabs(tabs) {
+  const container = document.getElementById('recentTabsList');
+  
+  if (!tabs || tabs.length === 0) {
+    container.innerHTML = '<div class="empty-history"><div class="empty-history-text">No recent tabs found.</div></div>';
+    return;
+  }
+
+  // Show only the 10 most recent tabs
+  const recentTabs = tabs.slice(0, 10);
+  
+  container.innerHTML = recentTabs.map(tab => {
+    const date = new Date(tab.timestamp).toLocaleString();
+    const timeFormatted = typeof DatabaseQueryHelper !== 'undefined'
+      ? DatabaseQueryHelper.formatTime(tab.activeTime || 0)
+      : formatTime(tab.activeTime || 0);
+    
+    return `
+      <div class="tab-item">
+        <div class="tab-item-title">${tab.title || tab.domain}</div>
+        <div class="tab-item-url">${tab.url}</div>
+        <div class="tab-item-meta">
+          <span>🕒 ${date}</span>
+          <span>⏱️ ${timeFormatted}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function displayHistoryPlaceholder() {
+  document.getElementById('historyTotalTabs').textContent = '-';
+  document.getElementById('historyUniqueDomains').textContent = '-';
+  document.getElementById('historyTotalTime').textContent = '-';
+  document.getElementById('historyTotalVisits').textContent = '-';
+  
+  document.getElementById('topDomainsList').innerHTML = `
+    <div class="empty-history">
+      <div class="empty-history-icon">📊</div>
+      <div class="empty-history-text">Database is initializing...<br>Reload the extension to see your browsing history.</div>
+    </div>
+  `;
+  
+  document.getElementById('recentTabsList').innerHTML = `
+    <div class="empty-history">
+      <div class="empty-history-icon">📝</div>
+      <div class="empty-history-text">Recent tabs will appear here once the database is ready.</div>
+    </div>
+  `;
+}
+
+function displayHistoryError(errorMessage) {
+  const errorHtml = `
+    <div class="empty-history">
+      <div class="empty-history-icon">⚠️</div>
+      <div class="empty-history-text">Error loading history: ${errorMessage}<br>Check the console for details.</div>
+    </div>
+  `;
+  
+  document.getElementById('topDomainsList').innerHTML = errorHtml;
+  document.getElementById('recentTabsList').innerHTML = errorHtml;
 } 
