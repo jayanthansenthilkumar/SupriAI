@@ -1,0 +1,13 @@
+/* This is just to show the design concept - you'll need to create actual PNG files */
+.icon {
+  background: #4285f4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon::after {
+  content: "⏱";
+  color: white;
+} 

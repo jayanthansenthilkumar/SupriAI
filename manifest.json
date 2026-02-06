@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "SupriAI",
+  "version": "1.0",
+  "description": "Track and visualize your browsing habits with interactive charts and tab management",
+  "web_accessible_resources": [{
+    "resources": ["config.js"],
+    "matches": ["<all_urls>"]
+  }],
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms",
+    "windows",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [{
+    "resources": [
+      "config/keys.js",
+      "services/gemini.js",
+      "config.js",
+      "lib/purify.min.js",
+      "services/curationService.js",
+      "components/curationWorkflow.js",
+      "styles/curation.css",
+      "styles/fonts.css",
+      "fonts/GoogleSans-Regular.woff",
+      "fonts/GoogleSans-Medium.woff",
+      "fonts/GoogleSans-Bold.woff"
+    ],
+    "matches": ["<all_urls>"]
+  }]
+} 

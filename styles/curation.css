@@ -1,0 +1,136 @@
+/* Import Google Sans fonts */
+@import url('fonts.css');
+
+.step-container {
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.intent-item, .rating-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: #f8f9fa;
+}
+
+.high-rated {
+  border-left: 4px solid #34A853;
+}
+
+.learning-plan {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.secondary-button {
+  background: #EA4335;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.secondary-button:hover {
+  background: #d33828;
+}
+
+.error-message {
+  background: #fff0f0;
+  border: 1px solid #EA4335;
+  color: #EA4335;
+  padding: 16px;
+  border-radius: 4px;
+  margin: 16px 0;
+  text-align: center;
+}
+
+.intent-summary {
+  background: #f0f4ff;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.intent-description {
+  color: #1a73e8;
+  font-size: 16px;
+  line-height: 1.4;
+  margin: 8px 0;
+}
+
+.relevant-tabs {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.tabs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  border-left: 4px solid #34A853;
+}
+
+.tab-title {
+  font-size: 14px;
+  color: #202124;
+  line-height: 1.4;
+}
+
+.step-actions {
+  margin-top: 20px;
+  text-align: right;
+}
+
+h4 {
+  color: #5f6368;
+  margin: 0 0 12px 0;
+  font-size: 14px;
+}
+
+.reading-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.reading-title {
+  flex: 1;
+  margin-right: 16px;
+}
+
+.reading-time {
+  color: #5f6368;
+  font-size: 14px;
+  white-space: nowrap;
+} 

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SupriAI</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="styles/curation.css">
+  <script src="lib/chart.js"></script>
+  <script src="lib/purify.min.js"></script>
+  <script src="config/keys.js"></script>
+  <script src="config.js"></script>
+  <script src="services/gemini.js"></script>
+  <script src="services/curationService.js"></script>
+  <script src="components/curationWorkflow.js"></script>
+  <script src="popup.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>SupriAI</h1>
+    
+    <div class="tabs">
+      <button class="tab-button" data-tab="curate">Curate</button>
+      <button class="tab-button" data-tab="summary">Summary</button>
+      <button class="tab-button active" data-tab="overview">Overview</button>
+      <button class="tab-button" data-tab="groups">Tab Groups</button>
+      <button class="tab-button" data-tab="inactive">Inactive Tabs</button>
+      <button class="tab-button" data-tab="settings">Settings</button>
+    </div>
+
+    <div class="tab-content" id="curate">
+      <div class="curation-controls">
+        <select id="domainSelect" class="domain-select">
+          <option value="">Select a domain...</option>
+        </select>
+        <button id="startCuration" class="primary-button">Start Curation</button>
+      </div>
+      <div id="curationWorkflow"></div>
+    </div>
+
+    <div class="tab-content" id="summary">
+      <div class="summary-section">
+        <button id="summarizeBtn" class="primary-button">Summarize This Page</button>
+        <div id="summaryResult" class="summary-content">
+          <div class="loader" style="display: none;">Summarizing...</div>
+          <div class="summary-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="overview">
+      <canvas id="timeChart"></canvas>
+      <div class="analytics-details">
+        <canvas id="dailyPattern"></canvas>
+        <canvas id="productivity"></canvas>
+        <div id="tabLifecycle"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="groups">
+      <div id="tabGroups"></div>
+    </div>
+
+    <div class="tab-content" id="inactive">
+      <div id="inactiveTabs"></div>
+    </div>
+
+    <div class="tab-content" id="settings">
+      <div class="settings-section">
+        <h3>Time Limits</h3>
+        <div class="add-limit">
+          <input type="text" id="limitDomain" placeholder="Domain (e.g., youtube.com)">
+          <input type="number" id="limitMinutes" placeholder="Minutes">
+          <button id="addLimit">Add Limit</button>
+        </div>
+        <div id="currentLimits"></div>
+      </div>
+      
+      <div class="settings-section">
+        <h3>Site Categories</h3>
+        <div class="category-section">
+          <h4>Productive Sites</h4>
+          <div class="add-site">
+            <input type="text" id="productiveSite" placeholder="Domain (e.g., github.com)">
+            <button id="addProductive">Add</button>
+          </div>
+          <div id="productiveSitesList"></div>
+        </div>
+        
+        <div class="category-section">
+          <h4>Social Sites</h4>
+          <div class="add-site">
+            <input type="text" id="socialSite" placeholder="Domain (e.g., twitter.com)">
+            <button id="addSocial">Add</button>
+          </div>
+          <div id="socialSitesList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

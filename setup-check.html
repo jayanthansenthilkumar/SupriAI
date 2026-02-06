@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SupriAI Setup Verification</title>
+  <style>
+    body {
+      font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f8f9fa;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #1a73e8;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #5f6368;
+      margin-bottom: 30px;
+    }
+    .check-item {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border-left: 4px solid #ccc;
+    }
+    .check-item.success {
+      background: #e6f4ea;
+      border-left-color: #34a853;
+    }
+    .check-item.error {
+      background: #fce8e6;
+      border-left-color: #ea4335;
+    }
+    .check-item.warning {
+      background: #fef7e0;
+      border-left-color: #fbbc04;
+    }
+    .status {
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+    .status.success { color: #34a853; }
+    .status.error { color: #ea4335; }
+    .status.warning { color: #fbbc04; }
+    button {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #1557b0;
+    }
+    .details {
+      font-size: 13px;
+      color: #5f6368;
+      margin-top: 5px;
+    }
+    code {
+      background: #f1f3f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 SupriAI Setup Verification</h1>
+    <p class="subtitle">This page verifies your extension configuration</p>
+    
+    <div id="results"></div>
+    
+    <button onclick="runChecks()">Run Verification</button>
+  </div>
+
+  <script src="config/keys.js"></script>
+  <script>
+    function addCheck(title, status, details) {
+      const resultsDiv = document.getElementById('results');
+      const checkDiv = document.createElement('div');
+      checkDiv.className = `check-item ${status}`;
+      
+      const statusText = status === 'success' ? '✅' : status === 'error' ? '❌' : '⚠️';
+      const statusLabel = status === 'success' ? 'PASS' : status === 'error' ? 'FAIL' : 'WARNING';
+      
+      checkDiv.innerHTML = `
+        <div class="status ${status}">${statusText} ${statusLabel}: ${title}</div>
+        <div class="details">${details}</div>
+      `;
+      
+      resultsDiv.appendChild(checkDiv);
+    }
+
+    function runChecks() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+      
+      // Check 1: CONFIG object exists
+      if (typeof CONFIG !== 'undefined') {
+        addCheck(
+          'Configuration Loaded',
+          'success',
+          'CONFIG object is properly loaded'
+        );
+      } else {
+        addCheck(
+          'Configuration Loaded',
+          'error',
+          'CONFIG object not found. Check if config/keys.js is loaded correctly.'
+        );
+        return;
+      }
+
+      // Check 2: API Key configured
+      if (CONFIG.GEMINI_API_KEY && CONFIG.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
+        addCheck(
+          'API Key Configured',
+          'success',
+          `API Key is set (${CONFIG.GEMINI_API_KEY.substring(0, 10)}...)`
+        );
+      } else {
+        addCheck(
+          'API Key Configured',
+          'error',
+          'API Key not configured. Please edit config/keys.js and add your Gemini API key.'
+        );
+      }
+
+      // Check 3: API URL configured
+      if (CONFIG.API_URL && CONFIG.API_URL.includes('generativelanguage.googleapis.com')) {
+        addCheck(
+          'API URL Configured',
+          'success',
+          `API URL: ${CONFIG.API_URL}`
+        );
+      } else {
+        addCheck(
+          'API URL Configured',
+          'error',
+          'API URL is not properly configured'
+        );
+      }
+
+      // Check 4: Test API connection (optional)
+      if (CONFIG.GEMINI_API_KEY && CONFIG.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
+        addCheck(
+          'API Connection Test',
+          'warning',
+          'To test the API connection, try using the Summary feature in the extension on a webpage.'
+        );
+      }
+
+      // Check 5: Font files
+      const fontCheck = new FontFace('Google Sans Test', 'url(fonts/GoogleSans-Regular.woff)');
+      fontCheck.load().then(() => {
+        addCheck(
+          'Font Files',
+          'success',
+          'Google Sans fonts are accessible'
+        );
+      }).catch(() => {
+        addCheck(
+          'Font Files',
+          'warning',
+          'Font files might not be loading correctly. Check the fonts/ directory.'
+        );
+      });
+
+      // Check 6: Extension context
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        addCheck(
+          'Extension Context',
+          'success',
+          'Running in Chrome extension context'
+        );
+      } else {
+        addCheck(
+          'Extension Context',
+          'warning',
+          'Not running as a Chrome extension. This is normal if viewing this file directly.'
+        );
+      }
+
+      // Summary
+      setTimeout(() => {
+        const summary = document.createElement('div');
+        summary.className = 'check-item success';
+        summary.innerHTML = `
+          <div class="status success">✨ Verification Complete</div>
+          <div class="details">
+            If all checks passed, your extension is ready to use!<br>
+            If any checks failed, please refer to <code>TROUBLESHOOTING.md</code> for solutions.
+          </div>
+        `;
+        resultsDiv.appendChild(summary);
+      }, 500);
+    }
+
+    // Auto-run on load
+    window.addEventListener('load', () => {
+      setTimeout(runChecks, 500);
+    });
+  </script>
+</body>
+</html>
