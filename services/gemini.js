@@ -43,8 +43,16 @@ async function summarizeContent(content) {
         throw new Error('Invalid request. Please check your API key and try again.');
       } else if (response.status === 403) {
         throw new Error('API key is invalid or doesn\'t have permission. Please check your Gemini API key.');
+      } else if (response.status === 404) {
+        const errorMsg = errorData.error?.message || '';
+        if (errorMsg.includes('not found for API version')) {
+          throw new Error('API endpoint error. The model may not be available. Please contact support or check the API configuration.');
+        }
+        throw new Error('API endpoint not found. Please check the configuration.');
       } else if (response.status === 429) {
         throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+      } else if (response.status === 500) {
+        throw new Error('Server error. Please try again in a moment.');
       } else {
         throw new Error(`API request failed with status ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
       }
