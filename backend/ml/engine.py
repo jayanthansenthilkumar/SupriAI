@@ -1,6 +1,12 @@
 """
 SupriAI ML Engine - Orchestrates all ML models
 Provides unified interface for the Flask API
+
+10 ML/DL Algorithms:
+  Traditional ML: Naive Bayes, K-Means, Random Forest, Isolation Forest,
+                  Ridge Regression + Exp. Smoothing, Decision Tree
+  Deep Learning:  MLP Recommendation, NLP/LSA Content Analysis,
+                  Neural Collaborative Filtering, Temporal Sequence Prediction
 """
 import numpy as np
 from datetime import datetime, timedelta
@@ -10,32 +16,52 @@ from ml.productivity import ProductivityPredictor
 from ml.anomaly import AnomalyDetector
 from ml.forecasting import TimeSeriesForecaster
 from ml.focus import FocusRecommender
+from ml.recommendation import DeepRecommender
+from ml.nlp_analyzer import NLPContentAnalyzer
+from ml.collaborative import NeuralCollaborativeFilter
+from ml.temporal import TemporalPredictor
 import config
 
 
 class MLEngine:
     """
-    Central ML engine that manages all 6 ML models:
-    1. Naive Bayes - Website Category Classification
-    2. K-Means - Browsing Habit Clustering
-    3. Random Forest - Productivity Score Prediction
-    4. Isolation Forest - Anomaly Detection
-    5. Linear Regression + Exp. Smoothing - Time Series Forecasting
-    6. Decision Tree - Focus Time Recommendation
+    Central ML engine that manages all 10 ML/DL models:
+
+    Traditional ML (scikit-learn):
+    1. Multinomial Naive Bayes  - Website Category Classification
+    2. K-Means Clustering       - Browsing Habit Clustering
+    3. Random Forest Regressor  - Productivity Score Prediction
+    4. Isolation Forest          - Anomaly Detection
+    5. Ridge Regression + ES     - Time Series Forecasting
+    6. Decision Tree Classifier  - Focus Time Recommendation
+
+    Deep Learning (Neural Networks):
+    7.  MLP Neural Network       - Learning Content Recommendation
+    8.  TF-IDF + LSA (SVD)       - NLP Content Analysis
+    9.  Neural Collaborative Filter - Domain Engagement Prediction
+    10. Temporal MLP (RNN-like)  - Browsing Time Prediction
     """
 
     def __init__(self):
-        print("Initializing SupriAI ML Engine...")
+        print("Initializing SupriAI ML Engine (10 models)...")
+
+        # Traditional ML models (1-6)
         self.classifier = WebsiteCategoryClassifier()
         self.clusterer = BrowsingClusterer()
         self.productivity_predictor = ProductivityPredictor()
         self.anomaly_detector = AnomalyDetector()
         self.forecaster = TimeSeriesForecaster()
         self.focus_recommender = FocusRecommender()
-        
+
+        # Deep Learning models (7-10)
+        self.deep_recommender = DeepRecommender()
+        self.nlp_analyzer = NLPContentAnalyzer()
+        self.collaborative_filter = NeuralCollaborativeFilter()
+        self.temporal_predictor = TemporalPredictor()
+
         # Pre-train focus recommender with synthetic data
         self.focus_recommender.train()
-        print("ML Engine initialized with 6 models.")
+        print("ML Engine initialized with 10 models (6 ML + 4 DL).")
 
     def classify_domain(self, domain):
         """Classify a website domain"""
@@ -86,6 +112,32 @@ class MLEngine:
         """Get optimal daily schedule"""
         return self.focus_recommender.get_optimal_schedule(historical_data or [])
 
+    # ==================== Deep Learning Models (7-10) ====================
+
+    def get_learning_recommendations(self, browsing_data, top_k=5):
+        """#7 — MLP Neural Network content recommendations"""
+        return self.deep_recommender.recommend(browsing_data, top_k)
+
+    def get_content_analysis(self, browsing_entries):
+        """#8 — NLP/LSA content topic analysis"""
+        return self.nlp_analyzer.analyze_content(browsing_entries)
+
+    def get_domain_recommendations(self, context, candidate_domains=None, top_k=10):
+        """#9 — Neural Collaborative Filtering domain recommendations"""
+        return self.collaborative_filter.recommend_domains(context, candidate_domains, top_k)
+
+    def predict_temporal(self, recent_days):
+        """#10 — Temporal MLP next-day prediction"""
+        return self.temporal_predictor.predict_next_day(recent_days)
+
+    def predict_week_temporal(self, recent_days):
+        """#10 — Temporal MLP week-ahead prediction"""
+        return self.temporal_predictor.predict_week(recent_days)
+
+    def get_optimal_hours(self):
+        """#10 — Best hours for deep work/learning"""
+        return self.temporal_predictor.predict_optimal_hours()
+
     def train_all(self, db):
         """Train all models with data from database"""
         results = {}
@@ -134,6 +186,49 @@ class MLEngine:
         # Train focus recommender (always has synthetic data fallback)
         focus_result = self.focus_recommender.train()
         results['focus'] = focus_result
+
+        # ---- Deep Learning models ----
+
+        # 7. Deep Recommender
+        rec_result = self.deep_recommender.train(daily_records if len(daily_records) >= 5 else None)
+        results['deep_recommender'] = rec_result
+
+        # 8. NLP Content Analyzer — build corpus from chrome history
+        history_entries = data.get('chrome_history', [])
+        if not history_entries:
+            # Fallback: build entries from domain_stats
+            history_entries = [
+                {'domain': d['domain'], 'title': d.get('title', d['domain']),
+                 'url': f"https://{d['domain']}", 'category': d.get('category', '')}
+                for d in domain_stats
+            ]
+        nlp_result = self.nlp_analyzer.train(history_entries)
+        results['nlp_analyzer'] = nlp_result
+
+        # 9. Neural Collaborative Filter
+        cf_interactions = []
+        for record in daily_records:
+            for domain, time_ms in record.get('domain_times', {}).items():
+                cf_interactions.append({
+                    'domain': domain,
+                    'context': {
+                        'hour_of_day': 12,
+                        'day_of_week': 3,
+                        'session_duration': record.get('avg_session_minutes', 30),
+                        'productivity_score': record.get('productivity_score', 50),
+                        'tab_count': record.get('unique_domains', 10),
+                        'unique_domains': record.get('unique_domains', 10),
+                        'productive_ratio': record.get('focus_score', 0.5),
+                        'focus_score': record.get('focus_score', 0.5)
+                    },
+                    'engagement': min(time_ms / 3600000, 1.0)  # normalize by 1 hour
+                })
+        cf_result = self.collaborative_filter.train(cf_interactions if len(cf_interactions) >= 10 else None)
+        results['collaborative_filter'] = cf_result
+
+        # 10. Temporal Predictor
+        temporal_result = self.temporal_predictor.train(daily_records if len(daily_records) >= 10 else None)
+        results['temporal_predictor'] = temporal_result
 
         return results
 
@@ -190,6 +285,60 @@ class MLEngine:
             insights['forecast'] = forecast
             insights['models_used'].append('Time Series Forecasting')
 
+        # ---- Deep Learning Insights ----
+
+        # 7. Deep Learning recommendations
+        try:
+            recommendations = self.deep_recommender.recommend(day_data, top_k=5)
+            insights['learning_recommendations'] = recommendations
+            insights['models_used'].append('MLP Neural Network Recommender')
+        except Exception as e:
+            insights['learning_recommendations'] = {'error': str(e)}
+
+        # 8. NLP Content Analysis
+        try:
+            # Build entries from available domain/title data
+            entries = []
+            for domain in day_data.get('domains', []):
+                entries.append({'domain': domain, 'title': domain, 'url': f'https://{domain}'})
+            if entries:
+                content_analysis = self.nlp_analyzer.analyze_content(entries)
+                insights['content_analysis'] = content_analysis
+                insights['models_used'].append('NLP/LSA Content Analyzer')
+        except Exception as e:
+            insights['content_analysis'] = {'error': str(e)}
+
+        # 9. Collaborative Filtering domain recommendations
+        try:
+            cf_context = {
+                'hour_of_day': datetime.now().hour,
+                'day_of_week': datetime.now().weekday(),
+                'session_duration': day_data.get('session_length', 30),
+                'productivity_score': productivity.get('predicted_score', 50),
+                'tab_count': day_data.get('unique_domains', 10),
+                'unique_domains': day_data.get('unique_domains', 10),
+                'productive_ratio': current_state['productive_ratio'],
+                'focus_score': current_state.get('productivity_score', 50) / 100
+            }
+            cf_recs = self.collaborative_filter.recommend_domains(cf_context, top_k=5)
+            insights['domain_recommendations'] = cf_recs
+            insights['models_used'].append('Neural Collaborative Filtering')
+        except Exception as e:
+            insights['domain_recommendations'] = {'error': str(e)}
+
+        # 10. Temporal predictions
+        try:
+            # Provide recent window as single-day records
+            recent = [day_data] * self.temporal_predictor.WINDOW_SIZE
+            temporal = self.temporal_predictor.predict_next_day(recent)
+            insights['temporal_prediction'] = temporal
+            insights['models_used'].append('Temporal MLP Predictor')
+
+            optimal = self.temporal_predictor.predict_optimal_hours()
+            insights['optimal_hours'] = optimal
+        except Exception as e:
+            insights['temporal_prediction'] = {'error': str(e)}
+
         return insights
 
     def _aggregate_daily_data(self, data):
@@ -241,7 +390,7 @@ class MLEngine:
         return records
 
     def get_all_models_info(self):
-        """Get information about all models"""
+        """Get information about all 10 models"""
         return {
             'models': {
                 'website_classifier': self.classifier.get_model_info(),
@@ -249,15 +398,28 @@ class MLEngine:
                 'productivity_predictor': self.productivity_predictor.get_model_info(),
                 'anomaly_detector': self.anomaly_detector.get_model_info(),
                 'time_series_forecaster': self.forecaster.get_model_info(),
-                'focus_recommender': self.focus_recommender.get_model_info()
+                'focus_recommender': self.focus_recommender.get_model_info(),
+                'deep_recommender': self.deep_recommender.get_model_info(),
+                'nlp_analyzer': self.nlp_analyzer.get_model_info(),
+                'collaborative_filter': self.collaborative_filter.get_model_info(),
+                'temporal_predictor': self.temporal_predictor.get_model_info()
             },
-            'total_models': 6,
+            'total_models': 10,
             'algorithms': [
                 'Multinomial Naive Bayes (TF-IDF)',
                 'K-Means Clustering',
                 'Random Forest Regression',
                 'Isolation Forest',
                 'Linear Regression + Exponential Smoothing',
-                'Decision Tree Classifier'
-            ]
+                'Decision Tree Classifier',
+                'MLP Neural Network (Deep Recommender)',
+                'TF-IDF + Truncated SVD / LSA (NLP Analyzer)',
+                'Neural Collaborative Filtering (NCF)',
+                'Temporal Sequence MLP (LSTM-like Predictor)'
+            ],
+            'categories': {
+                'traditional_ml': 6,
+                'deep_learning': 4,
+                'total': 10
+            }
         }

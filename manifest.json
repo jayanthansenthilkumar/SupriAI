@@ -36,16 +36,10 @@
   "web_accessible_resources": [{
     "resources": [
       "assets/config/keys.js",
-      "assets/scripts/services/gemini.js",
+      "assets/scripts/script.js",
       "assets/scripts/services/database.js",
-      "assets/scripts/services/databaseQueryHelper.js",
-      "assets/scripts/config.js",
       "assets/scripts/lib/purify.min.js",
-      "assets/scripts/services/curationService.js",
-      "assets/scripts/services/backendAPI.js",
-      "assets/scripts/components/curationWorkflow.js",
-      "assets/styles/curation.css",
-      "assets/styles/fonts.css",
+      "assets/styles/styles.css",
       "assets/fonts/GoogleSans-Regular.woff",
       "assets/fonts/GoogleSans-Medium.woff",
       "assets/fonts/GoogleSans-Bold.woff"

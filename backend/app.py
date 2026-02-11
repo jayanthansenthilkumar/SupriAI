@@ -413,6 +413,113 @@ def train_all_models():
         return jsonify({'error': str(e)}), 500
 
 
+# ==================== Deep Learning Endpoints ====================
+
+@app.route('/api/ml/recommendations', methods=['POST'])
+def get_learning_recommendations():
+    """Get AI-powered learning content recommendations (DL Model #7)"""
+    data = request.get_json() or {}
+
+    # Build browsing context from request or defaults
+    browsing_data = {
+        'category_times': data.get('category_times', {
+            'productive': 1800000, 'social': 300000, 'entertainment': 600000
+        }),
+        'total_time': data.get('total_time', 2700000),
+        'unique_domains': data.get('unique_domains', 10),
+        'domains': data.get('domains', []),
+        'hour_of_day': data.get('hour_of_day', datetime.now().hour),
+        'day_of_week': data.get('day_of_week', datetime.now().weekday()),
+        'avg_session_minutes': data.get('avg_session_minutes', 30),
+        'tab_switches': data.get('tab_switches', 5),
+        'focus_score': data.get('focus_score', 0.5),
+        'recency_weight': data.get('recency_weight', 0.5)
+    }
+
+    top_k = data.get('top_k', 5)
+    result = ml_engine.get_learning_recommendations(browsing_data, top_k)
+    return jsonify(result)
+
+
+@app.route('/api/ml/content-analysis', methods=['POST'])
+def analyze_content():
+    """Analyze browsing content with NLP (DL Model #8)"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    entries = data.get('entries', [])
+    if not entries:
+        # Try building from domains
+        domains = data.get('domains', [])
+        entries = [{'domain': d, 'title': d, 'url': f'https://{d}'} for d in domains]
+
+    if not entries:
+        return jsonify({'error': 'No entries or domains provided'}), 400
+
+    result = ml_engine.get_content_analysis(entries)
+    return jsonify(result)
+
+
+@app.route('/api/ml/collaborative', methods=['POST'])
+def get_collaborative_recommendations():
+    """Get domain recommendations via Neural Collaborative Filtering (DL Model #9)"""
+    data = request.get_json() or {}
+
+    context = {
+        'hour_of_day': data.get('hour_of_day', datetime.now().hour),
+        'day_of_week': data.get('day_of_week', datetime.now().weekday()),
+        'session_duration': data.get('session_duration', 30),
+        'productivity_score': data.get('productivity_score', 50),
+        'tab_count': data.get('tab_count', 5),
+        'unique_domains': data.get('unique_domains', 10),
+        'productive_ratio': data.get('productive_ratio', 0.5),
+        'focus_score': data.get('focus_score', 0.5)
+    }
+
+    candidate_domains = data.get('candidate_domains', None)
+    top_k = data.get('top_k', 10)
+
+    result = ml_engine.get_domain_recommendations(context, candidate_domains, top_k)
+    return jsonify(result)
+
+
+@app.route('/api/ml/temporal', methods=['POST'])
+def get_temporal_predictions():
+    """Predict future browsing patterns (DL Model #10)"""
+    data = request.get_json() or {}
+
+    recent_days = data.get('recent_days', [])
+    if not recent_days:
+        # Generate default day data
+        recent_days = [{
+            'total_time': 3600000 * 4,
+            'category_times': {'productive': 2000000, 'social': 500000, 'entertainment': 1000000},
+            'unique_domains': 15,
+            'session_count': 5,
+            'focus_score': 0.5,
+            'day_of_week': (datetime.now().weekday() - i) % 7
+        } for i in range(7)]
+
+    predict_type = data.get('type', 'next_day')
+
+    if predict_type == 'week':
+        result = ml_engine.predict_week_temporal(recent_days)
+    elif predict_type == 'optimal_hours':
+        result = ml_engine.get_optimal_hours()
+    else:
+        result = ml_engine.predict_temporal(recent_days)
+
+    return jsonify(result)
+
+
+@app.route('/api/ml/optimal-hours', methods=['GET'])
+def get_optimal_study_hours():
+    """Get optimal hours for deep work and learning"""
+    result = ml_engine.get_optimal_hours()
+    return jsonify(result)
+
+
 # ==================== Goals ====================
 
 @app.route('/api/goals', methods=['GET'])
@@ -522,15 +629,21 @@ if __name__ == '__main__':
     print(f"""
     ╔═══════════════════════════════════════════════════╗
     ║           SupriAI Backend Server                  ║
-    ║   Flask + SQLite + 6 ML Algorithms                ║
+    ║   Flask + SQLite + 10 ML/DL Algorithms            ║
     ╠═══════════════════════════════════════════════════╣
-    ║  ML Models:                                       ║
-    ║  1. Naive Bayes     - Website Classification      ║
-    ║  2. K-Means         - Browsing Clustering         ║
-    ║  3. Random Forest   - Productivity Prediction     ║
-    ║  4. Isolation Forest - Anomaly Detection          ║
-    ║  5. Linear Reg + ES - Time Series Forecast        ║
-    ║  6. Decision Tree   - Focus Recommendation        ║
+    ║  Traditional ML Models:                           ║
+    ║  1. Naive Bayes       - Website Classification    ║
+    ║  2. K-Means           - Browsing Clustering       ║
+    ║  3. Random Forest     - Productivity Prediction   ║
+    ║  4. Isolation Forest  - Anomaly Detection         ║
+    ║  5. Ridge Reg. + ES   - Time Series Forecast      ║
+    ║  6. Decision Tree     - Focus Recommendation      ║
+    ╠───────────────────────────────────────────────────╣
+    ║  Deep Learning Models:                            ║
+    ║  7.  MLP Neural Net   - Content Recommendation    ║
+    ║  8.  TF-IDF + LSA     - NLP Content Analysis      ║
+    ║  9.  Neural CF        - Collaborative Filtering   ║
+    ║  10. Temporal MLP     - Time Pattern Prediction   ║
     ╠═══════════════════════════════════════════════════╣
     ║  Server: http://{config.HOST}:{config.PORT}               ║
     ║  API:    http://{config.HOST}:{config.PORT}/api            ║

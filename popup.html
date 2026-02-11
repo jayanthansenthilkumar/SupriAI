@@ -3,18 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <title>SupriAI - AI-Powered Browsing Intelligence</title>
-    <link rel="stylesheet" href="assets/styles/popup.css" />
-    <link rel="stylesheet" href="assets/styles/curation.css" />
+    <link rel="stylesheet" href="assets/styles/styles.css" />
     <script src="assets/scripts/lib/chart.js"></script>
     <script src="assets/scripts/lib/purify.min.js"></script>
     <script src="assets/config/keys.js"></script>
-    <script src="assets/scripts/config.js"></script>
-    <script src="assets/scripts/services/gemini.js"></script>
-    <script src="assets/scripts/services/databaseQueryHelper.js"></script>
-    <script src="assets/scripts/services/backendAPI.js"></script>
-    <script src="assets/scripts/services/curationService.js"></script>
-    <script src="assets/scripts/components/curationWorkflow.js"></script>
-    <script src="assets/scripts/popup.js"></script>
+    <script src="assets/scripts/script.js"></script>
   </head>
   <body>
     <div class="container">
@@ -196,6 +189,42 @@
             </div>
             <div class="insight-body collapsed" id="modelsInfoDisplay">
               <p>Loading model information...</p>
+            </div>
+          </div>
+
+          <!-- NEW: AI/DL Learning Recommendations -->
+          <div class="insight-card" id="recommendationInsight">
+            <div class="insight-header">
+              <span class="insight-icon">📚</span>
+              <h3>Learning Recommendations</h3>
+              <span class="ml-badge dl-badge">Deep Learning</span>
+            </div>
+            <div class="insight-body" id="recommendationsDisplay">
+              <p>Generating personalized recommendations...</p>
+            </div>
+          </div>
+
+          <!-- NEW: NLP Content Analysis -->
+          <div class="insight-card" id="nlpInsight">
+            <div class="insight-header">
+              <span class="insight-icon">🔤</span>
+              <h3>Content Analysis</h3>
+              <span class="ml-badge dl-badge">NLP</span>
+            </div>
+            <div class="insight-body" id="nlpDisplay">
+              <p>Analyzing browsing content topics...</p>
+            </div>
+          </div>
+
+          <!-- NEW: Temporal Predictions -->
+          <div class="insight-card" id="temporalInsight">
+            <div class="insight-header">
+              <span class="insight-icon">⏰</span>
+              <h3>Time Pattern Predictions</h3>
+              <span class="ml-badge dl-badge">RNN</span>
+            </div>
+            <div class="insight-body" id="temporalDisplay">
+              <p>Predicting browsing patterns...</p>
             </div>
           </div>
 
