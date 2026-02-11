@@ -45,8 +45,8 @@ SupriAI is an intelligent Chrome extension that tracks your browsing habits and 
 ## 🏗 Architecture
 
 ```
-┌─────────────────────────┐     HTTP/REST     ┌─────────────────────────┐
-│   Chrome Extension      │ ◄───────────────► │   Flask Backend         │
+┌─────────────────────────┐     HTTP/REST      ┌─────────────────────────┐
+│   Chrome Extension      │ ◄───────────────►  │   Flask Backend         │
 │                         │                    │                         │
 │  ┌───────────────────┐  │                    │  ┌───────────────────┐  │
 │  │ Popup UI          │  │                    │  │ REST API          │  │
@@ -55,7 +55,7 @@ SupriAI is an intelligent Chrome extension that tracks your browsing habits and 
 │          │              │                    │          │              │
 │  ┌───────┴───────────┐  │                    │  ┌───────┴───────────┐  │
 │  │ Background Worker │  │   Sync every 60s   │  │ ML Engine         │  │
-│  │ (Service Worker)  │──┼──────────────────►│  │ (6 algorithms)    │  │
+│  │ (Service Worker)  │──┼──────────────────► │  │ (6 algorithms)    │  │
 │  └───────┬───────────┘  │                    │  └───────┬───────────┘  │
 │          │              │                    │          │              │
 │  ┌───────┴───────────┐  │                    │  ┌───────┴───────────┐  │
@@ -144,36 +144,42 @@ SupriAI is an intelligent Chrome extension that tracks your browsing habits and 
 SupriAI/
 ├── manifest.json                 # Chrome extension manifest (MV3)
 ├── popup.html                    # Extension popup UI
-├── popup.css                     # Popup styles (Google Material)
-├── popup.js                      # Popup logic with ML integration
-├── config.js                     # Default settings
-├── background-enhanced.js        # Background service worker
 │
-├── config/
-│   ├── keys.js                   # API keys (Gemini)
-│   └── keys.example.js           # Example config
-│
-├── services/
-│   ├── backendAPI.js            # Flask backend API client
-│   ├── database.js              # IndexedDB service
-│   ├── databaseQueryHelper.js   # DB query utilities
-│   ├── gemini.js                # Gemini AI summarization
-│   ├── curationService.js       # 3-step content curation
-│   └── dataMigration.js         # Storage migration
-│
-├── components/
-│   └── curationWorkflow.js      # Curation UI workflow
-│
-├── scripts/
-│   └── content.js               # Content extraction script
-│
-├── styles/
-│   ├── curation.css             # Curation styles
-│   └── fonts.css                # Google Sans fonts
-│
-├── lib/
-│   ├── chart.js                 # Chart.js library
-│   └── purify.min.js            # DOMPurify library
+├── assets/                       # All frontend assets
+│   ├── scripts/
+│   │   ├── popup.js             # Popup logic with ML integration
+│   │   ├── background-enhanced.js # Background service worker
+│   │   ├── background.js        # Legacy background script
+│   │   ├── config.js            # Default settings
+│   │   ├── gamification.js      # Gamification features
+│   │   ├── content.js           # Content extraction script
+│   │   │
+│   │   ├── services/
+│   │   │   ├── backendAPI.js    # Flask backend API client
+│   │   │   ├── database.js      # IndexedDB service
+│   │   │   ├── databaseQueryHelper.js # DB query utilities
+│   │   │   ├── gemini.js        # Gemini AI summarization
+│   │   │   ├── curationService.js # 3-step content curation
+│   │   │   └── dataMigration.js # Storage migration
+│   │   │
+│   │   ├── components/
+│   │   │   └── curationWorkflow.js # Curation UI workflow
+│   │   │
+│   │   └── lib/
+│   │       ├── chart.js         # Chart.js library
+│   │       └── purify.min.js    # DOMPurify library
+│   │
+│   ├── styles/
+│   │   ├── popup.css            # Popup styles (Google Material)
+│   │   ├── curation.css         # Curation styles
+│   │   └── fonts.css            # Google Sans fonts
+│   │
+│   ├── config/
+│   │   ├── keys.js              # API keys (Gemini)
+│   │   └── keys.example.js      # Example config
+│   │
+│   ├── fonts/                   # Google Sans font files
+│   └── icons/                   # Extension icons
 │
 ├── backend/                      # Python Flask Backend
 │   ├── app.py                   # Flask REST API server
@@ -191,8 +197,6 @@ SupriAI/
 │       ├── forecasting.py       # ML #5: Time Series
 │       └── focus.py             # ML #6: Decision Tree
 │
-├── icons/                        # Extension icons
-├── fonts/                        # Google Sans font files
 └── README.md                     # This file
 ```
 
@@ -221,9 +225,9 @@ The Flask server will start at `http://127.0.0.1:5000`
 
 ### Step 3: Configure API Keys
 ```bash
-cp config/keys.example.js config/keys.js
+cp assets/config/keys.example.js assets/config/keys.js
 ```
-Edit `config/keys.js` and add your **Gemini API key**.
+Edit `assets/config/keys.js` and add your **Gemini API key**.
 
 ### Step 4: Load Chrome Extension
 1. Open Chrome and go to `chrome://extensions/`

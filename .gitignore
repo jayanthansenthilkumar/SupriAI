@@ -1,5 +1,5 @@
 # Ignore config files with sensitive data
-config/keys.js
+assets/config/keys.js
 
 # Other common ignores
 node_modules/

@@ -18,37 +18,37 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background-enhanced.js"
+    "service_worker": "assets/scripts/background-enhanced.js"
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
     }
   },
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
   },
   "web_accessible_resources": [{
     "resources": [
-      "config/keys.js",
-      "services/gemini.js",
-      "services/database.js",
-      "services/databaseQueryHelper.js",
-      "config.js",
-      "lib/purify.min.js",
-      "services/curationService.js",
-      "services/backendAPI.js",
-      "components/curationWorkflow.js",
-      "styles/curation.css",
-      "styles/fonts.css",
-      "fonts/GoogleSans-Regular.woff",
-      "fonts/GoogleSans-Medium.woff",
-      "fonts/GoogleSans-Bold.woff"
+      "assets/config/keys.js",
+      "assets/scripts/services/gemini.js",
+      "assets/scripts/services/database.js",
+      "assets/scripts/services/databaseQueryHelper.js",
+      "assets/scripts/config.js",
+      "assets/scripts/lib/purify.min.js",
+      "assets/scripts/services/curationService.js",
+      "assets/scripts/services/backendAPI.js",
+      "assets/scripts/components/curationWorkflow.js",
+      "assets/styles/curation.css",
+      "assets/styles/fonts.css",
+      "assets/fonts/GoogleSans-Regular.woff",
+      "assets/fonts/GoogleSans-Medium.woff",
+      "assets/fonts/GoogleSans-Bold.woff"
     ],
     "matches": ["<all_urls>"]
   }]

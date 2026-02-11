@@ -277,7 +277,7 @@ function setupSummarizeHandler() {
       if (!tab.url || !tab.url.startsWith('http')) throw new Error('Navigate to a webpage to summarize.');
 
       try {
-        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['scripts/content.js'] });
+        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['assets/scripts/content.js'] });
       } catch (e) { /* already injected */ }
 
       await new Promise(r => setTimeout(r, 100));
@@ -450,8 +450,14 @@ async function loadBrowsingCluster() {
       'Casual Surfer': '\uD83C\uDFC4'
     };
 
-    const label = cluster.label || 'Analyzing...';
-    const emoji = clusterEmoji[label] || '\uD83D\uDCCA';
+    const label = cluster.label || null;
+    const emoji = label ? (clusterEmoji[label] || '\uD83D\uDCCA') : '\uD83D\uDCCA';
+
+    // If no cluster label, show helpful message instead of "Analyzing..."
+    if (!label) {
+      display.innerHTML = '<div class="cluster-label">\uD83D\uDCCA Not enough data</div><div class="cluster-description">Import your Chrome history and retrain models to see your browsing profile.</div>';
+      return;
+    }
 
     var barsHtml = '';
     if (cluster.features) {
@@ -470,9 +476,9 @@ async function loadBrowsingCluster() {
       barsHtml += '</div>';
     }
 
-    display.innerHTML = '<div class="cluster-label">' + emoji + ' ' + label + '</div><div class="cluster-description">' + (cluster.description || 'Your browsing habits are being analyzed.') + '</div>' + barsHtml;
+    display.innerHTML = '<div class="cluster-label">' + emoji + ' ' + label + '</div><div class="cluster-description">' + (cluster.description || 'Your browsing profile has been identified.') + '</div>' + barsHtml;
   } catch (e) {
-    document.getElementById('clusterDisplay').innerHTML = '<div class="cluster-label">Collecting data...</div>';
+    document.getElementById('clusterDisplay').innerHTML = '<div class="cluster-label">\uD83D\uDCCA Not enough data</div><div class="cluster-description">Import Chrome history and retrain models to see your profile.</div>';
   }
 }
 

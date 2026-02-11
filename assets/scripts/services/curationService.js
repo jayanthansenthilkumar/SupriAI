@@ -13,6 +13,13 @@ class CurationService {
     }));
 
     try {
+      if (!this.apiKey || this.apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+        return {
+          intent: 'Error: API key not configured. Update assets/config/keys.js',
+          relevant_tabs: []
+        };
+      }
+
       const response = await fetch(`${this.apiUrl}?key=${this.apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,11 +39,25 @@ class CurationService {
         })
       });
 
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        const errMsg = errBody.error?.message || response.statusText || 'Unknown error';
+        console.error('API HTTP error:', response.status, errMsg);
+        return {
+          intent: `Error (${response.status}): ${errMsg}`,
+          relevant_tabs: []
+        };
+      }
+
       const data = await response.json();
       if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const blockReason = data.promptFeedback?.blockReason;
+        const errorMsg = blockReason
+          ? `Content blocked: ${blockReason}`
+          : (data.error?.message || 'No response from API — try again');
         console.error('Invalid API response structure:', data);
         return {
-          intent: 'Error: Invalid API response',
+          intent: `Error: ${errorMsg}`,
           relevant_tabs: []
         };
       }

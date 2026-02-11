@@ -3,12 +3,12 @@ async function summarizeContent(content) {
     // Validate configuration
     if (!CONFIG || !CONFIG.GEMINI_API_KEY || !CONFIG.API_URL) {
       console.error('Configuration error:', { CONFIG });
-      throw new Error('API configuration is missing. Please check config/keys.js');
+      throw new Error('API configuration is missing. Please check assets/config/keys.js');
     }
 
     // Validate API key format
     if (CONFIG.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-      throw new Error('Please replace YOUR_GEMINI_API_KEY_HERE with your actual Gemini API key in config/keys.js');
+      throw new Error('Please replace YOUR_GEMINI_API_KEY_HERE with your actual Gemini API key in assets/config/keys.js');
     }
 
     // Validate content

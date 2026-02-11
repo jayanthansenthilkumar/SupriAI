@@ -1,6 +1,6 @@
 // Import database service
-importScripts('services/database.js');
-importScripts('services/backendAPI.js');
+importScripts('assets/scripts/services/database.js');
+importScripts('assets/scripts/services/backendAPI.js');
 
 // Get settings from storage
 async function getSettings() {
