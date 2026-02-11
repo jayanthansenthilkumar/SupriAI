@@ -1,5 +1,6 @@
 // Import database service
 importScripts('services/database.js');
+importScripts('services/backendAPI.js');
 
 // Get settings from storage
 async function getSettings() {
@@ -464,3 +465,65 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.runtime.onStartup.addListener(async () => {
   await initializeDatabase();
 });
+
+// ============================================
+// BACKEND SYNC — Periodically sync to Flask
+// ============================================
+let backendSyncEnabled = true;
+
+async function syncToBackend() {
+  if (!backendSyncEnabled) return;
+  
+  try {
+    // Check if backend is online first
+    const health = await backendAPI.checkHealth();
+    if (!health) return;
+
+    // Build sync payload from current in-memory data
+    const tabs = [];
+    const events = [];
+    
+    Object.keys(tabData).forEach(tabId => {
+      const data = tabData[tabId];
+      tabs.push({
+        tab_id: parseInt(tabId),
+        url: data.url || '',
+        title: data.title || data.domain || '',
+        domain: data.domain || '',
+        active_time: data.totalActiveTime || 0
+      });
+    });
+
+    const domainStats = [];
+    Object.keys(tabGroups).forEach(domain => {
+      const data = tabGroups[domain];
+      domainStats.push({
+        domain: domain,
+        total_time: data.totalTime || 0,
+        visit_count: data.tabs ? data.tabs.length : 0
+      });
+    });
+
+    await backendAPI.syncData({
+      session: {
+        session_id: currentSessionId,
+        start_time: new Date().toISOString(),
+        is_active: true
+      },
+      tabs: tabs,
+      events: events,
+      domain_stats: domainStats
+    });
+
+    console.log('[SupriAI] Backend sync successful -', tabs.length, 'tabs,', domainStats.length, 'domains');
+  } catch (error) {
+    // Silently fail - backend may be offline
+    console.log('[SupriAI] Backend sync skipped (server unavailable)');
+  }
+}
+
+// Sync to backend every 60 seconds
+setInterval(syncToBackend, 60000);
+
+// Also sync on extension startup after a short delay
+setTimeout(syncToBackend, 5000);

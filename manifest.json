@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "SupriAI",
-  "version": "0.0.2",
-  "description": "Track and visualize your browsing habits with interactive charts and tab management",
+  "version": "2.0.0",
+  "description": "AI-Powered Browsing Intelligence — Track habits, predict productivity, and get ML-driven insights from your Chrome history",
 
   "permissions": [
     "tabs",
@@ -10,7 +10,9 @@
     "alarms",
     "windows",
     "activeTab",
-    "scripting"
+    "scripting",
+    "history",
+    "notifications"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -40,6 +42,7 @@
       "config.js",
       "lib/purify.min.js",
       "services/curationService.js",
+      "services/backendAPI.js",
       "components/curationWorkflow.js",
       "styles/curation.css",
       "styles/fonts.css",
