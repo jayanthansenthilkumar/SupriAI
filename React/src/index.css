@@ -1,0 +1,199 @@
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+  /* Google Material Colors */
+  --google-blue-50: #e8f0fe;
+  --google-blue-100: #d2e3fc;
+  --google-blue-600: #1a73e8;
+  --google-blue-700: #1557b0;
+  --google-red-50: #fce8e6;
+  --google-red-600: #d93025;
+  --google-green-50: #e6f4ea;
+  --google-green-600: #188038;
+  --google-yellow-50: #fef7e0;
+  --google-yellow-600: #f9ab00;
+  --google-purple-50: #f3e8fd;
+  --google-purple-600: #9334e6;
+  --google-teal-50: #e0f7fa;
+  --google-teal-600: #00897b;
+  --google-orange-50: #fef0e1;
+  --google-orange-600: #e8710a;
+
+  --google-grey-50: #f8f9fa;
+  --google-grey-100: #f1f3f4;
+  --google-grey-200: #e8eaed;
+  --google-grey-300: #dadce0;
+  --google-grey-500: #9aa0a6;
+  --google-grey-700: #5f6368;
+  --google-grey-800: #3c4043;
+  --google-grey-900: #202124;
+
+  /* Theme Tokens */
+  --primary-color: var(--google-blue-600);
+  --primary-hover: var(--google-blue-700);
+  --primary-bg: var(--google-blue-50);
+  --error-color: var(--google-red-600);
+  --error-bg: var(--google-red-50);
+  --success-color: var(--google-green-600);
+  --success-bg: var(--google-green-50);
+  --warning-color: var(--google-yellow-600);
+  --warning-bg: var(--google-yellow-50);
+  --info-color: var(--google-purple-600);
+  --info-bg: var(--google-purple-50);
+  --text-primary: var(--google-grey-900);
+  --text-secondary: var(--google-grey-700);
+  --background-color: var(--google-grey-50);
+  --surface-color: #ffffff;
+  --border-color: var(--google-grey-300);
+  --bg-subtle: var(--google-grey-100);
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-1:
+    0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  --shadow-2:
+    0 4px 5px 0 rgba(60, 64, 67, 0.14), 0 1px 10px 0 rgba(60, 64, 67, 0.12),
+    0 2px 4px -1px rgba(60, 64, 67, 0.3);
+}
+
+body {
+  margin: 0;
+  font-family:
+    "Open Sans",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.card {
+  background: var(--surface-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.nav {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.nav-link {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.nav-link:hover {
+  background: var(--bg-subtle);
+  color: var(--primary-color);
+}
+
+.nav-link.active {
+  background: var(--primary-bg);
+  color: var(--primary-color);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-lg);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  box-shadow: var(--shadow-1);
+}
+
+.btn-success {
+  background: var(--success-color);
+  color: white;
+}
+
+h1,
+h2,
+h3 {
+  margin-top: 0;
+  color: var(--text-primary);
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin: 10px 0;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
