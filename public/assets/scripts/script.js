@@ -44,6 +44,13 @@ class BackendAPI {
     this.connected = false;
   }
 
+  async _safeJson(response) {
+    if (!response.ok) return { error: 'Server returned ' + response.status };
+    var ct = response.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) return { error: 'Non-JSON response' };
+    return await response.json();
+  }
+
   async checkHealth() {
     try {
       const response = await fetch(`${this.baseURL}/health`, {
@@ -69,7 +76,7 @@ class BackendAPI {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tabData, tabGroups, sessionId })
       });
-      return await response.json();
+      return await this._safeJson(response);
     } catch (e) {
       console.error('Sync failed:', e);
       return { error: e.message };
@@ -83,7 +90,7 @@ class BackendAPI {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ history: historyItems })
       });
-      return await response.json();
+      return await this._safeJson(response);
     } catch (e) {
       console.error('Import failed:', e);
       return { error: e.message };
@@ -121,9 +128,9 @@ class BackendAPI {
       const response = await fetch(`${this.baseURL}/ml/insights`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dayData)
+        body: JSON.stringify(dayData || {})
       });
-      return await response.json();
+      return await this._safeJson(response);
     } catch (e) {
       console.error('Insights error:', e);
       return { error: e.message };
@@ -1161,12 +1168,89 @@ function setupInsightsHandlers() {
   }
 }
 
+// --- Build browsing context from Chrome storage for ML model calls ---
+function classifyDomainLocally(domain) {
+  var d = domain.toLowerCase();
+  if (/github|stackoverflow|gitlab|docs\.|developer\.|mdn|w3schools|python|npm|docker|aws|azure|leetcode|codepen|replit/.test(d)) return 'productive';
+  if (/facebook|twitter|instagram|tiktok|reddit|linkedin|snapchat|pinterest|tumblr|x\.com|threads\.net/.test(d)) return 'social';
+  if (/youtube|netflix|twitch|spotify|hulu|disney|gaming|steam|epic|imdb|crunchyroll/.test(d)) return 'entertainment';
+  if (/cnn|bbc|reuters|nytimes|washingtonpost|aljazeera|foxnews|news|guardian|apnews/.test(d)) return 'news';
+  if (/amazon|ebay|etsy|walmart|aliexpress|shopify|target|bestbuy|wish\.com/.test(d)) return 'shopping';
+  if (/gmail|outlook|slack|teams|discord|zoom|whatsapp|telegram|messenger|meet\.google/.test(d)) return 'communication';
+  return 'productive';
+}
+
+async function buildBrowsingContext() {
+  return new Promise(function(resolve) {
+    chrome.storage.local.get(['tabData', 'tabGroups', 'sessionId'], function(data) {
+      var tabs = data.tabData || [];
+      var now = Date.now();
+      var category_times = { productive: 0, social: 0, entertainment: 0, news: 0, shopping: 0, communication: 0 };
+      var domain_times = {};
+      var uniqueDomains = {};
+      var total_time = 0;
+      var hourly_activity = new Array(24).fill(0);
+
+      tabs.forEach(function(tab) {
+        var domain = '';
+        try { domain = new URL(tab.url).hostname; } catch(e) { return; }
+        uniqueDomains[domain] = true;
+
+        var activeTime = tab.activeTime || tab.active_time || (tab.closedAt ? (tab.closedAt - tab.openedAt) : 60000);
+        total_time += activeTime;
+        domain_times[domain] = (domain_times[domain] || 0) + activeTime;
+
+        var cat = classifyDomainLocally(domain);
+        category_times[cat] = (category_times[cat] || 0) + activeTime;
+
+        var hour = new Date(tab.openedAt || tab.opened_at || now).getHours();
+        hourly_activity[hour] += activeTime;
+      });
+
+      // Find peak hour
+      var peak_hour = 12;
+      var max_activity = 0;
+      hourly_activity.forEach(function(val, idx) {
+        if (val > max_activity) { max_activity = val; peak_hour = idx; }
+      });
+
+      var domainCount = Object.keys(uniqueDomains).length || 5;
+      var sessionCount = Math.max(1, Math.ceil(tabs.length / 5));
+
+      // Provide sensible defaults if no tab data
+      if (total_time === 0) {
+        total_time = 1800000; // 30 min default
+        category_times = { productive: 900000, social: 300000, entertainment: 300000, news: 100000, shopping: 100000, communication: 100000 };
+      }
+
+      resolve({
+        category_times: category_times,
+        domain_times: domain_times,
+        total_time: total_time,
+        unique_domains: domainCount,
+        peak_hour: peak_hour,
+        session_count: sessionCount,
+        avg_session_minutes: Math.max(15, Math.round(total_time / 60000 / sessionCount)),
+        focus_score: category_times.productive / Math.max(total_time, 1),
+        date: new Date().toISOString().split('T')[0],
+        hourly_activity: hourly_activity,
+        minutes_since_break: 30,
+        session_length: 30,
+        tab_switches: tabs.length,
+        domains: Object.keys(uniqueDomains)
+      });
+    });
+  });
+}
+
 async function loadAllInsights() {
   if (!backendOnline) { showInsightsOfflineState(); return; }
+  // Build browsing context once and reuse for all model calls
+  var ctx = await buildBrowsingContext();
   await Promise.allSettled([
-    loadProductivityPrediction(),
-    loadBrowsingCluster(),
-    loadAnomalyDetection(),
+    loadProductivityPrediction(ctx),
+    loadBrowsingCluster(ctx),
+    loadAnomalyDetection(ctx),
     loadClassification(),
     loadForecast(),
     loadOptimalSchedule(),
@@ -1193,16 +1277,16 @@ function showInsightsOfflineState() {
 }
 
 // --- Productivity Prediction ---
-async function loadProductivityPrediction() {
+async function loadProductivityPrediction(ctx) {
   try {
-    const result = await backendAPI.predictProductivity();
+    const result = await backendAPI.predictProductivity(ctx || {});
     const score = Math.round(result.predicted_score || 0);
     const circle = document.getElementById('predictedScore');
     circle.style.setProperty('--score-pct', score);
     circle.querySelector('.score-number').textContent = score;
-    var ci = result.confidence_interval || {};
+    var ci = result.confidence_interval || [];
     var html = '<p>' + getProductivityMessage(score) + '</p>';
-    if (ci.lower !== undefined) html += '<p class="confidence">Range: ' + Math.round(ci.lower) + '% \u2014 ' + Math.round(ci.upper) + '%</p>';
+    if (ci.length >= 2) html += '<p class="confidence">Range: ' + Math.round(ci[0]) + '% \u2014 ' + Math.round(ci[1]) + '%</p>';
     if (result.features_used) html += '<p class="confidence">Based on ' + result.features_used + ' features</p>';
     document.getElementById('productivityDetails').innerHTML = html;
   } catch (e) {
@@ -1218,10 +1302,10 @@ function getProductivityMessage(score) {
 }
 
 // --- Browsing Cluster ---
-async function loadBrowsingCluster() {
+async function loadBrowsingCluster(ctx) {
   try {
-    const result = await backendAPI.getInsights();
-    const cluster = result.cluster || {};
+    const result = await backendAPI.getInsights(ctx || {});
+    const cluster = result.browsing_cluster || {};
     const display = document.getElementById('clusterDisplay');
     const clusterEmoji = { 'Focus Worker': '\uD83C\uDFAF', 'Social Butterfly': '\uD83E\uDD8B', 'Content Consumer': '\uD83D\uDCFA', 'Balanced Browser': '\u2696\uFE0F', 'Casual Surfer': '\uD83C\uDFC4' };
     const label = cluster.label || null;
@@ -1231,31 +1315,34 @@ async function loadBrowsingCluster() {
       return;
     }
     var barsHtml = '';
-    if (cluster.features) {
-      var f = cluster.features;
-      var bars = [
-        { label: 'Productive', value: f.productive_ratio || 0, cls: 'productive' },
-        { label: 'Social', value: f.social_ratio || 0, cls: 'social' },
-        { label: 'Entertainment', value: f.entertainment_ratio || 0, cls: 'entertainment' },
-        { label: 'News', value: f.news_ratio || 0, cls: 'news' },
-        { label: 'Shopping', value: f.shopping_ratio || 0, cls: 'shopping' }
-      ];
+    // Build bars from browsing context ratios
+    var catT = (ctx || {}).category_times || {};
+    var catTotal = Math.max(Object.values(catT).reduce(function(a,b){return a+b;}, 0), 1);
+    var bars = [
+      { label: 'Productive', value: catT.productive ? catT.productive / catTotal : 0, cls: 'productive' },
+      { label: 'Social', value: catT.social ? catT.social / catTotal : 0, cls: 'social' },
+      { label: 'Entertainment', value: catT.entertainment ? catT.entertainment / catTotal : 0, cls: 'entertainment' },
+      { label: 'News', value: catT.news ? catT.news / catTotal : 0, cls: 'news' },
+      { label: 'Shopping', value: catT.shopping ? catT.shopping / catTotal : 0, cls: 'shopping' }
+    ];
+    if (bars.some(function(b){return b.value > 0;})) {
       barsHtml = '<div class="cluster-bars">';
       bars.forEach(function(b) {
         barsHtml += '<div class="cluster-bar-item"><span class="cluster-bar-label">' + b.label + '</span><div class="cluster-bar-track"><div class="cluster-bar-fill ' + b.cls + '" style="width:' + Math.round(b.value * 100) + '%"></div></div><span class="cluster-bar-value">' + Math.round(b.value * 100) + '%</span></div>';
       });
       barsHtml += '</div>';
     }
-    display.innerHTML = '<div class="cluster-label">' + emoji + ' ' + label + '</div><div class="cluster-description">' + (cluster.description || 'Your browsing profile has been identified.') + '</div>' + barsHtml;
+    var confHtml = cluster.confidence ? '<div class="cluster-confidence">Confidence: ' + Math.round(cluster.confidence * 100) + '%</div>' : '';
+    display.innerHTML = '<div class="cluster-label">' + emoji + ' ' + label + '</div><div class="cluster-description">' + (cluster.description || 'Your browsing profile has been identified.') + '</div>' + confHtml + barsHtml;
   } catch (e) {
     document.getElementById('clusterDisplay').innerHTML = '<div class="cluster-label">\uD83D\uDCCA Not enough data</div><div class="cluster-description">Import Chrome history and retrain models.</div>';
   }
 }
 
 // --- Anomaly Detection ---
-async function loadAnomalyDetection() {
+async function loadAnomalyDetection(ctx) {
   try {
-    const result = await backendAPI.detectAnomaly();
+    const result = await backendAPI.detectAnomaly(ctx || {});
     const display = document.getElementById('anomalyDisplay');
     var severityIcons = { normal: '\u2705', mild: '\u26A1', moderate: '\u26A0\uFE0F', severe: '\uD83D\uDEA8' };
     var severity = result.severity || 'normal';
@@ -1280,10 +1367,12 @@ async function loadClassification() {
       try { var url = new URL(tab.url); if (url.protocol.startsWith('http') && domains.indexOf(url.hostname) === -1) domains.push(url.hostname); } catch (e) { /* skip */ }
     });
     if (domains.length === 0) { document.getElementById('classificationDisplay').innerHTML = '<p>No open tabs to classify.</p>'; return; }
-    const results = await backendAPI.classifyDomains(domains.slice(0, 12));
+    const response = await backendAPI.classifyDomains(domains.slice(0, 12));
+    var items = response.classifications || response || [];
+    if (!Array.isArray(items)) items = [];
     var catIcons = { productive: '\uD83D\uDCBC', social: '\uD83D\uDCAC', entertainment: '\uD83C\uDFAC', news: '\uD83D\uDCF0', shopping: '\uD83D\uDED2', communication: '\u2709\uFE0F', other: '\uD83C\uDF10' };
     var html = '<div class="classification-grid">';
-    results.forEach(function(r) {
+    items.forEach(function(r) {
       html += '<div class="classification-item"><span class="cat-icon">' + (catIcons[r.category] || '\uD83C\uDF10') + '</span><div class="cat-info"><div class="cat-domain">' + r.domain + '</div><div class="cat-label">' + r.category + ' (' + Math.round((r.confidence || 0) * 100) + '%)</div></div></div>';
     });
     html += '</div>';
@@ -1297,65 +1386,152 @@ async function loadClassification() {
 async function loadForecast() {
   try {
     const result = await backendAPI.getForecast(7);
-    if (!result || !result.forecasts || result.forecasts.length === 0) {
+    if (!result || !result.forecasts || result.error) {
       document.getElementById('forecastSummary').innerHTML = '<p>Not enough data for forecasting.</p>';
       return;
     }
-    var labels = result.forecasts.map(f => f.date);
-    var totalTime = result.forecasts.map(f => f.total_time || 0);
-    var productive = result.forecasts.map(f => f.productive_time || 0);
-    var ctx = document.getElementById('forecastChart').getContext('2d');
+    // Flask returns forecasts as an object: { total_time: {values:[], dates:[]}, productive_time: {...}, ... }
+    var forecasts = result.forecasts;
+    var totalSeries = forecasts.total_time || forecasts.total_browsing_time || null;
+    var prodSeries = forecasts.productive_time || null;
+    if (!totalSeries || !totalSeries.dates || totalSeries.dates.length === 0) {
+      document.getElementById('forecastSummary').innerHTML = '<p>Forecasting model needs more historical data.</p>';
+      return;
+    }
+    var labels = totalSeries.dates.map(function(d) { return d.split('T')[0].slice(5); }); // MM-DD
+    var totalTime = totalSeries.values.map(function(v) { return Math.round(v * 100) / 100; });
+    var productive = prodSeries ? prodSeries.values.map(function(v) { return Math.round(v * 100) / 100; }) : [];
+    var datasets = [
+      { label: 'Total Time (hrs)', data: totalTime, borderColor: '#1a73e8', backgroundColor: 'rgba(26,115,232,0.1)', tension: 0.4, fill: true }
+    ];
+    if (productive.length > 0) {
+      datasets.push({ label: 'Productive (hrs)', data: productive, borderColor: '#188038', backgroundColor: 'rgba(24,128,56,0.1)', tension: 0.4, fill: true });
+    }
+    // Add upper/lower bounds if available
+    if (totalSeries.upper_bound && totalSeries.lower_bound) {
+      datasets.push({ label: 'Upper Bound', data: totalSeries.upper_bound, borderColor: 'rgba(26,115,232,0.3)', borderDash: [5,5], pointRadius: 0, fill: false });
+      datasets.push({ label: 'Lower Bound', data: totalSeries.lower_bound, borderColor: 'rgba(26,115,232,0.3)', borderDash: [5,5], pointRadius: 0, fill: '-1' });
+    }
+    var chartCtx = document.getElementById('forecastChart').getContext('2d');
     if (forecastChartInstance) forecastChartInstance.destroy();
-    forecastChartInstance = new Chart(ctx, {
+    forecastChartInstance = new Chart(chartCtx, {
       type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          { label: 'Total Time (hrs)', data: totalTime, borderColor: '#1a73e8', backgroundColor: 'rgba(26,115,232,0.1)', tension: 0.4, fill: true },
-          { label: 'Productive (hrs)', data: productive, borderColor: '#188038', backgroundColor: 'rgba(24,128,56,0.1)', tension: 0.4, fill: true }
-        ]
-      },
+      data: { labels: labels, datasets: datasets },
       options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Hours' } }, x: { ticks: { font: { size: 10 } } } } }
     });
-    var avg = (totalTime.reduce((a, b) => a + b, 0) / totalTime.length).toFixed(1);
-    document.getElementById('forecastSummary').innerHTML = '<p>\uD83D\uDCCA 7-day forecast based on your browsing patterns. Predicted avg: ' + avg + ' hrs/day.</p>';
+    var avg = totalTime.length > 0 ? (totalTime.reduce(function(a,b){return a+b;},0) / totalTime.length).toFixed(1) : '?';
+    var trendText = totalSeries.trend ? ' Trend: ' + totalSeries.trend + '.' : '';
+    var summaryInfo = result.summary || {};
+    document.getElementById('forecastSummary').innerHTML = '<p>\uD83D\uDCCA 7-day forecast. Predicted avg: ' + avg + ' hrs/day.' + trendText + '</p>';
   } catch (e) {
     document.getElementById('forecastSummary').innerHTML = '<p>Forecasting needs more historical data.</p>';
   }
 }
 
-// --- Optimal Schedule ---
+// --- Optimal Schedule (Decision Tree Visualization) ---
 async function loadOptimalSchedule() {
+  var display = document.getElementById('scheduleDisplay');
   try {
     const result = await backendAPI.getOptimalSchedule();
-    var display = document.getElementById('scheduleDisplay');
-    if (!result || !result.schedule || result.schedule.length === 0) { renderSchedule(display, generateLocalSchedule()); return; }
-    renderSchedule(display, result.schedule);
-  } catch (e) { renderSchedule(document.getElementById('scheduleDisplay'), generateLocalSchedule()); }
+    if (!result || result.error) { renderScheduleTree(display, null); return; }
+    renderScheduleTree(display, result);
+    // Also try to load the decision tree structure
+    loadTreeStructure(display);
+  } catch (e) { renderScheduleTree(display, null); }
 }
 
-function renderSchedule(container, schedule) {
-  var html = '<div class="schedule-timeline">';
-  schedule.slice(0, 10).forEach(function(slot) {
-    var type = slot.recommendation || slot.type || 'light_work';
-    var hour = slot.hour !== undefined ? String(slot.hour).padStart(2, '0') + ':00' : '';
-    var label = type.replace(/_/g, ' ');
-    html += '<div class="schedule-slot ' + type + '"><span class="schedule-time">' + hour + '</span><span class="schedule-type">' + label + '</span></div>';
-  });
+async function loadTreeStructure(container) {
+  try {
+    var resp = await fetch(backendAPI.baseURL + '/ml/tree-structure');
+    var data = await resp.json();
+    if (data && data.tree && !data.error) {
+      var treeDiv = document.createElement('div');
+      treeDiv.className = 'dt-tree-container';
+      treeDiv.innerHTML = '<div class="dt-tree-title">\uD83C\uDF33 Decision Tree Rules</div>' + renderTreeNode(data.tree, 0);
+      container.appendChild(treeDiv);
+    }
+  } catch (e) { /* tree visualization not available */ }
+}
+
+function renderTreeNode(node, depth) {
+  if (!node) return '';
+  if (depth > 4) return '<div class="dt-node dt-leaf dt-depth-' + depth + '">...</div>';
+  var typeEmoji = { deep_focus: '\uD83C\uDFAF', light_work: '\uD83D\uDCDD', break_needed: '\u2615', leisure: '\uD83C\uDFC4', focus: '\uD83C\uDFAF' };
+  if (node.type === 'leaf') {
+    var cls = (node.class || 'light_work').replace(/\s/g, '_');
+    return '<div class="dt-node dt-leaf ' + cls + ' dt-depth-' + depth + '">' +
+      '<span class="dt-leaf-icon">' + (typeEmoji[cls] || '\uD83D\uDCCA') + '</span>' +
+      '<span class="dt-leaf-label">' + (node.class || '').replace(/_/g, ' ') + '</span>' +
+      '<span class="dt-leaf-conf">' + Math.round((node.confidence || 0) * 100) + '%</span>' +
+      '</div>';
+  }
+  // Split node
+  var featureLabel = (node.feature || '').replace(/_/g, ' ');
+  var threshold = node.threshold !== undefined ? node.threshold.toFixed(2) : '?';
+  return '<div class="dt-node dt-split dt-depth-' + depth + '">' +
+    '<div class="dt-split-header">' +
+    '<span class="dt-split-feature">' + featureLabel + '</span>' +
+    '<span class="dt-split-threshold">\u2264 ' + threshold + '</span>' +
+    '</div>' +
+    '<div class="dt-branches">' +
+    '<div class="dt-branch dt-branch-yes">' +
+    '<div class="dt-branch-label">\u2714 Yes</div>' +
+    renderTreeNode(node.left, depth + 1) +
+    '</div>' +
+    '<div class="dt-branch dt-branch-no">' +
+    '<div class="dt-branch-label">\u2718 No</div>' +
+    renderTreeNode(node.right, depth + 1) +
+    '</div>' +
+    '</div>' +
+    '</div>';
+}
+
+function renderScheduleTree(container, schedule) {
+  if (!schedule) {
+    schedule = { peak_productivity_hours: [9, 10, 14, 15], focus_blocks: [
+      { start: '09:00', end: '10:30', type: 'deep_focus', duration: 90 },
+      { start: '10:45', end: '12:00', type: 'light_work', duration: 75 },
+      { start: '14:00', end: '15:30', type: 'deep_focus', duration: 90 },
+      { start: '15:45', end: '17:00', type: 'light_work', duration: 75 }
+    ], tips: ['Start tracking your browsing for personalized schedule'] };
+  }
+  var typeEmoji = { deep_focus: '\uD83C\uDFAF', light_work: '\uD83D\uDCDD', break_needed: '\u2615', leisure: '\uD83C\uDFC4' };
+  var html = '<div class="schedule-tree">';
+  // Peak hours
+  var peakHours = schedule.peak_productivity_hours || [];
+  if (peakHours.length > 0) {
+    html += '<div class="schedule-peak">\u26A1 Peak Hours: ' + peakHours.map(function(h){return String(h).padStart(2,'0')+':00';}).join(', ') + '</div>';
+  }
+  // Focus blocks as tree-like timeline
+  var blocks = schedule.focus_blocks || [];
+  if (blocks.length > 0) {
+    html += '<div class="schedule-blocks">';
+    blocks.forEach(function(block) {
+      var type = block.type || 'light_work';
+      html += '<div class="schedule-block ' + type + '">' +
+        '<div class="schedule-block-time">' + (block.start || '') + ' \u2014 ' + (block.end || '') + '</div>' +
+        '<div class="schedule-block-info">' +
+        '<span class="schedule-block-emoji">' + (typeEmoji[type] || '\uD83D\uDCCA') + '</span>' +
+        '<span class="schedule-block-type">' + type.replace(/_/g, ' ') + '</span>' +
+        '<span class="schedule-block-dur">' + (block.duration || '') + ' min</span>' +
+        '</div></div>';
+    });
+    html += '</div>';
+  }
+  // Breaks
+  var breaks = schedule.recommended_breaks || [];
+  if (breaks.length > 0) {
+    html += '<div class="schedule-breaks">\u2615 Breaks: ' + breaks.join(', ') + '</div>';
+  }
+  // Tips
+  var tips = schedule.tips || [];
+  if (tips.length > 0) {
+    html += '<div class="schedule-tips">';
+    tips.forEach(function(tip) { html += '<div class="schedule-tip">\uD83D\uDCA1 ' + tip + '</div>'; });
+    html += '</div>';
+  }
   html += '</div>';
   container.innerHTML = html;
-}
-
-function generateLocalSchedule() {
-  var hours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-  return hours.map(function(h) {
-    var type = 'light_work';
-    if (h >= 9 && h <= 11) type = 'deep_focus';
-    else if (h === 12 || h === 13) type = 'break_needed';
-    else if (h >= 14 && h <= 16) type = 'light_work';
-    else if (h >= 17) type = 'leisure';
-    return { hour: h, type: type };
-  });
 }
 
 // --- Models Info ---

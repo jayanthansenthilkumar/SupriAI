@@ -31,9 +31,14 @@ class WebsiteCategoryClassifier:
         self.model = None
         self.pipeline = None
         self.categories = list(config.WEBSITE_CATEGORIES.keys())
+        self.training_domains = []
+        self.training_labels = []
+        self.accuracy = 0.0
         self.model_path = os.path.join(config.ML_MODEL_DIR, 'website_classifier.pkl')
         if self._load_model():
             print("  [Classifier] Loaded saved model from disk.")
+            # Still build training data for retraining support
+            self._build_training_data()
         else:
             print("  [Classifier] No saved model found, training from scratch...")
             self._build_training_data()

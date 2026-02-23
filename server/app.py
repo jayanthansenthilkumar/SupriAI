@@ -396,6 +396,16 @@ def get_optimal_schedule():
     return jsonify(result)
 
 
+@app.route('/api/ml/tree-structure', methods=['GET'])
+def get_tree_structure():
+    """Get decision tree structure as JSON for popup tree visualization"""
+    max_depth = request.args.get('depth', 4, type=int)
+    tree = ml_engine.get_tree_structure(max_depth)
+    if tree:
+        return jsonify({'tree': tree})
+    return jsonify({'error': 'Decision tree model not trained yet', 'tree': None})
+
+
 @app.route('/api/ml/insights', methods=['POST'])
 def get_comprehensive_insights():
     """Get all ML insights for current browsing state"""

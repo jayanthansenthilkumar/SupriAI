@@ -217,8 +217,6 @@ class NeuralCollaborativeFilter:
             learning_rate='adaptive',
             learning_rate_init=0.001,
             max_iter=500,
-            early_stopping=True,
-            validation_fraction=0.15,
             random_state=42,
             verbose=False
         )

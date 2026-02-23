@@ -1,5 +1,5 @@
 // BackendAPI — Lightweight service worker edition
-// Only includes methods used by background-enhanced.js
+// Methods used by background-enhanced.js for Express backend communication
 
 class BackendAPI {
   constructor() {
@@ -35,6 +35,46 @@ class BackendAPI {
       return await response.json();
     } catch (e) {
       console.error('[SupriAI] Sync failed:', e);
+      return { error: e.message };
+    }
+  }
+
+  async createSession(sessionId) {
+    try {
+      const response = await fetch(`${this.baseURL}/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      });
+      return await response.json();
+    } catch (e) {
+      return { error: e.message };
+    }
+  }
+
+  async importHistory(historyItems) {
+    try {
+      const response = await fetch(`${this.baseURL}/import-history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: historyItems })
+      });
+      return await response.json();
+    } catch (e) {
+      console.error('[SupriAI] History import failed:', e);
+      return { error: e.message };
+    }
+  }
+
+  async logEvent(eventData) {
+    try {
+      const response = await fetch(`${this.baseURL}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventData)
+      });
+      return await response.json();
+    } catch (e) {
       return { error: e.message };
     }
   }

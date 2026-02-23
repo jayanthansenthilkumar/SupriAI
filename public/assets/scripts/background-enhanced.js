@@ -1,6 +1,6 @@
-// Import database service
-importScripts('assets/scripts/services/database.js');
-importScripts('assets/scripts/services/backendAPI.js');
+// Import database service (paths relative to service worker location)
+importScripts('services/database.js');
+importScripts('services/backendAPI.js');
 
 // Get settings from storage
 async function getSettings() {
@@ -104,6 +104,9 @@ async function trackTab(tab) {
         domain: domain
       });
 
+      // Buffer event for backend sync
+      bufferTabEvent({ tabId: tab.id, eventType: 'opened', timestamp: currentTime, url: tab.url, domain });
+
       // Update session tab count
       if (currentSessionId) {
         const sessionTabs = await dbService.getTabsBySession(currentSessionId);
@@ -134,6 +137,9 @@ async function trackTab(tab) {
           url: tab.url,
           domain: domain
         });
+
+        // Buffer event for backend sync
+        bufferTabEvent({ tabId: tab.id, eventType: 'activated', timestamp: currentTime, url: tab.url, domain });
       } catch (error) {
         console.error('Error logging tab event:', error);
       }
@@ -191,6 +197,9 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
           activeTime: activeTime
         }
       });
+
+      // Buffer event for backend sync
+      bufferTabEvent({ tabId, eventType: 'closed', timestamp: Date.now(), url, domain, metadata: { activeTime } });
 
       // Update domain statistics
       const today = new Date().toISOString().split('T')[0];
@@ -470,55 +479,89 @@ chrome.runtime.onStartup.addListener(async () => {
 // BACKEND SYNC — Periodically sync to Express (port 3001)
 // ============================================
 let backendSyncEnabled = true;
+let historyImported = false;
+let pendingEvents = []; // Buffer for tab events to send
 
 async function syncToBackend() {
   if (!backendSyncEnabled) return;
-  
+
   try {
     // Check if backend is online first
     const health = await backendAPI.checkHealth();
     if (!health) return;
 
-    // Build sync payload from current in-memory data
-    const tabs = [];
-    const events = [];
-    
-    Object.keys(tabData).forEach(tabId => {
-      const data = tabData[tabId];
-      tabs.push({
-        tab_id: parseInt(tabId),
-        url: data.url || '',
-        title: data.title || data.domain || '',
-        domain: data.domain || '',
-        active_time: data.totalActiveTime || 0
-      });
-    });
+    // Ensure the session exists on the backend
+    if (currentSessionId) {
+      await backendAPI.createSession(currentSessionId);
+    }
 
-    const domainStats = [];
-    Object.keys(tabGroups).forEach(domain => {
-      const data = tabGroups[domain];
-      domainStats.push({
-        domain: domain,
-        total_time: data.totalTime || 0,
-        visit_count: data.tabs ? data.tabs.length : 0
-      });
-    });
-
+    // Send tabData directly as Express expects: { tabData: {}, tabGroups: {}, sessionId }
     await backendAPI.syncData({
-      session: {
-        session_id: currentSessionId,
-        start_time: new Date().toISOString(),
-        is_active: true
-      },
-      tabs: tabs,
-      events: events,
-      domain_stats: domainStats
+      tabData: tabData,
+      tabGroups: tabGroups,
+      sessionId: currentSessionId
     });
 
-    console.log('[SupriAI] Backend sync successful -', tabs.length, 'tabs,', domainStats.length, 'domains');
+    // Send any buffered tab events
+    if (pendingEvents.length > 0) {
+      const eventsToSend = [...pendingEvents];
+      pendingEvents = [];
+      for (const evt of eventsToSend) {
+        await backendAPI.logEvent(evt);
+      }
+    }
+
+    const tabCount = Object.keys(tabData).length;
+    const domainCount = Object.keys(tabGroups).length;
+    console.log('[SupriAI] Backend sync successful -', tabCount, 'tabs,', domainCount, 'domains');
+
+    // Import Chrome history once per session
+    if (!historyImported) {
+      await importChromeHistory();
+    }
   } catch (error) {
     // Silently fail - backend may be offline
     console.log('[SupriAI] Backend sync skipped (server unavailable)');
+  }
+}
+
+// Import Chrome browser history into the database
+async function importChromeHistory() {
+  try {
+    // Search last 90 days of Chrome history
+    const startTime = Date.now() - (90 * 24 * 60 * 60 * 1000);
+    const historyItems = await chrome.history.search({
+      text: '',
+      startTime: startTime,
+      maxResults: 5000
+    });
+
+    if (historyItems && historyItems.length > 0) {
+      const result = await backendAPI.importHistory(historyItems);
+      if (result && !result.error) {
+        historyImported = true;
+        console.log('[SupriAI] Chrome history imported:', result.imported, 'of', result.total_submitted);
+      }
+    }
+  } catch (error) {
+    console.log('[SupriAI] Chrome history import skipped:', error.message);
+  }
+}
+
+// Buffer a tab event for next sync
+function bufferTabEvent(event) {
+  pendingEvents.push({
+    tabId: event.tabId,
+    eventType: event.eventType,
+    timestamp: event.timestamp || Date.now(),
+    sessionId: currentSessionId,
+    url: event.url || '',
+    domain: event.domain || '',
+    metadata: event.metadata || {}
+  });
+  // Keep buffer reasonable
+  if (pendingEvents.length > 500) {
+    pendingEvents = pendingEvents.slice(-250);
   }
 }
 

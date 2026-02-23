@@ -1078,7 +1078,102 @@ select:focus,
   line-height: 1.5;
 }
 
-/* Schedule Display */
+/* Schedule Display — Tree-based */
+.schedule-tree { display: flex; flex-direction: column; gap: 8px; }
+
+.schedule-peak {
+  font-size: 13px; font-weight: 600; color: var(--warning-color);
+  padding: 6px var(--space-sm); background: var(--google-yellow-50);
+  border-radius: var(--radius-md); text-align: center;
+}
+
+.schedule-blocks { display: flex; flex-direction: column; gap: 6px; }
+
+.schedule-block {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px var(--space-sm); border-radius: var(--radius-md); font-size: 13px;
+}
+.schedule-block.deep_focus { background: var(--google-green-50); border-left: 3px solid var(--success-color); }
+.schedule-block.light_work { background: var(--google-blue-50); border-left: 3px solid var(--primary-color); }
+.schedule-block.break_needed { background: var(--google-yellow-50); border-left: 3px solid var(--warning-color); }
+.schedule-block.leisure { background: var(--google-purple-50); border-left: 3px solid var(--google-purple-600); }
+
+.schedule-block-time { font-weight: 600; color: var(--text-primary); font-size: 12px; }
+.schedule-block-info { display: flex; align-items: center; gap: 6px; }
+.schedule-block-emoji { font-size: 16px; }
+.schedule-block-type { flex: 1; color: var(--text-secondary); text-transform: capitalize; }
+.schedule-block-dur { font-size: 11px; color: var(--text-secondary); opacity: 0.7; }
+
+.schedule-breaks {
+  font-size: 12px; color: var(--text-secondary);
+  padding: 4px var(--space-sm); background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.schedule-tips { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.schedule-tip { font-size: 11px; color: var(--text-secondary); padding: 3px 0; }
+
+/* Decision Tree Visualization */
+.dt-tree-container {
+  margin-top: 12px; padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.dt-tree-title {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.dt-node { position: relative; }
+
+.dt-split {
+  padding: 4px 0;
+}
+
+.dt-split-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px; background: var(--bg-subtle);
+  border-radius: var(--radius-sm); font-size: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.dt-split-feature { font-weight: 600; color: var(--primary-color); }
+.dt-split-threshold { color: var(--text-secondary); font-size: 11px; }
+
+.dt-branches {
+  display: flex; gap: 8px; margin-top: 4px;
+  padding-left: 12px; border-left: 2px solid var(--border-color);
+}
+
+.dt-branch { flex: 1; min-width: 0; }
+
+.dt-branch-label {
+  font-size: 10px; font-weight: 600; margin-bottom: 3px;
+  padding: 2px 6px; border-radius: 8px; display: inline-block;
+}
+.dt-branch-yes .dt-branch-label { color: var(--success-color); background: var(--google-green-50); }
+.dt-branch-no .dt-branch-label { color: var(--error-color); background: rgba(234,67,53,0.08); }
+
+.dt-leaf {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 8px; border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+.dt-leaf.deep_focus { background: var(--google-green-50); border-left: 2px solid var(--success-color); }
+.dt-leaf.light_work { background: var(--google-blue-50); border-left: 2px solid var(--primary-color); }
+.dt-leaf.break_needed { background: var(--google-yellow-50); border-left: 2px solid var(--warning-color); }
+.dt-leaf.leisure { background: var(--google-purple-50); border-left: 2px solid var(--google-purple-600); }
+.dt-leaf.focus { background: var(--google-green-50); border-left: 2px solid var(--success-color); }
+
+.dt-leaf-icon { font-size: 12px; }
+.dt-leaf-label { font-weight: 500; color: var(--text-primary); text-transform: capitalize; flex: 1; }
+.dt-leaf-conf { font-size: 10px; color: var(--text-secondary); opacity: 0.7; }
+
+/* Limit tree depth visual nesting */
+.dt-depth-3 .dt-branches, .dt-depth-4 .dt-branches { padding-left: 8px; }
+.dt-depth-3 .dt-split-header, .dt-depth-4 .dt-split-header { font-size: 11px; padding: 3px 6px; }
+
+/* Legacy flat schedule (keep for backward compat) */
 .schedule-timeline { display: flex; flex-direction: column; gap: 6px; }
 
 .schedule-slot {

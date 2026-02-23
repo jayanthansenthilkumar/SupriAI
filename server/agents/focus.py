@@ -330,6 +330,44 @@ class FocusRecommender:
             ]
         }
 
+    def export_tree_json(self, max_depth=4):
+        """Export decision tree as nested JSON for visualization"""
+        if not self.model:
+            return None
+        
+        tree = self.model.tree_
+        feature_names = self.feature_names
+        try:
+            class_names = list(self.label_encoder.classes_)
+        except Exception:
+            class_names = self.classes
+
+        def build_node(node_id, depth=0):
+            if depth >= max_depth or tree.children_left[node_id] == -1:
+                # Leaf node
+                class_idx = int(np.argmax(tree.value[node_id]))
+                samples = int(tree.n_node_samples[node_id])
+                max_val = float(np.max(tree.value[node_id]))
+                return {
+                    'type': 'leaf',
+                    'class': class_names[class_idx] if class_idx < len(class_names) else f'class_{class_idx}',
+                    'samples': samples,
+                    'confidence': round(max_val / samples, 2) if samples > 0 else 0
+                }
+            
+            feature_idx = int(tree.feature[node_id])
+            threshold = float(tree.threshold[node_id])
+            return {
+                'type': 'split',
+                'feature': feature_names[feature_idx] if feature_idx < len(feature_names) else f'feature_{feature_idx}',
+                'threshold': round(threshold, 3),
+                'samples': int(tree.n_node_samples[node_id]),
+                'left': build_node(int(tree.children_left[node_id]), depth + 1),
+                'right': build_node(int(tree.children_right[node_id]), depth + 1)
+            }
+
+        return build_node(0)
+
     def get_model_info(self):
         """Get model information"""
         return {

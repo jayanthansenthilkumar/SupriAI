@@ -112,6 +112,10 @@ class MLEngine:
         """Get optimal daily schedule"""
         return self.focus_recommender.get_optimal_schedule(historical_data or [])
 
+    def get_tree_structure(self, max_depth=4):
+        """Get decision tree structure as JSON for visualization"""
+        return self.focus_recommender.export_tree_json(max_depth)
+
     # ==================== Deep Learning Models (7-10) ====================
 
     def get_learning_recommendations(self, browsing_data, top_k=5):
