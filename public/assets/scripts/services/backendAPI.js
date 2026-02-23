@@ -3,7 +3,7 @@
 
 class BackendAPI {
   constructor() {
-    this.baseURL = 'http://127.0.0.1:5000/api';
+    this.baseURL = 'http://127.0.0.1:3001/api';
     this.connected = false;
   }
 

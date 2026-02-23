@@ -467,7 +467,7 @@ chrome.runtime.onStartup.addListener(async () => {
 });
 
 // ============================================
-// BACKEND SYNC — Periodically sync to Flask
+// BACKEND SYNC — Periodically sync to Express (port 3001)
 // ============================================
 let backendSyncEnabled = true;
 
