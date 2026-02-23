@@ -19,7 +19,7 @@ CORS_ORIGINS = ['chrome-extension://*', 'http://localhost:*']
 
 # ML Model Settings
 ML_MODEL_DIR = os.path.join(BASE_DIR, 'ml', 'trained_models')
-MIN_DATA_POINTS_FOR_TRAINING = 10
+MIN_DATA_POINTS_FOR_TRAINING = 3
 RETRAIN_INTERVAL_HOURS = 6
 
 # Website Categories for Classification

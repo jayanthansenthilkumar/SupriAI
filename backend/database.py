@@ -381,12 +381,20 @@ class DatabaseManager:
 
     def save_prediction(self, prediction_type, prediction_data, confidence=0.0, valid_hours=24):
         """Save an ML prediction"""
+        import numpy as np
+        class NpEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, np.integer): return int(obj)
+                if isinstance(obj, np.floating): return float(obj)
+                if isinstance(obj, np.ndarray): return obj.tolist()
+                return super(NpEncoder, self).default(obj)
+                
         valid_until = (datetime.now() + timedelta(hours=valid_hours)).strftime('%Y-%m-%d %H:%M:%S')
         with self.get_connection() as conn:
             conn.execute("""
                 INSERT INTO ml_predictions (prediction_type, prediction_data, confidence, valid_until)
                 VALUES (?, ?, ?, ?)
-            """, (prediction_type, json.dumps(prediction_data), confidence, valid_until))
+            """, (prediction_type, json.dumps(prediction_data, cls=NpEncoder), confidence, valid_until))
 
     def get_latest_prediction(self, prediction_type):
         """Get the latest valid prediction of a type"""
