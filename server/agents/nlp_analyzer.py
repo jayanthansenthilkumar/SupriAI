@@ -66,6 +66,10 @@ class NLPContentAnalyzer:
         self._lsa_matrix = None
         self._labels = None
         self._topic_keywords = {}
+        if self._load_model():
+            print("  [NLPAnalyzer] Loaded saved model from disk.")
+        else:
+            print("  [NLPAnalyzer] No saved model found, will train when data is available.")
 
     def _preprocess_text(self, text):
         """Clean and tokenize browsing content text"""
@@ -81,7 +85,9 @@ class NLPContentAnalyzer:
         text = re.sub(r'[^a-z0-9\s]', '', text)
         # Remove stop words
         tokens = text.split()
-        tokens = [t for t in tokens if t not in self.STOP_WORDS and len(t) > 2]
+        # Keep meaningful short tokens like 'ai', 'ml', 'js', 'ui', 'ux', 'db', 'os', 'qa'
+        keep_short = {'ai', 'ml', 'js', 'ts', 'ui', 'ux', 'db', 'os', 'qa', 'ci', 'cd', 'go', 'r'}
+        tokens = [t for t in tokens if t not in self.STOP_WORDS and (len(t) > 2 or t in keep_short)]
         return ' '.join(tokens)
 
     def _extract_text_from_entry(self, entry):
@@ -428,3 +434,34 @@ class NLPContentAnalyzer:
             'explained_variance': round(float(np.sum(self.svd.explained_variance_ratio_)), 4)
                 if hasattr(self.svd, 'explained_variance_ratio_') else 0
         }
+
+    def _save_model(self):
+        """Save model to disk"""
+        os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
+        if self.is_trained:
+            joblib.dump({
+                'tfidf': self.tfidf,
+                'svd': self.svd,
+                'clusterer': self.clusterer,
+                'corpus': self._corpus,
+                'tfidf_matrix': self._tfidf_matrix,
+                'lsa_matrix': self._lsa_matrix,
+                'labels': self._labels,
+                'topic_keywords': self._topic_keywords
+            }, self.model_path)
+
+    def _load_model(self):
+        """Load model from disk"""
+        if os.path.exists(self.model_path):
+            data = joblib.load(self.model_path)
+            self.tfidf = data['tfidf']
+            self.svd = data['svd']
+            self.clusterer = data['clusterer']
+            self._corpus = data['corpus']
+            self._tfidf_matrix = data['tfidf_matrix']
+            self._lsa_matrix = data['lsa_matrix']
+            self._labels = data['labels']
+            self._topic_keywords = data['topic_keywords']
+            self.is_trained = True
+            return True
+        return False

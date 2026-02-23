@@ -171,7 +171,11 @@ class DeepRecommender:
         self.model_path = os.path.join(config.ML_MODEL_DIR, 'deep_recommender.pkl')
         self.is_trained = False
         self._build_domain_index()
-        self._train_with_synthetic_data()
+        if self._load_model():
+            print("  [DeepRecommender] Loaded saved model from disk.")
+        else:
+            print("  [DeepRecommender] No saved model found, training from scratch...")
+            self._train_with_synthetic_data()
 
     def _build_domain_index(self):
         """Build reverse mapping: domain -> category"""
@@ -532,3 +536,24 @@ class DeepRecommender:
         for intercept in self.model.intercepts_:
             total += intercept.size
         return total
+
+    def _save_model(self):
+        """Save model to disk"""
+        os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
+        if self.model:
+            joblib.dump({
+                'model': self.model,
+                'scaler': self.scaler,
+                'label_encoder': self.label_encoder
+            }, self.model_path)
+
+    def _load_model(self):
+        """Load model from disk"""
+        if os.path.exists(self.model_path):
+            data = joblib.load(self.model_path)
+            self.model = data['model']
+            self.scaler = data['scaler']
+            self.label_encoder = data['label_encoder']
+            self.is_trained = True
+            return True
+        return False

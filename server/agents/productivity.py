@@ -42,6 +42,10 @@ class ProductivityPredictor:
             'rolling_7d_score', 'session_count', 'avg_session_length'
         ]
         self.importance_scores = {}
+        if self._load_model():
+            print("  [ProductivityPredictor] Loaded saved model from disk.")
+        else:
+            print("  [ProductivityPredictor] No saved model found, will train when data is available.")
 
     def prepare_features(self, records):
         """

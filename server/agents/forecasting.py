@@ -44,6 +44,10 @@ class TimeSeriesForecaster:
             'productivity_scores': [],
             'dates': []
         }
+        if self._load_model():
+            print("  [Forecaster] Loaded saved model from disk.")
+        else:
+            print("  [Forecaster] No saved model found, will train when data is available.")
 
     def add_data_point(self, date, data):
         """Add a daily data point"""

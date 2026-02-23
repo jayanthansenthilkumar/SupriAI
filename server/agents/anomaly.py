@@ -42,6 +42,10 @@ class AnomalyDetector:
             'unique_domains_normalized', 'max_single_domain_ratio',
             'session_count', 'avg_session_length', 'category_entropy'
         ]
+        if self._load_model():
+            print("  [AnomalyDetector] Loaded saved model from disk.")
+        else:
+            print("  [AnomalyDetector] No saved model found, will train when data is available.")
 
     def prepare_features(self, daily_data):
         """Prepare features for anomaly detection"""

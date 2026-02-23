@@ -152,14 +152,19 @@ class MLEngine:
                 'classified_domains': len(domains),
                 'model_info': self.classifier.get_model_info()
             }
-            # Update domain categories in database
-            for domain, classification in zip(domains, classifications):
-                for date_record in domain_stats:
-                    if date_record['domain'] == domain:
-                        db.save_domain_stats(domain, date_record['date'], {
-                            'visitCount': 0, 'activeTime': 0, 'tabCount': 0,
-                            'category': classification['category']
-                        })
+            # Update domain categories in database (category only, preserve existing stats)
+            category_map = {domain: cls['category'] for domain, cls in zip(domains, classifications)}
+            for date_record in domain_stats:
+                domain = date_record['domain']
+                if domain in category_map:
+                    try:
+                        with db.get_connection() as conn:
+                            conn.execute(
+                                "UPDATE domain_stats SET category = ? WHERE domain = ? AND date = ?",
+                                (category_map[domain], domain, date_record['date'])
+                            )
+                    except Exception:
+                        pass  # Skip if update fails
 
         # 2. Prepare daily records for other models
         daily_records = self._aggregate_daily_data(data)
@@ -240,50 +245,69 @@ class MLEngine:
         }
 
         # 1. Category classification for domains
-        if 'domains' in day_data:
-            insights['domain_categories'] = self.classify_domains(day_data['domains'])
-            insights['models_used'].append('Naive Bayes Classifier')
+        try:
+            if 'domains' in day_data:
+                insights['domain_categories'] = self.classify_domains(day_data['domains'])
+                insights['models_used'].append('Naive Bayes Classifier')
+        except Exception as e:
+            insights['domain_categories'] = {'error': str(e)}
 
         # 2. Browsing cluster
-        cluster = self.get_browsing_cluster(day_data)
-        insights['browsing_cluster'] = cluster
-        insights['models_used'].append('K-Means Clustering')
+        try:
+            cluster = self.get_browsing_cluster(day_data)
+            insights['browsing_cluster'] = cluster
+            insights['models_used'].append('K-Means Clustering')
+        except Exception as e:
+            insights['browsing_cluster'] = {'error': str(e)}
 
         # 3. Productivity prediction
-        productivity = self.predict_productivity(day_data)
-        insights['productivity_prediction'] = productivity
-        insights['models_used'].append('Random Forest Regression')
+        productivity = {'predicted_score': 50}
+        try:
+            productivity = self.predict_productivity(day_data)
+            insights['productivity_prediction'] = productivity
+            insights['models_used'].append('Random Forest Regression')
+        except Exception as e:
+            insights['productivity_prediction'] = {'error': str(e)}
 
         # 4. Anomaly detection
-        anomaly = self.detect_anomaly(day_data)
-        insights['anomaly_detection'] = anomaly
-        insights['models_used'].append('Isolation Forest')
+        try:
+            anomaly = self.detect_anomaly(day_data)
+            insights['anomaly_detection'] = anomaly
+            insights['models_used'].append('Isolation Forest')
+        except Exception as e:
+            insights['anomaly_detection'] = {'error': str(e)}
 
         # 5. Focus recommendation
-        current_state = {
-            'hour_of_day': datetime.now().hour,
-            'day_of_week': datetime.now().weekday(),
-            'productive_ratio': day_data.get('category_times', {}).get('productive', 0) /
+        try:
+            current_state = {
+                'hour_of_day': datetime.now().hour,
+                'day_of_week': datetime.now().weekday(),
+                'productive_ratio': day_data.get('category_times', {}).get('productive', 0) /
+                                   max(sum(day_data.get('category_times', {}).values()), 1),
+                'social_ratio': day_data.get('category_times', {}).get('social', 0) /
                                max(sum(day_data.get('category_times', {}).values()), 1),
-            'social_ratio': day_data.get('category_times', {}).get('social', 0) /
-                           max(sum(day_data.get('category_times', {}).values()), 1),
-            'entertainment_ratio': day_data.get('category_times', {}).get('entertainment', 0) /
-                                  max(sum(day_data.get('category_times', {}).values()), 1),
-            'minutes_since_break': day_data.get('minutes_since_break', 30),
-            'session_length': day_data.get('session_length', 30),
-            'tab_switches': day_data.get('tab_switches', 5),
-            'unique_domains_hour': day_data.get('unique_domains', 5),
-            'productivity_score': productivity.get('predicted_score', 50)
-        }
-        focus = self.get_focus_recommendation(current_state)
-        insights['focus_recommendation'] = focus
-        insights['models_used'].append('Decision Tree Classifier')
+                'entertainment_ratio': day_data.get('category_times', {}).get('entertainment', 0) /
+                                      max(sum(day_data.get('category_times', {}).values()), 1),
+                'minutes_since_break': day_data.get('minutes_since_break', 30),
+                'session_length': day_data.get('session_length', 30),
+                'tab_switches': day_data.get('tab_switches', 5),
+                'unique_domains_hour': day_data.get('unique_domains', 5),
+                'productivity_score': productivity.get('predicted_score', 50)
+            }
+            focus = self.get_focus_recommendation(current_state)
+            insights['focus_recommendation'] = focus
+            insights['models_used'].append('Decision Tree Classifier')
+        except Exception as e:
+            insights['focus_recommendation'] = {'error': str(e)}
 
         # 6. Time series forecast
-        forecast = self.forecast(7)
-        if 'error' not in forecast:
-            insights['forecast'] = forecast
-            insights['models_used'].append('Time Series Forecasting')
+        try:
+            forecast = self.forecast(7)
+            if 'error' not in forecast:
+                insights['forecast'] = forecast
+                insights['models_used'].append('Time Series Forecasting')
+        except Exception as e:
+            insights['forecast'] = {'error': str(e)}
 
         # ---- Deep Learning Insights ----
 

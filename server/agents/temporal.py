@@ -56,7 +56,11 @@ class TemporalPredictor:
         self.is_trained = False
         self._history_buffer = []
         self._hourly_patterns = defaultdict(list)
-        self._train_with_synthetic()
+        if self._load_model():
+            print("  [TemporalPredictor] Loaded saved model from disk.")
+        else:
+            print("  [TemporalPredictor] No saved model found, training from scratch...")
+            self._train_with_synthetic()
 
     def _encode_timestep(self, day_data):
         """
@@ -373,9 +377,9 @@ class TemporalPredictor:
 
             # Roll the prediction into the window for next prediction
             synthetic_day = {
-                'total_time': pred['predicted_total_hours'] * 3600000 / 12,
+                'total_time': pred['predicted_total_hours'] * 3600000,
                 'category_times': {
-                    'productive': pred['predicted_total_hours'] * 3600000 / 12 * pred['predicted_productive_ratio']
+                    'productive': pred['predicted_total_hours'] * 3600000 * pred['predicted_productive_ratio']
                 },
                 'unique_domains': 15,
                 'session_count': pred['predicted_sessions'],
@@ -441,3 +445,24 @@ class TemporalPredictor:
             'r2_score': round(self._train_r2, 4) if hasattr(self, '_train_r2') else None,
             'history_buffer_size': len(self._history_buffer)
         }
+
+    def _save_model(self):
+        """Save model to disk"""
+        os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
+        if self.model:
+            joblib.dump({
+                'model': self.model,
+                'input_scaler': self.input_scaler,
+                'output_scaler': self.output_scaler
+            }, self.model_path)
+
+    def _load_model(self):
+        """Load model from disk"""
+        if os.path.exists(self.model_path):
+            data = joblib.load(self.model_path)
+            self.model = data['model']
+            self.input_scaler = data['input_scaler']
+            self.output_scaler = data['output_scaler']
+            self.is_trained = True
+            return True
+        return False

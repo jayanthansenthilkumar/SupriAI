@@ -49,6 +49,10 @@ class BrowsingClusterer:
             'peak_hour', 'unique_domains', 'total_time_hours',
             'avg_session_minutes', 'focus_score'
         ]
+        if self._load_model():
+            print("  [Clusterer] Loaded saved model from disk.")
+        else:
+            print("  [Clusterer] No saved model found, will train when data is available.")
 
     def prepare_features(self, daily_data):
         """

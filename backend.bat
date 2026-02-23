@@ -4,7 +4,7 @@ echo   SupriAI Backend - Starting Flask Server
 echo ============================================
 echo.
 
-cd /d "%~dp0backend"
+cd /d "%~dp0server\backend"
 
 echo [1/3] Checking Python installation...
 python --version 2>nul

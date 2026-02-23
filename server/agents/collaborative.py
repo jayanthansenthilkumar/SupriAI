@@ -43,7 +43,11 @@ class NeuralCollaborativeFilter:
         self.is_trained = False
         self.domain_features_cache = {}
         self._known_domains = set()
-        self._train_with_synthetic()
+        if self._load_model():
+            print("  [CollaborativeFilter] Loaded saved model from disk.")
+        else:
+            print("  [CollaborativeFilter] No saved model found, training from scratch...")
+            self._train_with_synthetic()
 
     def _encode_domain(self, domain):
         """
@@ -408,3 +412,24 @@ class NeuralCollaborativeFilter:
             'is_trained': self.is_trained,
             'r2_score': round(self._train_r2, 4) if hasattr(self, '_train_r2') else None
         }
+
+    def _save_model(self):
+        """Save model to disk"""
+        os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
+        if self.model:
+            joblib.dump({
+                'model': self.model,
+                'domain_scaler': self.domain_scaler,
+                'context_scaler': self.context_scaler
+            }, self.model_path)
+
+    def _load_model(self):
+        """Load model from disk"""
+        if os.path.exists(self.model_path):
+            data = joblib.load(self.model_path)
+            self.model = data['model']
+            self.domain_scaler = data['domain_scaler']
+            self.context_scaler = data['context_scaler']
+            self.is_trained = True
+            return True
+        return False

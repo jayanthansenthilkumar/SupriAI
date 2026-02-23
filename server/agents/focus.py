@@ -42,6 +42,10 @@ class FocusRecommender:
         self.classes = ['deep_focus', 'light_work', 'break_needed', 'leisure']
         self.label_encoder.fit(self.classes)
         self.tree_rules = ""
+        if self._load_model():
+            print("  [FocusRecommender] Loaded saved model from disk.")
+        else:
+            print("  [FocusRecommender] No saved model found, will train when data is available.")
 
     def prepare_features(self, sessions):
         """Prepare feature vectors from session data"""
@@ -301,8 +305,8 @@ class FocusRecommender:
         sorted_peaks = sorted(peak_hours)
         for hour in sorted_peaks:
             blocks.append({
-                'start': f'{hour}:00',
-                'end': f'{(hour + 1) % 24}:30',
+                'start': f'{hour:02d}:00',
+                'end': f'{(hour + 1) % 24:02d}:30',
                 'type': 'deep_focus',
                 'duration': 90
             })
