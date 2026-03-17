@@ -9,7 +9,9 @@ Provides unified interface for the Flask API
                   Neural Collaborative Filtering, Temporal Sequence Prediction
 """
 import numpy as np
+import warnings
 from datetime import datetime, timedelta
+from sklearn.exceptions import InconsistentVersionWarning
 from ml.classifier import WebsiteCategoryClassifier
 from ml.clustering import BrowsingClusterer
 from ml.productivity import ProductivityPredictor
@@ -44,6 +46,10 @@ class MLEngine:
 
     def __init__(self):
         print("Initializing SupriAI ML Engine (10 models)...")
+
+        # If serialized sklearn artifacts are incompatible with the current
+        # sklearn runtime, raise and let loaders retrain from scratch.
+        warnings.filterwarnings('error', category=InconsistentVersionWarning)
 
         # Traditional ML models (1-6)
         self.classifier = WebsiteCategoryClassifier()

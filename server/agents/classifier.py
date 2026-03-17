@@ -185,6 +185,13 @@ class WebsiteCategoryClassifier:
     def _load_model(self):
         """Load trained model from disk"""
         if os.path.exists(self.model_path):
-            self.pipeline = joblib.load(self.model_path)
-            return True
+            try:
+                self.pipeline = joblib.load(self.model_path)
+                return True
+            except Exception as e:
+                print(f"  [Classifier] Failed to load saved model: {e}")
+                try:
+                    os.remove(self.model_path)
+                except OSError:
+                    pass
         return False

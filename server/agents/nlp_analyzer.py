@@ -453,15 +453,22 @@ class NLPContentAnalyzer:
     def _load_model(self):
         """Load model from disk"""
         if os.path.exists(self.model_path):
-            data = joblib.load(self.model_path)
-            self.tfidf = data['tfidf']
-            self.svd = data['svd']
-            self.clusterer = data['clusterer']
-            self._corpus = data['corpus']
-            self._tfidf_matrix = data['tfidf_matrix']
-            self._lsa_matrix = data['lsa_matrix']
-            self._labels = data['labels']
-            self._topic_keywords = data['topic_keywords']
-            self.is_trained = True
-            return True
+            try:
+                data = joblib.load(self.model_path)
+                self.tfidf = data['tfidf']
+                self.svd = data['svd']
+                self.clusterer = data['clusterer']
+                self._corpus = data['corpus']
+                self._tfidf_matrix = data['tfidf_matrix']
+                self._lsa_matrix = data['lsa_matrix']
+                self._labels = data['labels']
+                self._topic_keywords = data['topic_keywords']
+                self.is_trained = True
+                return True
+            except Exception as e:
+                print(f"  [NLPAnalyzer] Failed to load saved model: {e}")
+                try:
+                    os.remove(self.model_path)
+                except OSError:
+                    pass
         return False

@@ -236,9 +236,16 @@ class ProductivityPredictor:
     def _load_model(self):
         """Load model"""
         if os.path.exists(self.model_path):
-            data = joblib.load(self.model_path)
-            self.model = data['model']
-            self.scaler = data['scaler']
-            self.importance_scores = data.get('importance_scores', {})
-            return True
+            try:
+                data = joblib.load(self.model_path)
+                self.model = data['model']
+                self.scaler = data['scaler']
+                self.importance_scores = data.get('importance_scores', {})
+                return True
+            except Exception as e:
+                print(f"  [ProductivityPredictor] Failed to load saved model: {e}")
+                try:
+                    os.remove(self.model_path)
+                except OSError:
+                    pass
         return False

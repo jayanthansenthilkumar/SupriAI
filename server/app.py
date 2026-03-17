@@ -652,29 +652,31 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(config.BASE_DIR, 'data'), exist_ok=True)
     os.makedirs(config.ML_MODEL_DIR, exist_ok=True)
 
-    print(f"""
-    ╔═══════════════════════════════════════════════════╗
-    ║           SupriAI Backend Server                  ║
-    ║   Flask + SQLite + 10 ML/DL Algorithms            ║
-    ╠═══════════════════════════════════════════════════╣
-    ║  Traditional ML Models:                           ║
-    ║  1. Naive Bayes       - Website Classification    ║
-    ║  2. K-Means           - Browsing Clustering       ║
-    ║  3. Random Forest     - Productivity Prediction   ║
-    ║  4. Isolation Forest  - Anomaly Detection         ║
-    ║  5. Ridge Reg. + ES   - Time Series Forecast      ║
-    ║  6. Decision Tree     - Focus Recommendation      ║
-    ╠───────────────────────────────────────────────────╣
-    ║  Deep Learning Models:                            ║
-    ║  7.  MLP Neural Net   - Content Recommendation    ║
-    ║  8.  TF-IDF + LSA     - NLP Content Analysis      ║
-    ║  9.  Neural CF        - Collaborative Filtering   ║
-    ║  10. Temporal MLP     - Time Pattern Prediction   ║
-    ╠═══════════════════════════════════════════════════╣
-    ║  Server: http://{config.HOST}:{config.PORT}               ║
-    ║  API:    http://{config.HOST}:{config.PORT}/api            ║
-    ╚═══════════════════════════════════════════════════╝
-    """)
+    # Keep startup logs ASCII-only so default Windows terminals don't crash on encoding.
+    banner_lines = [
+        "=======================================================",
+        "                SupriAI Backend Server",
+        "         Flask + SQLite + 10 ML/DL Algorithms",
+        "-------------------------------------------------------",
+        " Traditional ML Models:",
+        "  1. Naive Bayes      - Website Classification",
+        "  2. K-Means          - Browsing Clustering",
+        "  3. Random Forest    - Productivity Prediction",
+        "  4. Isolation Forest - Anomaly Detection",
+        "  5. Ridge Reg + ES   - Time Series Forecast",
+        "  6. Decision Tree    - Focus Recommendation",
+        "-------------------------------------------------------",
+        " Deep Learning Models:",
+        "  7. MLP Neural Net   - Content Recommendation",
+        "  8. TF-IDF + LSA     - NLP Content Analysis",
+        "  9. Neural CF        - Collaborative Filtering",
+        " 10. Temporal MLP     - Time Pattern Prediction",
+        "-------------------------------------------------------",
+        f" Server: http://{config.HOST}:{config.PORT}",
+        f" API:    http://{config.HOST}:{config.PORT}/api",
+        "=======================================================",
+    ]
+    print("\n" + "\n".join(banner_lines) + "\n")
 
     app.run(
         host=config.HOST,

@@ -180,7 +180,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/classifier.py` |
+| **File** | `server/ml/classifier.py` |
 | **Algorithm** | Multinomial Naive Bayes with TF-IDF Pipeline |
 | **Input Features** | Domain name tokens (split by dots, hyphens), TLD type, URL path keywords, known domain patterns |
 | **Output** | Category: productive, social, entertainment, news, shopping, communication, unknown |
@@ -191,7 +191,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/clustering.py` |
+| **File** | `server/ml/clustering.py` |
 | **Algorithm** | K-Means Clustering with StandardScaler normalization |
 | **Clusters** | 5: Focus Worker, Social Butterfly, Content Consumer, Balanced Browser, Casual Surfer |
 | **Features (11)** | productive_ratio, social_ratio, entertainment_ratio, news_ratio, shopping_ratio, communication_ratio, peak_hour, unique_domains, total_time_hours, avg_session_minutes, focus_score |
@@ -201,7 +201,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/productivity.py` |
+| **File** | `server/ml/productivity.py` |
 | **Algorithm** | Random Forest Regression (100 estimators, max_depth=10) |
 | **Features (23)** | Day-of-week one-hot (7), time-of-day ratios (4), category ratios (6), unique_domains, total_time_hours, prev_day_score, rolling_7d_score, session_count, avg_session_length |
 | **Output** | Productivity score 0–100 with confidence interval (from individual tree variance) and feature importance ranking |
@@ -210,7 +210,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/anomaly.py` |
+| **File** | `server/ml/anomaly.py` |
 | **Algorithm** | Isolation Forest (100 estimators, contamination=0.1) |
 | **Features (10)** | total_time_hours, productive_ratio, social_ratio, entertainment_ratio, peak_hour_normalized, unique_domains_normalized, max_single_domain_ratio, session_count, avg_session_length, category_entropy |
 | **Output** | is_anomaly flag, severity (normal/mild/moderate/severe), anomalous features list, actionable recommendations |
@@ -219,7 +219,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/forecasting.py` |
+| **File** | `server/ml/forecasting.py` |
 | **Algorithm** | Ridge Regression trend model + Exponential Smoothing (alpha=0.3) + Savitzky-Golay smoothing |
 | **Tracks** | total_time, productive_time, social_time, entertainment_time, productivity_scores (daily) |
 | **Output** | 7-day forecast with predicted totals, productive time, scores, trend direction, and widening confidence bands |
@@ -228,7 +228,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/focus.py` |
+| **File** | `server/ml/focus.py` |
 | **Algorithm** | Decision Tree Classifier (max_depth=8, class-balanced weighting) |
 | **Features (10)** | hour_of_day, day_of_week, productive_ratio, social_ratio, entertainment_ratio, minutes_since_last_break, current_session_length, tab_switch_frequency, unique_domains_last_hour, productivity_score_today |
 | **Output** | Focus state (deep_focus / light_work / break_needed / leisure), suggested duration in minutes, optimal hourly schedule |
@@ -239,7 +239,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/recommendation.py` |
+| **File** | `server/ml/recommendation.py` |
 | **Algorithm** | Multi-Layer Perceptron (MLPClassifier) |
 | **Architecture** | 18 → 128 → 64 → 32 → 12 neurons |
 | **Activation** | ReLU with Adam optimizer |
@@ -254,7 +254,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/nlp_analyzer.py` |
+| **File** | `server/ml/nlp_analyzer.py` |
 | **Algorithm** | TF-IDF Vectorization → Truncated SVD (50-dim LSA) → MiniBatch K-Means Clustering |
 | **Pipeline** | Text preprocessing → TF-IDF (2000 features, bigrams, sublinear TF) → SVD dimensionality reduction → 8-cluster K-Means |
 | **Input** | Page titles, domain names, URL paths — with custom stop words and tokenization |
@@ -266,7 +266,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/collaborative.py` |
+| **File** | `server/ml/collaborative.py` |
 | **Algorithm** | Neural Collaborative Filtering (MLPRegressor) |
 | **Architecture** | 16 → 64 → 32 → 16 → 1 neurons |
 | **Domain Encoding (8)** | domain_length, subdomain_count, has_www, tld_type, is_known_productive, is_known_social, is_known_entertainment, learning_keyword_score |
@@ -279,7 +279,7 @@ Extension configuration:
 
 | Property | Detail |
 |----------|--------|
-| **File** | `backend/ml/temporal.py` |
+| **File** | `server/ml/temporal.py` |
 | **Algorithm** | Sliding-window MLP simulating recurrent (LSTM-like) behavior |
 | **Architecture** | 56 → 64 → 32 → 16 → 4 neurons |
 | **Window** | 7 days × 8 features per step = 56 input dimensions |
@@ -372,7 +372,7 @@ Extension configuration:
 
 ## Database Schema
 
-### Backend — SQLite (`backend/data/supriai.db`, 8 tables)
+### Backend — SQLite (`server/data/supriai.db`, 8 tables)
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
@@ -467,7 +467,7 @@ SupriAI/
 │   └── styles/
 │       └── styles.css                     # Unified stylesheet (~1490 lines)
 │
-└── backend/
+└── server/
     ├── app.py                             # Flask REST API (33 routes)
     ├── config.py                          # Configuration & website categories
     ├── database.py                        # SQLite DB manager (8 tables)
@@ -496,6 +496,7 @@ SupriAI/
 ### Prerequisites
 
 - **Google Chrome** (version 88 or later)
+- **Node.js 18+** and **npm**
 - **Python 3.10+**
 - **pip** (Python package manager)
 
@@ -506,11 +507,26 @@ git clone https://github.com/jayanthansenthilkumar/SupriAI.git
 cd SupriAI
 ```
 
-### Step 2 — Setup the Python Backend
+### Step 2 — Install Dependencies
 
 ```bash
-cd backend
+npm install
+cd server
+npm install
 pip install -r requirements.txt
+```
+
+### Step 3 — Start Backend Services
+
+```bash
+cd server
+node server.js
+```
+
+In a second terminal:
+
+```bash
+cd server
 python app.py
 ```
 
@@ -539,9 +555,9 @@ The Flask server starts at `http://127.0.0.1:5000` and initializes all 10 ML/DL 
 ╚═══════════════════════════════════════════════════╝
 ```
 
-> **Windows shortcut:** Double-click `backend.bat` to auto-install dependencies and start the server.
+> **Windows shortcut:** Double-click `backend.bat` to auto-install dependencies and start both backend services.
 
-### Step 3 — Configure Gemini API Key
+### Step 4 — Configure Gemini API Key
 
 ```bash
 cp assets/config/keys.example.js assets/config/keys.js
@@ -556,7 +572,7 @@ const CONFIG = {
 };
 ```
 
-### Step 4 — Load the Chrome Extension
+### Step 5 — Load the Chrome Extension
 
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable **Developer mode** (toggle in top-right corner)
@@ -564,7 +580,7 @@ const CONFIG = {
 4. Select the `SupriAI` project root folder
 5. Pin the SupriAI extension to your toolbar
 
-### Step 5 — Start Using
+### Step 6 — Start Using
 
 1. Click the **SupriAI icon** in your toolbar to open the popup
 2. The **Overview** tab shows real-time browsing stats immediately
@@ -637,14 +653,14 @@ const CONFIG = {
 | Productive Sites | github.com, stackoverflow.com, docs.google.com, linkedin.com | Sites classified as productive |
 | Social Sites | facebook.com, twitter.com, instagram.com, youtube.com | Sites classified as social |
 
-### Backend Config (`backend/config.py`)
+### Backend Config (`server/config.py`)
 
 | Setting | Default | Environment Variable |
 |---------|---------|---------------------|
 | Server Host | `127.0.0.1` | `FLASK_HOST` |
 | Server Port | `5000` | `FLASK_PORT` |
 | Debug Mode | `True` | `FLASK_DEBUG` |
-| Database Path | `backend/data/supriai.db` | — |
+| Database Path | `server/data/supriai.db` | — |
 | Min Training Data | 10 data points | — |
 | Retrain Interval | 6 hours | — |
 | Website Categories | 6 categories, 86 predefined domains | — |
@@ -720,3 +736,4 @@ This project is developed as a **Final Year Project** for academic purposes.
 **Jayanthan Senthilkumar**
 
 Built with Chrome Extensions API, Python Flask, scikit-learn, Gemini AI, and Chart.js.
+

@@ -15,7 +15,7 @@ if errorlevel 1 (
 )
 
 echo [2/5] Installing Python dependencies...
-pip install -r requirements.txt --quiet
+python -m pip install -r requirements.txt --quiet
 
 echo [3/5] Starting Python ML server (port 5000)...
 start "SupriAI-Python" /min cmd /c "python app.py"

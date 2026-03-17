@@ -230,10 +230,17 @@ class BrowsingClusterer:
     def _load_model(self):
         """Load model from disk"""
         if os.path.exists(self.model_path):
-            data = joblib.load(self.model_path)
-            self.model = data['model']
-            self.scaler = data['scaler']
-            self.cluster_labels = data['cluster_labels']
-            self.n_clusters = data['n_clusters']
-            return True
+            try:
+                data = joblib.load(self.model_path)
+                self.model = data['model']
+                self.scaler = data['scaler']
+                self.cluster_labels = data['cluster_labels']
+                self.n_clusters = data['n_clusters']
+                return True
+            except Exception as e:
+                print(f"  [Clusterer] Failed to load saved model: {e}")
+                try:
+                    os.remove(self.model_path)
+                except OSError:
+                    pass
         return False

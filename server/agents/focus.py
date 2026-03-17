@@ -392,9 +392,16 @@ class FocusRecommender:
     def _load_model(self):
         """Load model"""
         if os.path.exists(self.model_path):
-            data = joblib.load(self.model_path)
-            self.model = data['model']
-            self.label_encoder = data['label_encoder']
-            self.tree_rules = data.get('tree_rules', '')
-            return True
+            try:
+                data = joblib.load(self.model_path)
+                self.model = data['model']
+                self.label_encoder = data['label_encoder']
+                self.tree_rules = data.get('tree_rules', '')
+                return True
+            except Exception as e:
+                print(f"  [FocusRecommender] Failed to load saved model: {e}")
+                try:
+                    os.remove(self.model_path)
+                except OSError:
+                    pass
         return False

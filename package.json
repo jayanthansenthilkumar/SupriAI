@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -n VITE,EXPRESS -c blue,green \"vite\" \"cd server && node server.js\"",
+    "dev:full": "concurrently -n VITE,EXPRESS,FLASK -c blue,green,magenta \"vite\" \"cd server && node server.js\" \"cd server && python app.py\"",
     "dev:frontend": "vite",
     "dev:backend": "cd server && node server.js",
+    "dev:python": "cd server && python app.py",
+    "install:all": "npm install && cd server && npm install",
+    "setup:python": "cd server && python -m pip install -r requirements.txt",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

@@ -261,10 +261,17 @@ class AnomalyDetector:
     def _load_model(self):
         """Load model"""
         if os.path.exists(self.model_path):
-            data = joblib.load(self.model_path)
-            self.model = data['model']
-            self.scaler = data['scaler']
-            self.feature_means = data['feature_means']
-            self.feature_stds = data['feature_stds']
-            return True
+            try:
+                data = joblib.load(self.model_path)
+                self.model = data['model']
+                self.scaler = data['scaler']
+                self.feature_means = data['feature_means']
+                self.feature_stds = data['feature_stds']
+                return True
+            except Exception as e:
+                print(f"  [AnomalyDetector] Failed to load saved model: {e}")
+                try:
+                    os.remove(self.model_path)
+                except OSError:
+                    pass
         return False

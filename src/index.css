@@ -143,6 +143,7 @@ body {
   transition: all 0.15s;
   text-align: left;
   font-family: inherit;
+  text-decoration: none;
 }
 
 .sidebar-link:hover {
@@ -984,6 +985,47 @@ body {
 .text-center { text-align: center; }
 .text-secondary { color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
 .empty-text { color: var(--text-secondary); text-align: center; padding: var(--space-lg); font-size: 14px; }
+
+.route-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-color);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.route-link:hover {
+  text-decoration: underline;
+}
+
+.route-links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.route-chip {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.route-chip:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
 
 /* ==================== Animations ==================== */
 @keyframes spin {

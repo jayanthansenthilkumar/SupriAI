@@ -457,10 +457,17 @@ class TemporalPredictor:
     def _load_model(self):
         """Load model from disk"""
         if os.path.exists(self.model_path):
-            data = joblib.load(self.model_path)
-            self.model = data['model']
-            self.input_scaler = data['input_scaler']
-            self.output_scaler = data['output_scaler']
-            self.is_trained = True
-            return True
+            try:
+                data = joblib.load(self.model_path)
+                self.model = data['model']
+                self.input_scaler = data['input_scaler']
+                self.output_scaler = data['output_scaler']
+                self.is_trained = True
+                return True
+            except Exception as e:
+                print(f"  [TemporalPredictor] Failed to load saved model: {e}")
+                try:
+                    os.remove(self.model_path)
+                except OSError:
+                    pass
         return False
