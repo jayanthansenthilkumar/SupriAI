@@ -1,11 +1,6 @@
-flask==3.1.0
-flask-cors==5.0.1
-flask-socketio==5.5.1
-numpy==2.2.3
-pandas==2.2.3
-scikit-learn==1.6.1
-scipy==1.15.2
-matplotlib==3.10.0
-joblib==1.4.2
-python-dateutil==2.9.0.post0
-apscheduler==3.11.0
+flask
+flask-cors
+numpy
+scikit-learn
+scipy
+joblib

@@ -4,8 +4,8 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n VITE,EXPRESS -c blue,green \"vite\" \"cd server && node server.js\"",
-    "dev:full": "concurrently -n VITE,EXPRESS,FLASK -c blue,green,magenta \"vite\" \"cd server && node server.js\" \"cd server && python app.py\"",
+    "dev:full": "concurrently -n VITE,EXPRESS -c blue,green \"vite\" \"cd server && node server.js\"",
+    "dev": "concurrently -n VITE,EXPRESS,FLASK -c blue,green,magenta \"vite\" \"cd server && node server.js\" \"cd server && python app.py\"",
     "dev:frontend": "vite",
     "dev:backend": "cd server && node server.js",
     "dev:python": "cd server && python app.py",
