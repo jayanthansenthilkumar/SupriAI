@@ -131,6 +131,120 @@ function initTables() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_productivity_date ON productivity_scores(date)`);
 
     console.log("Database tables initialized.");
+    seedDummyDataIfEmpty();
+  });
+}
+
+function getDateOffset(daysAgo) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+}
+
+function seedDummyDataIfEmpty() {
+  db.get('SELECT COUNT(*) as count FROM domain_stats', (countErr, row) => {
+    if (countErr) {
+      console.error('Dummy seed check failed:', countErr.message);
+      return;
+    }
+
+    if ((row?.count || 0) > 0) {
+      return;
+    }
+
+    console.log('No browsing records found. Seeding dummy offline dataset...');
+
+    const domainTemplate = [
+      { domain: 'github.com', category: 'productive', baseTime: 1600000, visits: 20, tabs: 10 },
+      { domain: 'stackoverflow.com', category: 'productive', baseTime: 1020000, visits: 15, tabs: 8 },
+      { domain: 'docs.google.com', category: 'productive', baseTime: 940000, visits: 10, tabs: 6 },
+      { domain: 'youtube.com', category: 'entertainment', baseTime: 780000, visits: 13, tabs: 6 },
+      { domain: 'reddit.com', category: 'social', baseTime: 560000, visits: 11, tabs: 5 },
+      { domain: 'news.ycombinator.com', category: 'news', baseTime: 300000, visits: 7, tabs: 4 },
+      { domain: 'mail.google.com', category: 'communication', baseTime: 450000, visits: 8, tabs: 4 }
+    ];
+
+    db.serialize(() => {
+      const sessionId = `seed_session_${Date.now()}`;
+      db.run(
+        'INSERT OR IGNORE INTO sessions (session_id, start_time, tab_count, total_active_time) VALUES (?, ?, ?, ?)',
+        [sessionId, Date.now() - 3600000, 24, 5200000]
+      );
+
+      for (let day = 0; day < 7; day += 1) {
+        const date = getDateOffset(day);
+        let productive = 0;
+        let social = 0;
+        let entertainment = 0;
+        let other = 0;
+        let total = 0;
+
+        domainTemplate.forEach((item, idx) => {
+          const jitter = Math.max(0.85, 1 - day * 0.03);
+          const activeTime = Math.round(item.baseTime * jitter);
+          const visits = Math.max(1, item.visits - day);
+          const tabs = Math.max(1, item.tabs - Math.floor(day / 2));
+          const ts = Date.now() - day * 86400000 - idx * 3600000;
+
+          total += activeTime;
+          if (item.category === 'productive') productive += activeTime;
+          else if (item.category === 'social') social += activeTime;
+          else if (item.category === 'entertainment') entertainment += activeTime;
+          else other += activeTime;
+
+          db.run(
+            `INSERT INTO domain_stats (domain, date, visit_count, total_active_time, tab_count, category, last_visit)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [item.domain, date, visits, activeTime, tabs, item.category, ts]
+          );
+
+          db.run(
+            `INSERT INTO tabs (tab_id, url, title, domain, timestamp, session_id, active_time, date, category)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              1000 + idx + day * 20,
+              `https://${item.domain}`,
+              `${item.domain} activity (${date})`,
+              item.domain,
+              ts,
+              sessionId,
+              Math.round(activeTime / Math.max(1, tabs)),
+              date,
+              item.category
+            ]
+          );
+        });
+
+        const score = total > 0
+          ? ((productive * 1.0 + social * 0.1 + entertainment * 0.1 + other * 0.3) / total) * 100
+          : 0;
+
+        db.run(
+          `INSERT OR REPLACE INTO productivity_scores
+           (date, score, productive_time, social_time, entertainment_time, other_time, total_time,
+            top_productive_domain, top_distraction_domain)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [date, Math.round(score * 10) / 10, productive, social, entertainment, other, total, 'github.com', 'youtube.com']
+        );
+      }
+
+      db.run(
+        `INSERT INTO insights (model_name, insight_type, data)
+         VALUES (?, ?, ?)`,
+        ['Offline Seed', 'bootstrap', JSON.stringify({ note: 'Dummy dataset inserted for offline mode' })]
+      );
+
+      db.run(
+        `INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?), (?, ?), (?, ?)`,
+        [
+          'syncInterval', '60',
+          'inactiveThreshold', '5',
+          'timeLimits', 'youtube.com:45, reddit.com:20, x.com:15'
+        ]
+      );
+
+      console.log('Dummy offline dataset seeded into SQLite.');
+    });
   });
 }
 

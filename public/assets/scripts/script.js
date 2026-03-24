@@ -853,6 +853,56 @@ let backendOnline = false;
 let forecastChartInstance = null;
 let productivityTimelineChart = null;
 
+function hasBrowsingData(tabData, tabGroups) {
+  return Object.keys(tabData || {}).length > 0 || Object.keys(tabGroups || {}).length > 0;
+}
+
+function buildGroupsFromTabData(tabData) {
+  var groups = {};
+  Object.keys(tabData || {}).forEach(function (tabId) {
+    var tab = tabData[tabId] || {};
+    var domain = tab.domain || 'unknown';
+    if (!groups[domain]) groups[domain] = { tabs: [], totalTime: 0 };
+    groups[domain].tabs.push(parseInt(tabId));
+    groups[domain].totalTime += tab.totalActiveTime || 0;
+  });
+  return groups;
+}
+
+function createDummyPopupData() {
+  var now = Date.now();
+  var seedTabs = [
+    { id: 1001, domain: 'github.com', title: 'SupriAI Pull Requests', url: 'https://github.com', totalActiveTime: 42 * 60000, minsAgo: 15 },
+    { id: 1002, domain: 'stackoverflow.com', title: 'Promise fallback patterns', url: 'https://stackoverflow.com', totalActiveTime: 28 * 60000, minsAgo: 45 },
+    { id: 1003, domain: 'docs.google.com', title: 'Project planning notes', url: 'https://docs.google.com', totalActiveTime: 31 * 60000, minsAgo: 80 },
+    { id: 1004, domain: 'youtube.com', title: 'System design lecture', url: 'https://youtube.com', totalActiveTime: 20 * 60000, minsAgo: 120 },
+    { id: 1005, domain: 'reddit.com', title: 'r/programming', url: 'https://reddit.com/r/programming', totalActiveTime: 12 * 60000, minsAgo: 170 }
+  ];
+
+  var tabData = {};
+  seedTabs.forEach(function (tab) {
+    var start = now - tab.minsAgo * 60000;
+    tabData[String(tab.id)] = {
+      domain: tab.domain,
+      title: tab.title,
+      url: tab.url,
+      totalActiveTime: tab.totalActiveTime,
+      activeTime: tab.totalActiveTime,
+      startTime: start,
+      openedAt: start,
+      lastActiveTime: now - (tab.minsAgo - 5) * 60000,
+      isActive: false,
+      lastInactiveTime: now - (tab.minsAgo - 2) * 60000
+    };
+  });
+
+  return {
+    tabData: tabData,
+    tabGroups: buildGroupsFromTabData(tabData),
+    sessionId: 'dummy_session_' + Math.floor(now / 1000)
+  };
+}
+
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async () => {
   if (typeof Chart === 'undefined') {
@@ -863,8 +913,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   const { tabData, tabGroups, settings: storedSettings } = await chrome.storage.local.get(['tabData', 'tabGroups', 'settings']);
   settings = storedSettings || defaultSettings;
 
-  const initializedTabData = tabData || {};
-  const initializedTabGroups = tabGroups || {};
+  let initializedTabData = tabData || {};
+  let initializedTabGroups = tabGroups || {};
+
+  if (!hasBrowsingData(initializedTabData, initializedTabGroups)) {
+    var dummy = createDummyPopupData();
+    initializedTabData = dummy.tabData;
+    initializedTabGroups = dummy.tabGroups;
+    await chrome.storage.local.set({
+      tabData: initializedTabData,
+      tabGroups: initializedTabGroups,
+      sessionId: dummy.sessionId,
+      usingDummyData: true
+    });
+  }
 
   document.querySelectorAll('.tab-button').forEach(button => {
     button.addEventListener('click', () => switchTab(button.dataset.tab));
@@ -2150,19 +2212,70 @@ async function loadHistoryData() {
     var period = document.getElementById('historyPeriod').value;
     if (typeof DatabaseQueryHelper !== 'undefined') {
       var summary = await DatabaseQueryHelper.getBrowsingSummary(period);
-      document.getElementById('historyTotalTabs').textContent = summary.totalTabs || 0;
-      document.getElementById('historyUniqueDomains').textContent = summary.uniqueDomains || 0;
-      document.getElementById('historyTotalTime').textContent = summary.totalActiveTimeFormatted || '0s';
-      document.getElementById('historyTotalVisits').textContent = summary.totalVisits || 0;
-      var topDomains = await DatabaseQueryHelper.getMostVisitedDomains(5, period);
-      displayTopDomains(topDomains);
-      displayRecentTabs(summary.tabs || []);
+      if ((summary.totalTabs || 0) === 0) {
+        var local = await chrome.storage.local.get(['tabData', 'tabGroups']);
+        var localSummary = buildLocalHistorySummary(local.tabData || {}, local.tabGroups || {});
+        renderLocalHistorySummary(localSummary);
+      } else {
+        document.getElementById('historyTotalTabs').textContent = summary.totalTabs || 0;
+        document.getElementById('historyUniqueDomains').textContent = summary.uniqueDomains || 0;
+        document.getElementById('historyTotalTime').textContent = summary.totalActiveTimeFormatted || '0s';
+        document.getElementById('historyTotalVisits').textContent = summary.totalVisits || 0;
+        var topDomains = await DatabaseQueryHelper.getMostVisitedDomains(5, period);
+        displayTopDomains(topDomains);
+        displayRecentTabs(summary.tabs || []);
+      }
     } else displayHistoryPlaceholder();
     if (backendOnline && typeof backendAPI !== 'undefined') loadProductivityTimeline();
   } catch (e) {
     console.error('Error loading history:', e);
     displayHistoryError(e.message);
   }
+}
+
+function buildLocalHistorySummary(tabData, tabGroups) {
+  var tabs = Object.values(tabData || {});
+  var uniqueDomains = new Set(tabs.map(function (t) { return t.domain; }).filter(Boolean)).size;
+  var totalActiveTime = tabs.reduce(function (sum, t) { return sum + (t.totalActiveTime || 0); }, 0);
+  var totalVisits = Object.keys(tabGroups || {}).length ? Object.values(tabGroups).reduce(function (sum, g) { return sum + ((g.tabs && g.tabs.length) || 0); }, 0) : tabs.length;
+
+  var topDomains = Object.keys(tabGroups || {}).map(function (domain) {
+    var group = tabGroups[domain] || {};
+    return {
+      domain: domain,
+      visitCount: (group.tabs && group.tabs.length) || 0,
+      totalActiveTime: group.totalTime || 0,
+      tabCount: (group.tabs && group.tabs.length) || 0
+    };
+  }).sort(function (a, b) { return b.totalActiveTime - a.totalActiveTime; }).slice(0, 5);
+
+  var recentTabs = tabs.map(function (tab) {
+    return {
+      title: tab.title || tab.domain,
+      domain: tab.domain,
+      url: tab.url || ('https://' + (tab.domain || 'example.com')),
+      timestamp: tab.startTime || Date.now(),
+      activeTime: tab.totalActiveTime || 0
+    };
+  }).sort(function (a, b) { return b.timestamp - a.timestamp; }).slice(0, 10);
+
+  return {
+    totalTabs: tabs.length,
+    uniqueDomains: uniqueDomains,
+    totalActiveTime: totalActiveTime,
+    totalVisits: totalVisits,
+    topDomains: topDomains,
+    recentTabs: recentTabs
+  };
+}
+
+function renderLocalHistorySummary(summary) {
+  document.getElementById('historyTotalTabs').textContent = summary.totalTabs || 0;
+  document.getElementById('historyUniqueDomains').textContent = summary.uniqueDomains || 0;
+  document.getElementById('historyTotalTime').textContent = formatTime(summary.totalActiveTime || 0);
+  document.getElementById('historyTotalVisits').textContent = summary.totalVisits || 0;
+  displayTopDomains(summary.topDomains || []);
+  displayRecentTabs(summary.recentTabs || []);
 }
 
 async function loadProductivityTimeline() {

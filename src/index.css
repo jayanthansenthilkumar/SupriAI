@@ -327,6 +327,12 @@ body {
   gap: var(--space-lg);
 }
 
+.chart-shell {
+  width: 100%;
+  height: 240px;
+  min-height: 240px;
+}
+
 /* ==================== Buttons ==================== */
 .btn {
   display: inline-flex;

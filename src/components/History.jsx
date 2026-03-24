@@ -67,7 +67,12 @@ export default function History() {
 
   const chartData = scores.map(s => ({
     date: s.date,
-    score: Math.round(s.score || 0),
+    score: Number.isFinite(Number(s.score)) ? Math.round(Number(s.score)) : 0,
+  })).filter(row => row.date);
+
+  const trendData = chartData.map((row, index) => ({
+    ...row,
+    label: row.date?.slice(5) || `Day ${index + 1}`,
   }));
 
   return (
@@ -87,19 +92,30 @@ export default function History() {
       </div>
 
       {/* Productivity Trend */}
-      {chartData.length > 0 && (
+      {trendData.length > 0 && (
         <motion.div className="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <h3><Filter size={16} /> Productivity Trend</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="score" stroke="var(--primary-color)"
-                strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="chart-shell">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8eaed" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#5f6368' }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#5f6368' }} />
+                <Tooltip
+                  formatter={(value) => [`${value}%`, 'Score']}
+                  labelFormatter={(label) => `Date: ${label}`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="score"
+                  stroke="#1a73e8"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: '#1a73e8' }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </motion.div>
       )}
 
