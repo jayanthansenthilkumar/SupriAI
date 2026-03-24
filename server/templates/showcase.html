@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SupriAI Flask Showcase</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --border: #d9e0ea;
+      --text: #112033;
+      --muted: #5f6f86;
+      --blue: #1f6feb;
+      --green: #188038;
+      --red: #cf222e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 18px;
+    }
+    .hero {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(17, 32, 51, 0.06);
+      margin-bottom: 16px;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 28px;
+    }
+    .muted { color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .box {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fbfdff;
+    }
+    .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .value {
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      word-break: break-all;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 16px;
+      box-shadow: 0 8px 24px rgba(17, 32, 51, 0.04);
+    }
+    .endpoint {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      margin-bottom: 8px;
+    }
+    .method {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      height: fit-content;
+    }
+    .get { background: #e8f1ff; color: var(--blue); }
+    .post { background: #e8f7eb; color: var(--green); }
+    .url {
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      color: var(--text);
+      word-break: break-all;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      margin-left: 6px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+    .dot.ok { background: var(--green); }
+    button {
+      border: none;
+      background: var(--blue);
+      color: #fff;
+      border-radius: 9px;
+      padding: 8px 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    pre {
+      margin: 10px 0 0;
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 12px;
+      border-radius: 10px;
+      overflow: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>SupriAI Flask Backend Showcase</h1>
+      <p class="muted">This page is rendered directly by Flask at <code>http://127.0.0.1:5000</code>.</p>
+      <div class="grid">
+        <div class="box">
+          <div class="label">Server</div>
+          <div class="value">http://127.0.0.1:5000</div>
+        </div>
+        <div class="box">
+          <div class="label">API Base</div>
+          <div class="value">http://127.0.0.1:5000/api</div>
+        </div>
+        <div class="box">
+          <div class="label">Health</div>
+          <div class="value">GET /api/health</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Endpoints</h3>
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="url">http://127.0.0.1:5000/api/health</span>
+      </div>
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="url">http://127.0.0.1:5000/api/models</span>
+      </div>
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="url">http://127.0.0.1:5000/api/sync</span>
+      </div>
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="url">http://127.0.0.1:5000/api/ml/insights</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>
+        Live Health Check
+        <span id="status" class="status"><span id="dot" class="dot"></span><span id="label">Not checked</span></span>
+      </h3>
+      <button id="checkBtn">Check /api/health</button>
+      <pre id="output">Run the check to see JSON response.</pre>
+    </div>
+  </div>
+
+  <script>
+    async function checkHealth() {
+      const output = document.getElementById('output');
+      const label = document.getElementById('label');
+      const dot = document.getElementById('dot');
+      output.textContent = 'Loading...';
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        label.textContent = 'Online';
+        dot.classList.add('ok');
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        label.textContent = 'Offline';
+        dot.classList.remove('ok');
+        output.textContent = 'Error: ' + (e.message || 'Failed to fetch health endpoint');
+      }
+    }
+
+    document.getElementById('checkBtn').addEventListener('click', checkHealth);
+  </script>
+</body>
+</html>

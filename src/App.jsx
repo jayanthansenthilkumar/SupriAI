@@ -11,6 +11,7 @@ import History from './components/History';
 import Groups from './components/Groups';
 import Inactive from './components/Inactive';
 import SettingsPage from './components/Settings';
+import ServerShowcase from './components/ServerShowcase';
 import { checkHealth } from './services/api';
 import './index.css';
 
@@ -29,6 +30,7 @@ const ROUTES = [
   { id: 'groups', path: '/groups', title: 'Groups', component: Groups },
   { id: 'inactive', path: '/inactive', title: 'Inactive', component: Inactive },
   { id: 'settings', path: '/settings', title: 'Settings', component: SettingsPage },
+  { id: 'showcase', path: '/showcase', title: 'API Showcase', component: ServerShowcase },
 ];
 
 function ServicePorts() {
@@ -86,6 +88,7 @@ function NotFoundPage() {
             </Link>
           ))}
           <Link to="/ports" className="route-chip">Service Ports</Link>
+          <Link to="/showcase" className="route-chip">API Showcase</Link>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ import os
 import sys
 import json
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
 
 # Add parent directory to path
@@ -41,6 +41,15 @@ app.json = NumpyJSONProvider(app)
 
 # Initialize ML Engine
 ml_engine = MLEngine()
+
+
+# ==================== Showcase UI ====================
+
+@app.route('/', methods=['GET'])
+@app.route('/showcase', methods=['GET'])
+def showcase_page():
+    """Render a simple backend showcase page for local demo usage."""
+    return render_template('showcase.html')
 
 
 # ==================== Health & Info ====================

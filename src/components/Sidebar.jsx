@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BrainCircuit, FileText, Clock, FolderOpen, Moon, Settings, Bookmark, Server } from 'lucide-react';
+import { LayoutDashboard, BrainCircuit, FileText, Clock, FolderOpen, Moon, Settings, Bookmark, Server, Presentation } from 'lucide-react';
 
 const iconById = {
   overview: <LayoutDashboard size={16} />,
@@ -12,6 +12,7 @@ const iconById = {
   groups: <FolderOpen size={16} />,
   inactive: <Moon size={16} />,
   settings: <Settings size={16} />,
+  showcase: <Presentation size={16} />,
 };
 
 export default function Sidebar({ routes = [] }) {

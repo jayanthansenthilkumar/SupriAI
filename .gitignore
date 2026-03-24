@@ -1,5 +1,8 @@
 # Sensitive config
 public/assets/config/keys.js
+.env
+.env.*
+!.env.example
 
 # Dependencies
 node_modules/
