@@ -115,11 +115,11 @@ export default function Overview() {
         <motion.div className="card focus-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           <h3><BrainCircuit size={18} /> Focus Recommendation</h3>
           <p className="focus-text">
-            {focus?.recommendation || 'Connect to backend to receive personalized focus recommendations.'}
+            {typeof focus?.recommendation === 'object' ? focus.recommendation.message : (focus?.recommendation || 'Connect to backend to receive personalized focus recommendations.')}
           </p>
-          {focus?.focus_state && (
-            <span className={`badge badge-${focus.focus_state === 'deep_focus' ? 'success' : focus.focus_state === 'break_needed' ? 'warning' : 'info'}`}>
-              {focus.focus_state.replace(/_/g, ' ')}
+          {(focus?.focus_state || focus?.state) && (
+            <span className={`badge badge-${(focus?.focus_state || focus?.state) === 'deep_focus' ? 'success' : (focus?.focus_state || focus?.state) === 'break_needed' ? 'warning' : 'info'}`}>
+              {(focus?.focus_state || focus?.state).replace(/_/g, ' ')}
             </span>
           )}
         </motion.div>

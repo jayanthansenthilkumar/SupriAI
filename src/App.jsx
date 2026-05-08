@@ -12,6 +12,8 @@ import Groups from './components/Groups';
 import Inactive from './components/Inactive';
 import SettingsPage from './components/Settings';
 import ServerShowcase from './components/ServerShowcase';
+import NodeApi from './components/NodeApi';
+import PythonApi from './components/PythonApi';
 import { checkHealth } from './services/api';
 import './index.css';
 
@@ -31,6 +33,8 @@ const ROUTES = [
   { id: 'inactive', path: '/inactive', title: 'Inactive', component: Inactive },
   { id: 'settings', path: '/settings', title: 'Settings', component: SettingsPage },
   { id: 'showcase', path: '/showcase', title: 'API Showcase', component: ServerShowcase },
+  { id: 'node-api', path: '/node-api', title: 'Node API', component: NodeApi },
+  { id: 'python-api', path: '/python-api', title: 'Python API', component: PythonApi },
 ];
 
 function ServicePorts() {
@@ -57,17 +61,17 @@ function ServicePorts() {
         <div className="stat-card">
           <div className="stat-info">
             <span className="stat-label">Node API</span>
-            <a href="http://localhost:3001/api/health" target="_blank" rel="noreferrer" className="route-link">
-              http://localhost:3001/api/health <ExternalLink size={14} />
-            </a>
+            <Link to="/node-api" className="route-link">
+              /api/health <ExternalLink size={14} />
+            </Link>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-info">
             <span className="stat-label">Python API</span>
-            <a href="http://127.0.0.1:5000/api/health" target="_blank" rel="noreferrer" className="route-link">
-              http://127.0.0.1:5000/api/health <ExternalLink size={14} />
-            </a>
+            <Link to="/python-api" className="route-link">
+              /api/health <ExternalLink size={14} />
+            </Link>
           </div>
         </div>
       </div>
