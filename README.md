@@ -1,8 +1,8 @@
-# SupriAI — AI-Powered Browsing Intelligence
+# IntellicAI — AI-Powered Browsing Intelligence
 
 > **Final Year Project** — Chrome Extension + Python Flask Backend with 10 ML/DL Algorithms
 
-SupriAI is an intelligent Chrome extension that monitors your browsing behavior in real time and uses **10 Machine Learning and Deep Learning algorithms** to deliver productivity predictions, learning content recommendations, anomaly detection, NLP-based content analysis, time-pattern forecasting, and personalized focus scheduling — powered by a **Python Flask + SQLite + scikit-learn** backend.
+IntellicAI is an intelligent Chrome extension that monitors your browsing behavior in real time and uses **10 Machine Learning and Deep Learning algorithms** to deliver productivity predictions, learning content recommendations, anomaly detection, NLP-based content analysis, time-pattern forecasting, and personalized focus scheduling — powered by a **Python Flask + SQLite + scikit-learn** backend.
 
 ---
 
@@ -372,7 +372,7 @@ Extension configuration:
 
 ## Database Schema
 
-### Backend — SQLite (`server/data/supriai.db`, 8 tables)
+### Backend — SQLite (`server/data/intellicai.db`, 8 tables)
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
@@ -387,7 +387,7 @@ Extension configuration:
 
 **Indexes:** 10 indexes on frequently queried columns (domain, date, timestamp, session_id, category).
 
-### Frontend — IndexedDB (`SupriAI_DB`, version 1, 4 object stores)
+### Frontend — IndexedDB (`IntellicAI_DB`, version 1, 4 object stores)
 
 | Store | keyPath | Purpose |
 |-------|---------|---------|
@@ -435,7 +435,7 @@ Extension configuration:
 ## Project Structure
 
 ```
-SupriAI/
+IntellicAI/
 ├── manifest.json                          # Chrome extension manifest (MV3)
 ├── popup.html                             # Extension popup UI (8 tabs)
 ├── backend.bat                            # Windows launcher script
@@ -472,7 +472,7 @@ SupriAI/
     ├── config.py                          # Configuration & website categories
     ├── database.py                        # SQLite DB manager (8 tables)
     ├── requirements.txt                   # Python dependencies
-    ├── data/                              # Runtime: supriai.db (auto-created)
+    ├── data/                              # Runtime: intellicai.db (auto-created)
     └── ml/
         ├── __init__.py
         ├── engine.py                      # ML orchestrator (all 10 models)
@@ -503,8 +503,8 @@ SupriAI/
 ### Step 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/jayanthansenthilkumar/SupriAI.git
-cd SupriAI
+git clone https://github.com/jayanthansenthilkumar/IntellicAI.git
+cd IntellicAI
 ```
 
 ### Step 2 — Install Dependencies
@@ -534,7 +534,7 @@ The Flask server starts at `http://127.0.0.1:5000` and initializes all 10 ML/DL 
 
 ```
 ╔═══════════════════════════════════════════════════╗
-║           SupriAI Backend Server                  ║
+║           IntellicAI Backend Server                  ║
 ║   Flask + SQLite + 10 ML/DL Algorithms            ║
 ╠═══════════════════════════════════════════════════╣
 ║  Traditional ML Models:                           ║
@@ -577,12 +577,12 @@ const CONFIG = {
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable **Developer mode** (toggle in top-right corner)
 3. Click **"Load unpacked"**
-4. Select the `SupriAI` project root folder
-5. Pin the SupriAI extension to your toolbar
+4. Select the `IntellicAI` project root folder
+5. Pin the IntellicAI extension to your toolbar
 
 ### Step 6 — Start Using
 
-1. Click the **SupriAI icon** in your toolbar to open the popup
+1. Click the **IntellicAI icon** in your toolbar to open the popup
 2. The **Overview** tab shows real-time browsing stats immediately
 3. Go to **AI Insights** and click **"Import Chrome History"** to feed 30 days of data into the ML pipeline
 4. Click **"Retrain ML Models"** to train all 10 models on your data
@@ -609,7 +609,7 @@ const CONFIG = {
 ### Summarizing Pages
 
 1. Navigate to any webpage you want to summarize
-2. Click the SupriAI icon → **Summary** tab
+2. Click the IntellicAI icon → **Summary** tab
 3. Click **"Summarize This Page"**
 4. Read the AI-generated bullet-point summary
 
@@ -660,7 +660,7 @@ const CONFIG = {
 | Server Host | `127.0.0.1` | `FLASK_HOST` |
 | Server Port | `5000` | `FLASK_PORT` |
 | Debug Mode | `True` | `FLASK_DEBUG` |
-| Database Path | `server/data/supriai.db` | — |
+| Database Path | `server/data/intellicai.db` | — |
 | Min Training Data | 10 data points | — |
 | Retrain Interval | 6 hours | — |
 | Website Categories | 6 categories, 86 predefined domains | — |

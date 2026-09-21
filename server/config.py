@@ -1,15 +1,15 @@
 """
-SupriAI Backend Configuration
+IntellicAI Backend Configuration
 """
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Database
-DATABASE_PATH = os.path.join(BASE_DIR, 'data', 'supriai.db')
+DATABASE_PATH = os.path.join(BASE_DIR, 'data', 'intellicai.db')
 
 # Flask
-SECRET_KEY = os.environ.get('SECRET_KEY', 'supriai-secret-key-change-in-production')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'intellicai-secret-key-change-in-production')
 DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
 HOST = os.environ.get('FLASK_HOST', '127.0.0.1')
 PORT = int(os.environ.get('FLASK_PORT', 5000))

@@ -7,7 +7,7 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const dbPath = path.resolve(dataDir, "supriai.db");
+const dbPath = path.resolve(dataDir, "intellicai.db");
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {

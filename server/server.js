@@ -1,5 +1,5 @@
 /**
- * SupriAI Express Backend Server
+ * IntellicAI Express Backend Server
  * Handles: CRUD operations, Chrome extension sync, Python AI bridge
  * Stack: Express + SQLite + Python Flask bridge
  */
@@ -88,7 +88,7 @@ app.get('/api/health', async (req, res) => {
   res.json({
     status: 'running',
     version: '3.0.0',
-    name: 'SupriAI Express Backend',
+    name: 'IntellicAI Express Backend',
     timestamp: new Date().toISOString(),
     python_backend: pythonStatus
   });
@@ -638,10 +638,10 @@ app.post('/api/ml/cluster', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`
   ╔═══════════════════════════════════════════════╗
-  ║       SupriAI Express Backend — v3.0          ║
+  ║       IntellicAI Express Backend — v3.0         ║
   ║  Server:  http://localhost:${PORT}               ║
   ║  Python:  ${PYTHON_API}       ║
-  ║  DB:      SQLite (server/data/supriai.db)     ║
+  ║  DB:      SQLite (server/data/intellicai.db)    ║
   ╚═══════════════════════════════════════════════╝
   `);
 });

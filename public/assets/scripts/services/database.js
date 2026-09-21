@@ -1,12 +1,12 @@
 /**
- * Database Service for SupriAI
+ * Database Service for IntellicAI
  * Uses IndexedDB to store tab history and browsing data
  * Schema is designed to be compatible with SQLite for future server-side sync
  */
 
 class DatabaseService {
   constructor() {
-    this.dbName = "SupriAI_DB";
+    this.dbName = "IntellicAI_DB";
     this.version = 1;
     this.db = null;
   }

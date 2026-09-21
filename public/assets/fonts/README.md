@@ -1,6 +1,6 @@
 # Google Sans Font Integration
 
-This document explains how Google Sans fonts are integrated throughout the SupriAI extension.
+This document explains how Google Sans fonts are integrated throughout the IntellicAI extension.
 
 ## Font Files
 
@@ -87,7 +87,7 @@ Helper classes are available for font weight control:
 ### HTML
 
 ```html
-<h1>SupriAI</h1>
+<h1>IntellicAI</h1>
 <!-- Automatically uses Google Sans -->
 <p class="font-medium">Medium weight text</p>
 <strong class="font-bold">Bold text</strong>

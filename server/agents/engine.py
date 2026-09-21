@@ -1,5 +1,5 @@
 """
-SupriAI ML Engine - Orchestrates all ML models
+IntellicAI ML Engine - Orchestrates all ML models
 Provides unified interface for the Flask API
 
 10 ML/DL Algorithms:
@@ -45,7 +45,7 @@ class MLEngine:
     """
 
     def __init__(self):
-        print("Initializing SupriAI ML Engine (10 models)...")
+        print("Initializing IntellicAI ML Engine (10 models)...")
 
         # If serialized sklearn artifacts are incompatible with the current
         # sklearn runtime, raise and let loaders retrain from scratch.

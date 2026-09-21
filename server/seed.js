@@ -1,5 +1,5 @@
 /**
- * SupriAI — Database Seed Script
+ * IntellicAI — Database Seed Script
  * Generates 400+ realistic dummy browsing records across all tables
  * for ML model training and prediction.
  *
@@ -15,7 +15,7 @@ const crypto = require("crypto");
 const dataDir = path.resolve(__dirname, "data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-const dbPath = path.resolve(dataDir, "supriai.db");
+const dbPath = path.resolve(dataDir, "intellicai.db");
 const db = new sqlite3.Database(dbPath);
 
 function run(sql, params = []) {
@@ -148,7 +148,7 @@ const PRODUCTIVITY_WEIGHTS = {
 // ── Main Seed ──────────────────────────────────────────────
 async function seed() {
   console.log("╔═══════════════════════════════════════════╗");
-  console.log("║    SupriAI — Seeding Database             ║");
+  console.log("║    IntellicAI — Seeding Database          ║");
   console.log("╚═══════════════════════════════════════════╝\n");
 
   // Create tables (same schema as database.js / database.py)

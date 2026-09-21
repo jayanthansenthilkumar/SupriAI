@@ -1,5 +1,5 @@
 /* ============================================
-   SupriAI v2.0 — Unified Popup Script
+   IntellicAI v2.0 — Unified Popup Script
    Merged: config.js + backendAPI.js + gemini.js +
            databaseQueryHelper.js + curationService.js +
            curationWorkflow.js + popup.js
@@ -597,7 +597,7 @@ class DatabaseQueryHelper {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `supri-ai-data-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `intellicai-export-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -872,7 +872,7 @@ function buildGroupsFromTabData(tabData) {
 function createDummyPopupData() {
   var now = Date.now();
   var seedTabs = [
-    { id: 1001, domain: 'github.com', title: 'SupriAI Pull Requests', url: 'https://github.com', totalActiveTime: 42 * 60000, minsAgo: 15 },
+    { id: 1001, domain: 'github.com', title: 'IntellicAI Pull Requests', url: 'https://github.com', totalActiveTime: 42 * 60000, minsAgo: 15 },
     { id: 1002, domain: 'stackoverflow.com', title: 'Promise fallback patterns', url: 'https://stackoverflow.com', totalActiveTime: 28 * 60000, minsAgo: 45 },
     { id: 1003, domain: 'docs.google.com', title: 'Project planning notes', url: 'https://docs.google.com', totalActiveTime: 31 * 60000, minsAgo: 80 },
     { id: 1004, domain: 'youtube.com', title: 'System design lecture', url: 'https://youtube.com', totalActiveTime: 20 * 60000, minsAgo: 120 },
@@ -2196,7 +2196,7 @@ function setupHistoryHandlers() {
           var url = URL.createObjectURL(blob);
           var a = document.createElement('a');
           a.href = url;
-          a.download = 'supriai-export-' + new Date().toISOString().split('T')[0] + '.json';
+          a.download = 'intellicai-export-' + new Date().toISOString().split('T')[0] + '.json';
           a.click();
           URL.revokeObjectURL(url);
           exportBtn.textContent = '\u2713 Exported!';

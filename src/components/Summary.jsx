@@ -28,7 +28,7 @@ export default function Summary() {
           return;
         }
       }
-      setSummary('Page summarization requires the Chrome extension context. Open SupriAI from the Chrome toolbar to use this feature.');
+      setSummary('Page summarization requires the Chrome extension context. Open IntellicAI from the Chrome toolbar to use this feature.');
     } catch {
       setSummary('Summarization is available through the Chrome extension popup.');
     } finally {

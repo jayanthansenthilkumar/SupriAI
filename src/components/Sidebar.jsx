@@ -28,7 +28,7 @@ export default function Sidebar({ routes = [] }) {
       <div className="sidebar-header">
         <BrainCircuit size={28} color="var(--primary-color)" />
         <div>
-          <h1 className="sidebar-title">SupriAI</h1>
+          <h1 className="sidebar-title">IntellicAI</h1>
           <span className="version-badge">v3.0</span>
         </div>
       </div>

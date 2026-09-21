@@ -27,7 +27,7 @@ const CATEGORY_ROWS = [
 const HISTORY_ROWS = [
   {
     domain: 'github.com',
-    title: 'Pull Requests - SupriAI',
+    title: 'Pull Requests - IntellicAI',
     category: 'productive',
     active_time: 420000,
     timestamp: Date.now() - 1000 * 60 * 15,
@@ -84,7 +84,7 @@ const SCORE_ROWS = [
   total_time: 3140000
 }));
 
-const OFFLINE_SETTINGS_KEY = 'supriai-offline-settings';
+const OFFLINE_SETTINGS_KEY = 'intellicai-offline-settings';
 
 function readOfflineSettings() {
   try {
@@ -107,7 +107,7 @@ export const offlineData = {
   health() {
     return {
       status: 'offline-fallback',
-      name: 'SupriAI Local Fallback',
+      name: 'IntellicAI Local Fallback',
       version: 'offline-1.0.0',
       timestamp: new Date().toISOString(),
       python_backend: 'offline',

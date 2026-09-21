@@ -34,7 +34,7 @@ class BackendAPI {
       });
       return await response.json();
     } catch (e) {
-      console.error('[SupriAI] Sync failed:', e);
+      console.error('[IntellicAI] Sync failed:', e);
       return { error: e.message };
     }
   }
@@ -61,7 +61,7 @@ class BackendAPI {
       });
       return await response.json();
     } catch (e) {
-      console.error('[SupriAI] History import failed:', e);
+      console.error('[IntellicAI] History import failed:', e);
       return { error: e.message };
     }
   }

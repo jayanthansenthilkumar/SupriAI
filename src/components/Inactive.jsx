@@ -117,7 +117,7 @@ export default function Inactive() {
           <p className="text-secondary">
             {typeof chrome !== 'undefined' && chrome.tabs
               ? 'All your tabs are currently active. Great job keeping things tidy!'
-              : 'Inactive tab detection requires the Chrome extension context. Open SupriAI from the Chrome toolbar.'}
+              : 'Inactive tab detection requires the Chrome extension context. Open IntellicAI from the Chrome toolbar.'}
           </p>
         </div>
       )}

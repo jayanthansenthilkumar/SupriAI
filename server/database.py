@@ -1,5 +1,5 @@
 """
-SupriAI Database Manager
+IntellicAI Database Manager
 SQLite database for storing browsing data, sessions, and ML results
 """
 import os
@@ -12,7 +12,7 @@ import config
 
 
 class DatabaseManager:
-    """SQLite database manager for SupriAI backend"""
+    """SQLite database manager for IntellicAI backend"""
 
     def __init__(self, db_path=None):
         self.db_path = db_path or config.DATABASE_PATH

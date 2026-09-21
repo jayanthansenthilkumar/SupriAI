@@ -14,7 +14,7 @@ const withFallback = async (requestFn, fallbackFn, label) => {
     return await requestFn();
   } catch (error) {
     // Keep the app functional when backend services are offline.
-    console.warn(`[SupriAI][offline] ${label}:`, error?.message || error);
+    console.warn(`[IntellicAI][offline] ${label}:`, error?.message || error);
     return typeof fallbackFn === 'function' ? fallbackFn(error) : fallbackFn;
   }
 };

@@ -513,7 +513,7 @@ async function syncToBackend() {
 
     const tabCount = Object.keys(tabData).length;
     const domainCount = Object.keys(tabGroups).length;
-    console.log('[SupriAI] Backend sync successful -', tabCount, 'tabs,', domainCount, 'domains');
+    console.log('[IntellicAI] Backend sync successful -', tabCount, 'tabs,', domainCount, 'domains');
 
     // Import Chrome history once per session
     if (!historyImported) {
@@ -521,7 +521,7 @@ async function syncToBackend() {
     }
   } catch (error) {
     // Silently fail - backend may be offline
-    console.log('[SupriAI] Backend sync skipped (server unavailable)');
+    console.log('[IntellicAI] Backend sync skipped (server unavailable)');
   }
 }
 
@@ -540,11 +540,11 @@ async function importChromeHistory() {
       const result = await backendAPI.importHistory(historyItems);
       if (result && !result.error) {
         historyImported = true;
-        console.log('[SupriAI] Chrome history imported:', result.imported, 'of', result.total_submitted);
+        console.log('[IntellicAI] Chrome history imported:', result.imported, 'of', result.total_submitted);
       }
     }
   } catch (error) {
-    console.log('[SupriAI] Chrome history import skipped:', error.message);
+    console.log('[IntellicAI] Chrome history import skipped:', error.message);
   }
 }
 

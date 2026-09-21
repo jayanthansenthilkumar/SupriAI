@@ -1,5 +1,5 @@
 """
-SupriAI ML Package
+IntellicAI ML Package
 Re-exports all ML agent modules for clean imports
 """
 from agents.engine import MLEngine

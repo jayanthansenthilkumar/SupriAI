@@ -1,5 +1,5 @@
 """
-Train SupriAI ML models with a mix of real and synthetic data.
+Train IntellicAI ML models with a mix of real and synthetic data.
 
 This utility preserves existing Chrome history and augments the database with
 synthetic records to improve model coverage before running full training.

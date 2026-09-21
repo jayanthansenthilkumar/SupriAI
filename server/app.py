@@ -1,5 +1,5 @@
 """
-SupriAI Flask Backend
+IntellicAI Flask Backend
 Main application with REST API for Chrome Extension + ML Engine
 """
 import os
@@ -60,7 +60,7 @@ def health_check():
     return jsonify({
         'status': 'running',
         'version': '1.0.0',
-        'name': 'SupriAI Backend',
+        'name': 'IntellicAI Backend',
         'timestamp': datetime.now().isoformat(),
         'ml_models': ml_engine.get_all_models_info()['total_models']
     })
@@ -664,7 +664,7 @@ if __name__ == '__main__':
     # Keep startup logs ASCII-only so default Windows terminals don't crash on encoding.
     banner_lines = [
         "=======================================================",
-        "                SupriAI Backend Server",
+        "                IntellicAI Backend Server",
         "         Flask + SQLite + 10 ML/DL Algorithms",
         "-------------------------------------------------------",
         " Traditional ML Models:",

@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   SupriAI Backend - Starting All Servers
+echo   IntellicAI Backend - Starting All Servers
 echo ============================================
 echo.
 
@@ -18,7 +18,7 @@ echo [2/5] Installing Python dependencies...
 python -m pip install -r requirements.txt --quiet
 
 echo [3/5] Starting Python ML server (port 5000)...
-start "SupriAI-Python" /min cmd /c "python app.py"
+start "IntellicAI-Python" /min cmd /c "python app.py"
 timeout /t 3 >nul
 
 :start_node
