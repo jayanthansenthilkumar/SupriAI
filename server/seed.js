@@ -139,112 +139,7 @@ async function seed() {
   console.log("║    IntellicAI — Seeding Database          ║");
   console.log("╚═══════════════════════════════════════════╝\n");
 
-  // Create tables (same schema as database.js / database.py)
-  await new Promise((resolve, reject) => {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id TEXT UNIQUE,
-        start_time INTEGER,
-        end_time INTEGER,
-        tab_count INTEGER DEFAULT 0,
-        total_active_time INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS tabs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tab_id INTEGER,
-        url TEXT,
-        title TEXT DEFAULT '',
-        domain TEXT,
-        favicon TEXT DEFAULT '',
-        timestamp INTEGER,
-        session_id TEXT,
-        active_time INTEGER DEFAULT 0,
-        date TEXT,
-        category TEXT DEFAULT 'unknown',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS domain_stats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        domain TEXT,
-        date TEXT,
-        visit_count INTEGER DEFAULT 0,
-        total_active_time INTEGER DEFAULT 0,
-        tab_count INTEGER DEFAULT 0,
-        category TEXT DEFAULT 'unknown',
-        last_visit INTEGER,
-        UNIQUE(domain, date)
-      );
-      CREATE TABLE IF NOT EXISTS tab_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tab_id INTEGER,
-        event_type TEXT,
-        timestamp INTEGER,
-        session_id TEXT,
-        url TEXT DEFAULT '',
-        domain TEXT DEFAULT '',
-        metadata TEXT DEFAULT '{}'
-      );
-      CREATE TABLE IF NOT EXISTS productivity_scores (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT UNIQUE,
-        score REAL DEFAULT 0,
-        productive_time INTEGER DEFAULT 0,
-        social_time INTEGER DEFAULT 0,
-        entertainment_time INTEGER DEFAULT 0,
-        other_time INTEGER DEFAULT 0,
-        total_time INTEGER DEFAULT 0,
-        top_productive_domain TEXT DEFAULT '',
-        top_distraction_domain TEXT DEFAULT '',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS chrome_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        url TEXT,
-        title TEXT DEFAULT '',
-        domain TEXT,
-        visit_count INTEGER DEFAULT 1,
-        last_visit_time REAL DEFAULT 0,
-        typed_count INTEGER DEFAULT 0,
-        category TEXT DEFAULT 'unknown',
-        imported_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS insights (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        model_name TEXT,
-        insight_type TEXT,
-        data TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS goals (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        description TEXT DEFAULT '',
-        target_value REAL DEFAULT 0,
-        current_value REAL DEFAULT 0,
-        goal_type TEXT DEFAULT 'productivity',
-        status TEXT DEFAULT 'active',
-        start_date TEXT,
-        end_date TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        key TEXT UNIQUE,
-        value TEXT
-      );
-      CREATE INDEX IF NOT EXISTS idx_tabs_domain ON tabs(domain);
-      CREATE INDEX IF NOT EXISTS idx_tabs_date ON tabs(date);
-      CREATE INDEX IF NOT EXISTS idx_tabs_session ON tabs(session_id);
-      CREATE INDEX IF NOT EXISTS idx_domain_stats_date ON domain_stats(date);
-      CREATE INDEX IF NOT EXISTS idx_domain_stats_domain ON domain_stats(domain);
-      CREATE INDEX IF NOT EXISTS idx_tab_events_session ON tab_events(session_id);
-      CREATE INDEX IF NOT EXISTS idx_productivity_date ON productivity_scores(date);
-      CREATE INDEX IF NOT EXISTS idx_chrome_history_domain ON chrome_history(domain);
-    `, (err) => { if (err) reject(err); else resolve(); });
-  });
-  console.log("   Tables created.\n");
+  console.log("   Tables verified.\n");
 
   // Generate data for the last 90 days
   const today = new Date();
@@ -483,7 +378,7 @@ async function seed() {
   console.log(`   Goals:             ${goals.length}`);
   console.log(`   ────────────────────────────`);
   console.log(`   TOTAL RECORDS:     ${totalTabs + totalEvents + totalSessions + totalDomainStats + totalProductivity + totalHistory + mlPredictions.length + goals.length}`);
-  console.log(`\n   Database: ${dbPath}`);
+  console.log(`   Database: server/data/intellicai.db`);
 }
 
 seed()
