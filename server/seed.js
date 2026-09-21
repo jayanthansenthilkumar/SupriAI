@@ -6,25 +6,13 @@
  * Usage:  cd server && node seed.js
  */
 
-const sqlite3 = require("sqlite3").verbose();
+const { dbRun, dbGet, dbAll } = require("./database.js");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 
-// ── Setup ──────────────────────────────────────────────────
-const dataDir = path.resolve(__dirname, "data");
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-const dbPath = path.resolve(dataDir, "intellicai.db");
-const db = new sqlite3.Database(dbPath);
-
 function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
+  return dbRun(sql, params);
 }
 
 // ── Realistic Websites Pool ────────────────────────────────
@@ -498,21 +486,12 @@ async function seed() {
   console.log(`\n   Database: ${dbPath}`);
 }
 
-// ── Run ────────────────────────────────────────────────────
-db.serialize(() => {
-  db.run("PRAGMA journal_mode=WAL");
-  db.run("PRAGMA foreign_keys=ON");
-});
-
 seed()
   .then(() => {
-    db.close(() => {
-      console.log("\n   Database connection closed. Done.\n");
-      process.exit(0);
-    });
+    console.log("\n   Done.\n");
+    process.exit(0);
   })
   .catch((err) => {
     console.error("Seed error:", err);
-    db.close();
     process.exit(1);
   });
