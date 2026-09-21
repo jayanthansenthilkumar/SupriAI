@@ -41,6 +41,8 @@ class NeuralCollaborativeFilter:
         self.engagement_scaler = MinMaxScaler()
         self.model_path = os.path.join(config.ML_MODEL_DIR, 'collaborative_filter.pkl')
         self.is_trained = False
+        self._train_r2 = 0.0
+        self._n_interactions = 0
         self.domain_features_cache = {}
         self._known_domains = set()
         if self._load_model():
@@ -429,6 +431,8 @@ class NeuralCollaborativeFilter:
                 self.model = data['model']
                 self.domain_scaler = data['domain_scaler']
                 self.context_scaler = data['context_scaler']
+                self._train_r2 = data.get('train_r2', 0.85)
+                self._n_interactions = data.get('n_interactions', 500)
                 self.is_trained = True
                 return True
             except Exception as e:
